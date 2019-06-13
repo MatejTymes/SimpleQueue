@@ -17,7 +17,7 @@ import java.util.*
 // todo: turn into features: heartBeat, retry count
 abstract class GenericTaskDao(val clock: Clock) {
 
-    private enum class TaskProgress {
+    private enum class ProgressState {
         available,
         inProgress,
         done,
@@ -34,7 +34,7 @@ abstract class GenericTaskDao(val clock: Clock) {
                 .putAll(
                         "_id" to UUID.randomUUID(),
                         "createdAt" to now,
-                        "progress" to TaskProgress.available,
+                        "progress" to ProgressState.available,
                         "lastUpdatedAt" to now
                 )
                 .build())
@@ -57,20 +57,20 @@ abstract class GenericTaskDao(val clock: Clock) {
                         docBuilder()
                                 .putAll(query)
                                 .put(
-                                        "progress" to doc("\$in" to listOf(TaskProgress.available, TaskProgress.resubmitted))
+                                        "progress" to doc("\$in" to listOf(ProgressState.available, ProgressState.resubmitted))
                                 )
                                 .build(),
                         docBuilder()
                                 .putAll(query)
                                 .putAll(
-                                        "progress" to TaskProgress.inProgress,
+                                        "progress" to ProgressState.inProgress,
                                         "lastHeartBeatAt" to doc("\$lte" to now.minus(deadIfNoHeartBeatFor))
                                 )
                                 .build()
                 )),
                 doc("\$set" to doc(
                         "workerHost" to longLocalHostName(),
-                        "progress" to TaskProgress.inProgress,
+                        "progress" to ProgressState.inProgress,
                         "lastHeartBeatAt" to now,
                         "lastUpdatedAt" to now
                 )),
@@ -88,7 +88,7 @@ abstract class GenericTaskDao(val clock: Clock) {
         val updateResult = coll.updateOne(
                 doc(
                         "_id" to taskId,
-                        "progress" to TaskProgress.inProgress
+                        "progress" to ProgressState.inProgress
                 ),
                 doc("\$set" to doc(
                         "workerHost" to longLocalHostName(),
@@ -106,25 +106,7 @@ abstract class GenericTaskDao(val clock: Clock) {
             taskId: UUID,
             data: Document = emptyDoc()
     ): Boolean {
-        val now = clock.now()
-        val updateResult = coll.updateOne(
-                doc(
-                        "_id" to taskId,
-                        "progress" to TaskProgress.inProgress
-                ),
-                doc("\$set" to docBuilder()
-                        .putAll(data)
-                        .putAll(
-                                "progress" to TaskProgress.done,
-                                "workerHost" to longLocalHostName(),
-                                "lastHeartBeatAt" to now,
-                                "lastUpdatedAt" to now
-                        )
-                        .build()
-                )
-        )
-
-        return updateResult.modifiedCount == 1L
+        return setStatus(coll, taskId, data, ProgressState.done)
     }
 
     protected fun markForRetry(
@@ -132,16 +114,20 @@ abstract class GenericTaskDao(val clock: Clock) {
             taskId: UUID,
             data: Document = emptyDoc()
     ): Boolean {
+        return setStatus(coll, taskId, data, ProgressState.resubmitted)
+    }
+
+    private fun setStatus(coll: MongoCollection<Document>, taskId: UUID, data: Document, newStatus: ProgressState): Boolean {
         val now = clock.now()
         val updateResult = coll.updateOne(
                 doc(
                         "_id" to taskId,
-                        "progress" to TaskProgress.inProgress
+                        "progress" to ProgressState.inProgress
                 ),
                 doc("\$set" to docBuilder()
                         .putAll(data)
                         .putAll(
-                                "progress" to TaskProgress.resubmitted,
+                                "progress" to newStatus,
                                 "workerHost" to longLocalHostName(),
                                 "lastHeartBeatAt" to now,
                                 "lastUpdatedAt" to now
