@@ -14,6 +14,7 @@ import java.time.Duration
 import java.util.*
 
 // todo: add client
+// todo: store custom data into field "data" - generate proper update on status change
 // todo: turn into features: heartBeat, retry count
 abstract class GenericTaskDao(val clock: Clock) {
 
@@ -100,6 +101,8 @@ abstract class GenericTaskDao(val clock: Clock) {
 
         return updateResult.modifiedCount == 1L
     }
+
+    // todo: add - updateProgressData
 
     protected fun markAsDone(
             coll: MongoCollection<Document>,
