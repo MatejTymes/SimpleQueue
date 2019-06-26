@@ -3,6 +3,7 @@ package mtymes.simplequeue.dao
 import com.mongodb.MongoWriteException
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.FindOneAndUpdateOptions
+import com.mongodb.client.model.IndexOptions
 import com.mongodb.client.model.ReturnDocument
 import mtymes.common.mongo.DocBuilder.Companion.doc
 import mtymes.common.mongo.DocBuilder.Companion.docBuilder
@@ -23,6 +24,30 @@ abstract class GenericTaskDao(val clock: Clock) {
         inProgress,
         done,
         resubmitted
+    }
+
+    protected fun createQueryIndex(
+            queryFields: Document,
+            sortBy: Document,
+            coll: MongoCollection<Document>
+    ) {
+        coll.createIndex(
+                docBuilder()
+                        .putAll(sortBy)
+                        .putAll(
+                                "progress" to 1,
+                                "lastHeartBeatAt" to 1 // todo: only if heart beat enabled
+                        )
+                        .putAll(queryFields)
+                        .build(),
+                IndexOptions().partialFilterExpression(doc(
+                        "progress" to (doc("\$in", listOf(
+                                ProgressState.available.name,
+                                ProgressState.inProgress.name,
+                                ProgressState.resubmitted.name
+                        )))
+                ))
+        )
     }
 
     protected fun submit(
