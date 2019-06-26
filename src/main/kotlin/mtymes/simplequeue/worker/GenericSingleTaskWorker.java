@@ -64,8 +64,8 @@ public abstract class GenericSingleTaskWorker<Task> {
     }
 
     private void registerHeartBeater(Runner runner) {
-        runner.runTask(() -> {
-            while (true) {
+        runner.run(shutdownInfo -> {
+            while (!shutdownInfo.wasShutdownTriggered()) {
                 UUID taskId = inProgressTaskId.get();
                 if (taskId != null) {
                     try {
@@ -75,14 +75,14 @@ public abstract class GenericSingleTaskWorker<Task> {
                         e.printStackTrace();
                     }
                 }
-                Thread.sleep(heartBeadPeriod.toMillis()); // this also allows to stop the handler
+                Thread.sleep(heartBeadPeriod.toMillis());
             }
         });
     }
 
     private void registerWorker(Runner runner) {
-        runner.runTask(() -> {
-            while (true) {
+        runner.run(shutdownInfo -> {
+            while (!shutdownInfo.wasShutdownTriggered()) {
                 try {
                     Optional<Tuple<UUID, Task>> taskTuple = pickNextTask();
                     if (!taskTuple.isPresent()) {
