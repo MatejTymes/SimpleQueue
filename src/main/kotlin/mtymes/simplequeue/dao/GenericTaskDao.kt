@@ -45,6 +45,7 @@ abstract class GenericTaskDao(val clock: Clock) {
             coll: MongoCollection<Document>,
             query: Document,
             deadIfNoHeartBeatFor: Duration,
+            data: Document = emptyDoc(),
             sortBy: Document = emptyDoc()
     ): Optional<Document> {
         var options = FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
@@ -69,12 +70,15 @@ abstract class GenericTaskDao(val clock: Clock) {
                                 )
                                 .build()
                 )),
-                doc("\$set" to doc(
-                        "workerHost" to longLocalHostName(),
-                        "progress" to ProgressState.inProgress,
-                        "lastHeartBeatAt" to now,
-                        "lastUpdatedAt" to now
-                )),
+                doc("\$set" to docBuilder()
+                        .putAll(data)
+                        .putAll(
+                                "workerHost" to longLocalHostName(),
+                                "progress" to ProgressState.inProgress,
+                                "lastHeartBeatAt" to now,
+                                "lastUpdatedAt" to now
+                        )
+                        .build()),
                 options
         )
 
