@@ -26,7 +26,7 @@ abstract class GenericTaskDao(val clock: Clock) {
         resubmitted
     }
 
-    protected fun createQueryIndex(
+    protected fun createPickingIndex(
             queryFields: Document,
             sortBy: Document,
             coll: MongoCollection<Document>
