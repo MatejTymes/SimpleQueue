@@ -17,7 +17,7 @@ import java.util.*
 // todo: add client
 // todo: store custom data into field "data" - generate proper update on status change
 // todo: turn into features: heartBeat, retry count
-abstract class GenericTaskDao(val clock: Clock) {
+abstract class GenericTaskDao(val clock: Clock = Clock()) {
 
     private enum class ProgressState {
         available,
