@@ -2,6 +2,8 @@ package mtymes.simplequeue.worker;
 
 import javafixes.concurrency.Runner;
 import javafixes.object.Tuple;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -13,6 +15,8 @@ import static javafixes.concurrency.Runner.runner;
 
 // todo: test this
 public abstract class GenericSingleTaskWorker<Task> {
+
+    protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     protected abstract Optional<Tuple<UUID, Task>> pickNextTask();
 
@@ -37,23 +41,32 @@ public abstract class GenericSingleTaskWorker<Task> {
 
     public void start() {
         synchronized (isRunning) {
+            logger.info("Starting task worker");
             if (isRunning.get()) {
+                logger.error("Task worker WAS already running");
                 throw new IllegalStateException(this.getClass().getSimpleName() + " is already running");
             }
             runner = runner(2);
             registerHeartBeater(runner);
             registerWorker(runner);
             isRunning.set(true);
+
+            logger.info("Task worker started");
         }
     }
 
     public void stop() {
         synchronized (isRunning) {
+            logger.info("Stopping task worker");
+
             if (!isRunning.get()) {
+                logger.error("Task worker WAS NOT running");
                 throw new IllegalStateException(this.getClass().getSimpleName() + " is not running");
             }
             runner.shutdownNow().waitTillDone();
             isRunning.set(false);
+
+            logger.info("Task worker stopped");
         }
     }
 
@@ -69,8 +82,7 @@ public abstract class GenericSingleTaskWorker<Task> {
                     try {
                         updateHeartBeat(taskId);
                     } catch (Exception e) {
-                        // todo: log error
-                        e.printStackTrace();
+                        logger.error("Failed to update hear beat", e);
                     }
                 }
                 Thread.sleep(heartBeadPeriod.toMillis());
@@ -84,8 +96,10 @@ public abstract class GenericSingleTaskWorker<Task> {
                 try {
                     Optional<Tuple<UUID, Task>> taskTuple = pickNextTask();
                     if (!taskTuple.isPresent()) {
+                        logger.info("No available task found");
                         Thread.sleep(Math.min(10, waitDurationIfNoTaskAvailable.toMillis())); // this also allows to stop the handler
                     } else {
+                        logger.info("Going to process next available task " + taskTuple);
                         try {
                             UUID taskId = taskTuple.get().a();
                             inProgressTaskId.set(taskId);
@@ -94,14 +108,13 @@ public abstract class GenericSingleTaskWorker<Task> {
                             try {
                                 executeTask(taskId, task);
                             } catch (Exception e) {
-                                // todo: log error
+                                logger.error("Failed to execute task " + taskTuple, e);
                                 e.printStackTrace();
                                 handleExecutionFailure(taskId, task, e);
                             }
                         } catch (Exception e) {
                             inProgressTaskId.set(null);
-                            // todo: log error
-                            e.printStackTrace();
+                            logger.error("Failed to execute task " + taskTuple, e);
                         }
 
                         Thread.sleep(10); // this allows to stop the handler
@@ -109,8 +122,7 @@ public abstract class GenericSingleTaskWorker<Task> {
                 } catch (InterruptedException e) {
                     throw e; // rethrow exception
                 } catch (Exception e) {
-                    // todo: log error
-                    e.printStackTrace();
+                    logger.error("Failed to process next available task ", e);
                 }
             }
         });
