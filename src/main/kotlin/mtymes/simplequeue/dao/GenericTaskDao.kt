@@ -41,20 +41,18 @@ abstract class GenericTaskDao(val clock: Clock = Clock()) {
                 .putAll(queryFields)
                 .build()
 
+        val indexOptions = IndexOptions().background(true)
         if (isPartialIndexSupported) {
-            coll.createIndex(
-                    indexFields,
-                    IndexOptions().partialFilterExpression(doc(
-                            "progress" to (doc("\$in", listOf(
-                                    ProgressState.available.name,
-                                    ProgressState.inProgress.name,
-                                    ProgressState.resubmitted.name
-                            )))
-                    ))
-            )
-        } else {
-            coll.createIndex(indexFields)
+            indexOptions.partialFilterExpression(doc(
+                    "progress" to (doc("\$in", listOf(
+                            ProgressState.available.name,
+                            ProgressState.inProgress.name,
+                            ProgressState.resubmitted.name
+                    )))
+            ))
         }
+
+        coll.createIndex(indexFields, indexOptions)
     }
 
     protected fun submit(
