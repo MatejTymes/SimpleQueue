@@ -29,25 +29,32 @@ abstract class GenericTaskDao(val clock: Clock = Clock()) {
     protected fun createPickingIndex(
             queryFields: Document,
             sortBy: Document,
-            coll: MongoCollection<Document>
+            coll: MongoCollection<Document>,
+            isPartialIndexSupported: Boolean = true
     ) {
-        coll.createIndex(
-                docBuilder()
-                        .putAll(sortBy)
-                        .putAll(
-                                "progress" to 1,
-                                "lastHeartBeatAt" to 1 // todo: only if heart beat enabled
-                        )
-                        .putAll(queryFields)
-                        .build(),
-                IndexOptions().partialFilterExpression(doc(
-                        "progress" to (doc("\$in", listOf(
-                                ProgressState.available.name,
-                                ProgressState.inProgress.name,
-                                ProgressState.resubmitted.name
-                        )))
-                ))
-        )
+        val indexFields = docBuilder()
+                .putAll(sortBy)
+                .putAll(
+                        "progress" to 1,
+                        "lastHeartBeatAt" to 1 // todo: only if heart beat enabled
+                )
+                .putAll(queryFields)
+                .build()
+
+        if (isPartialIndexSupported) {
+            coll.createIndex(
+                    indexFields,
+                    IndexOptions().partialFilterExpression(doc(
+                            "progress" to (doc("\$in", listOf(
+                                    ProgressState.available.name,
+                                    ProgressState.inProgress.name,
+                                    ProgressState.resubmitted.name
+                            )))
+                    ))
+            )
+        } else {
+            coll.createIndex(indexFields)
+        }
     }
 
     protected fun submit(
