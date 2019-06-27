@@ -20,9 +20,7 @@ public abstract class GenericSingleTaskWorker<Task> {
 
     protected abstract void executeTask(UUID taskId, Task task);
 
-    protected abstract void handleSuccessfulExecution(UUID taskId, Task task);
-
-    protected abstract void handleFailedExecution(UUID taskId, Task task, Exception exception);
+    protected abstract void handleExecutionFailure(UUID taskId, Task task, Exception exception);
 
 
     private final Duration waitDurationIfNoTaskAvailable;
@@ -54,7 +52,7 @@ public abstract class GenericSingleTaskWorker<Task> {
             if (!isRunning.get()) {
                 throw new IllegalStateException(this.getClass().getSimpleName() + " is not running");
             }
-            runner.shutdownAndAwaitTermination();
+            runner.shutdownNow().waitTillDone();
             isRunning.set(false);
         }
     }
@@ -95,11 +93,10 @@ public abstract class GenericSingleTaskWorker<Task> {
                             Task task = taskTuple.get().b();
                             try {
                                 executeTask(taskId, task);
-                                handleSuccessfulExecution(taskId, task);
                             } catch (Exception e) {
                                 // todo: log error
                                 e.printStackTrace();
-                                handleFailedExecution(taskId, task, e);
+                                handleExecutionFailure(taskId, task, e);
                             }
                         } catch (Exception e) {
                             inProgressTaskId.set(null);
