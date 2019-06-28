@@ -1,13 +1,11 @@
 package mtymes.simplequeue.worker;
 
 import javafixes.concurrency.Runner;
-import javafixes.object.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -18,19 +16,19 @@ public abstract class GenericSingleTaskWorker<Task> {
 
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    protected abstract Optional<Tuple<UUID, Task>> pickNextTask();
+    protected abstract Optional<Task> pickNextTask();
 
-    protected abstract void updateHeartBeat(UUID taskId);
+    protected abstract void updateHeartBeat(Task task);
 
-    protected abstract void executeTask(UUID taskId, Task task);
+    protected abstract void executeTask(Task task);
 
-    protected abstract void handleExecutionFailure(UUID taskId, Task task, Exception exception);
+    protected abstract void handleExecutionFailure(Task task, Exception exception);
 
 
     private final Duration waitDurationIfNoTaskAvailable;
     private final Duration heartBeadPeriod;
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
-    private final AtomicReference<UUID> inProgressTaskId = new AtomicReference<>(null);
+    private final AtomicReference<Task> taskInProgress = new AtomicReference<>(null);
 
     private Runner runner;
 
@@ -77,10 +75,10 @@ public abstract class GenericSingleTaskWorker<Task> {
     private void registerHeartBeater(Runner runner) {
         runner.run(shutdownInfo -> {
             while (!shutdownInfo.wasShutdownTriggered()) {
-                UUID taskId = inProgressTaskId.get();
-                if (taskId != null) {
+                Task task = taskInProgress.get();
+                if (task != null) {
                     try {
-                        updateHeartBeat(taskId);
+                        updateHeartBeat(task);
                     } catch (Exception e) {
                         logger.error("Failed to update hear beat", e);
                     }
@@ -94,27 +92,26 @@ public abstract class GenericSingleTaskWorker<Task> {
         runner.run(shutdownInfo -> {
             while (!shutdownInfo.wasShutdownTriggered()) {
                 try {
-                    Optional<Tuple<UUID, Task>> taskTuple = pickNextTask();
-                    if (!taskTuple.isPresent()) {
+                    Optional<Task> optionalTask = pickNextTask();
+                    if (!optionalTask.isPresent()) {
                         logger.info("No available task found");
                         Thread.sleep(Math.min(10, waitDurationIfNoTaskAvailable.toMillis())); // this also allows to stop the handler
                     } else {
-                        logger.info("Going to process next available task " + taskTuple);
+                        logger.info("Going to process next available task " + optionalTask);
                         try {
-                            UUID taskId = taskTuple.get().a();
-                            inProgressTaskId.set(taskId);
+                            Task task = optionalTask.get();
+                            taskInProgress.set(task);
 
-                            Task task = taskTuple.get().b();
                             try {
-                                executeTask(taskId, task);
+                                executeTask(task);
                             } catch (Exception e) {
-                                logger.error("Failed to execute task " + taskTuple, e);
+                                logger.error("Failed to execute task " + optionalTask, e);
                                 e.printStackTrace();
-                                handleExecutionFailure(taskId, task, e);
+                                handleExecutionFailure(task, e);
                             }
                         } catch (Exception e) {
-                            inProgressTaskId.set(null);
-                            logger.error("Failed to execute task " + taskTuple, e);
+                            taskInProgress.set(null);
+                            logger.error("Failed to execute task " + optionalTask, e);
                         }
 
                         Thread.sleep(10); // this allows to stop the handler
