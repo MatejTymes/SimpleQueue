@@ -25,6 +25,7 @@ public abstract class GenericSingleTaskWorker<Task> {
 
     protected abstract void handleExecutionFailure(Task task, Exception exception) throws Exception;
 
+
     private static final AtomicInteger workerIdCounter = new AtomicInteger(0);
 
     protected final String workerName;
