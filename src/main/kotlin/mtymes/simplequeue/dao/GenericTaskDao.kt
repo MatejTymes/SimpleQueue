@@ -85,20 +85,15 @@ abstract class GenericTaskDao(val clock: Clock = Clock()) {
 
         val now = clock.now()
         val workDoc = coll.findOneAndUpdate(
-                doc("\$or" to listOf(
-                        docBuilder()
-                                .putAll(query)
-                                .put(
-                                        "progress" to doc("\$in" to listOf(ProgressState.available, ProgressState.resubmitted))
-                                )
-                                .build(),
-                        docBuilder()
-                                .putAll(query)
-                                .putAll(
+                doc("\$and" to listOf(
+                        query,
+                        doc("\$or" to listOf(
+                                doc("progress" to doc("\$in" to listOf(ProgressState.available, ProgressState.resubmitted))),
+                                doc(
                                         "progress" to ProgressState.inProgress,
                                         "lastHeartBeatAt" to doc("\$lte" to now.minus(deadIfNoHeartBeatFor))
                                 )
-                                .build()
+                        ))
                 )),
                 doc("\$set" to docBuilder()
                         .putAll(data)
