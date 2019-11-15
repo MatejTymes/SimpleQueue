@@ -20,9 +20,9 @@ public abstract class GenericSingleTaskWorker<Task> {
 
     protected abstract void updateHeartBeat(Task task);
 
-    protected abstract void executeTask(Task task);
+    protected abstract void executeTask(Task task) throws Exception;
 
-    protected abstract void handleExecutionFailure(Task task, Exception exception);
+    protected abstract void handleExecutionFailure(Task task, Exception exception) throws Exception;
 
 
     private final Duration waitDurationIfNoTaskAvailable;
