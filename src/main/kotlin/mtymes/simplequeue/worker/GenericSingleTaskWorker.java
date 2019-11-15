@@ -106,7 +106,6 @@ public abstract class GenericSingleTaskWorker<Task> {
                                 executeTask(task);
                             } catch (Exception e) {
                                 logger.error("Failed to execute task " + optionalTask, e);
-                                e.printStackTrace();
                                 handleExecutionFailure(task, e);
                             }
                         } catch (Exception e) {
