@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static javafixes.concurrency.Runner.runner;
@@ -24,7 +25,9 @@ public abstract class GenericSingleTaskWorker<Task> {
 
     protected abstract void handleExecutionFailure(Task task, Exception exception) throws Exception;
 
+    private static final AtomicInteger workerIdCounter = new AtomicInteger(0);
 
+    protected final String workerName;
     private final Duration waitDurationIfNoTaskAvailable;
     private final Duration heartBeadPeriod;
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
@@ -33,15 +36,17 @@ public abstract class GenericSingleTaskWorker<Task> {
     private Runner runner;
 
     protected GenericSingleTaskWorker(Duration waitDurationIfNoTaskAvailable, Duration heartBeadPeriod) {
+        this.workerName = "Worker" + "-" + workerIdCounter.incrementAndGet();
+
         this.waitDurationIfNoTaskAvailable = waitDurationIfNoTaskAvailable;
         this.heartBeadPeriod = heartBeadPeriod;
     }
 
     public void start() {
         synchronized (isRunning) {
-            logger.info("Starting task worker");
+            logger.info(workerName + ": Starting task worker");
             if (isRunning.get()) {
-                logger.error("Task worker WAS already running");
+                logger.error(workerName + ": Task worker WAS already running");
                 throw new IllegalStateException(this.getClass().getSimpleName() + " is already running");
             }
             runner = runner(2);
@@ -49,22 +54,22 @@ public abstract class GenericSingleTaskWorker<Task> {
             registerWorker(runner);
             isRunning.set(true);
 
-            logger.info("Task worker started");
+            logger.info(workerName + ": Task worker started");
         }
     }
 
     public void stop() {
         synchronized (isRunning) {
-            logger.info("Stopping task worker");
+            logger.info(workerName + ": Stopping task worker");
 
             if (!isRunning.get()) {
-                logger.error("Task worker WAS NOT running");
+                logger.error(workerName + ": Task worker WAS NOT running");
                 throw new IllegalStateException(this.getClass().getSimpleName() + " is not running");
             }
             runner.shutdownNow().waitTillDone();
             isRunning.set(false);
 
-            logger.info("Task worker stopped");
+            logger.info(workerName + ": Task worker stopped");
         }
     }
 
@@ -80,7 +85,7 @@ public abstract class GenericSingleTaskWorker<Task> {
                     try {
                         updateHeartBeat(task);
                     } catch (Exception e) {
-                        logger.error("Failed to update hear beat", e);
+                        logger.error(workerName + ": Failed to update hear beat", e);
                     }
                 }
                 Thread.sleep(heartBeadPeriod.toMillis());
@@ -94,10 +99,10 @@ public abstract class GenericSingleTaskWorker<Task> {
                 try {
                     Optional<Task> optionalTask = pickNextTask();
                     if (!optionalTask.isPresent()) {
-                        logger.info("No available task found");
+                        logger.info(workerName + ": No available task found");
                         Thread.sleep(Math.min(10, waitDurationIfNoTaskAvailable.toMillis())); // this also allows to stop the handler
                     } else {
-                        logger.info("Going to process next available task " + optionalTask);
+                        logger.info(workerName + ": Going to process next available task " + optionalTask);
                         try {
                             Task task = optionalTask.get();
                             taskInProgress.set(task);
@@ -105,12 +110,13 @@ public abstract class GenericSingleTaskWorker<Task> {
                             try {
                                 executeTask(task);
                             } catch (Exception e) {
-                                logger.error("Failed to execute task " + optionalTask, e);
+                                logger.error(workerName + ": Failed to execute task " + optionalTask, e);
                                 handleExecutionFailure(task, e);
                             }
                         } catch (Exception e) {
+                            logger.error(workerName + ": Failed to execute task " + optionalTask, e);
+                        } finally {
                             taskInProgress.set(null);
-                            logger.error("Failed to execute task " + optionalTask, e);
                         }
 
                         Thread.sleep(10); // this allows to stop the handler
@@ -118,7 +124,7 @@ public abstract class GenericSingleTaskWorker<Task> {
                 } catch (InterruptedException e) {
                     throw e; // rethrow exception
                 } catch (Exception e) {
-                    logger.error("Failed to process next available task ", e);
+                    logger.error(workerName + ": Failed to process next available task ", e);
                 }
             }
         });
