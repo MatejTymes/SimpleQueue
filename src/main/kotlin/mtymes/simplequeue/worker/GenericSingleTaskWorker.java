@@ -101,7 +101,10 @@ public abstract class GenericSingleTaskWorker<Task> {
                     Optional<Task> optionalTask = pickNextTask();
                     if (!optionalTask.isPresent()) {
                         logger.info(workerName + ": No available task found");
-                        Thread.sleep(Math.min(10, waitDurationIfNoTaskAvailable.toMillis())); // this also allows to stop the handler
+                        Thread.sleep(Math.min(
+                                waitDurationIfNoTaskAvailable.toMillis(),
+                                10 // this allows to recognize InterruptedException in case there would be no wait on unavailable task
+                        ));
                     } else {
                         logger.info(workerName + ": Going to process next available task " + optionalTask);
                         try {
@@ -120,14 +123,17 @@ public abstract class GenericSingleTaskWorker<Task> {
                             taskInProgress.set(null);
                         }
 
-                        Thread.sleep(10); // this allows to stop the handler
+                        Thread.sleep(10); // this allows to recognize InterruptedException
                     }
                 } catch (InterruptedException e) {
+                    logger.warn(workerName + ": Worker thread has been interrupted ", e);
                     throw e; // rethrow exception
                 } catch (Exception e) {
                     logger.error(workerName + ": Failed to process next available task ", e);
                 }
             }
+
+            logger.warn(workerName + ": Worker thread has been shut down");
         });
     }
 }
