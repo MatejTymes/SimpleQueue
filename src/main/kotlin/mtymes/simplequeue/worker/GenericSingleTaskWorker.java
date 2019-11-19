@@ -30,17 +30,17 @@ public abstract class GenericSingleTaskWorker<Task> {
 
     protected final String workerName;
     private final Duration waitDurationIfNoTaskAvailable;
-    private final Duration heartBeadPeriod;
+    private final Duration heartBeatPeriod;
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private final AtomicReference<Task> taskInProgress = new AtomicReference<>(null);
 
     private Runner runner;
 
-    protected GenericSingleTaskWorker(Duration waitDurationIfNoTaskAvailable, Duration heartBeadPeriod) {
+    protected GenericSingleTaskWorker(Duration waitDurationIfNoTaskAvailable, Duration heartBeatPeriod) {
         this.workerName = "Worker" + "-" + workerIdCounter.incrementAndGet();
 
         this.waitDurationIfNoTaskAvailable = waitDurationIfNoTaskAvailable;
-        this.heartBeadPeriod = heartBeadPeriod;
+        this.heartBeatPeriod = heartBeatPeriod;
     }
 
     public void start() {
@@ -89,7 +89,7 @@ public abstract class GenericSingleTaskWorker<Task> {
                         logger.error(workerName + ": Failed to update hear beat", e);
                     }
                 }
-                Thread.sleep(heartBeadPeriod.toMillis());
+                Thread.sleep(heartBeatPeriod.toMillis());
             }
         });
     }
