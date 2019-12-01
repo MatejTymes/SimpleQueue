@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static java.lang.Math.max;
 import static javafixes.concurrency.Runner.runner;
 
 // todo: test this
@@ -17,13 +18,13 @@ public abstract class GenericSingleTaskWorker<Task> {
 
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    protected abstract Optional<Task> pickNextTask();
+    public abstract Optional<Task> pickNextTask();
 
-    protected abstract void updateHeartBeat(Task task);
+    public abstract void updateHeartBeat(Task task);
 
-    protected abstract void executeTask(Task task) throws Exception;
+    public abstract void executeTask(Task task) throws Exception;
 
-    protected abstract void handleExecutionFailure(Task task, Exception exception) throws Exception;
+    public abstract void handleExecutionFailure(Task task, Exception exception) throws Exception;
 
 
     private static final AtomicInteger workerIdCounter = new AtomicInteger(0);
@@ -101,7 +102,7 @@ public abstract class GenericSingleTaskWorker<Task> {
                     Optional<Task> optionalTask = pickNextTask();
                     if (!optionalTask.isPresent()) {
                         logger.info(workerName + ": No available task found");
-                        Thread.sleep(Math.min(
+                        Thread.sleep(max(
                                 waitDurationIfNoTaskAvailable.toMillis(),
                                 10 // this allows to recognize InterruptedException in case there would be no wait on unavailable task
                         ));
