@@ -18,7 +18,7 @@ public abstract class GenericSingleTaskWorker<Task> {
 
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public abstract Optional<Task> pickNextTask();
+    public abstract Optional<Task> pickNextTask() throws Exception;
 
     public abstract void updateHeartBeat(Task task);
 
@@ -98,34 +98,49 @@ public abstract class GenericSingleTaskWorker<Task> {
     private void registerWorker(Runner runner) {
         runner.run(shutdownInfo -> {
             while (!shutdownInfo.wasShutdownTriggered()) {
+
                 try {
-                    Optional<Task> optionalTask = pickNextTask();
+
+                    Optional<Task> optionalTask = Optional.empty();
+                    try {
+                        optionalTask = pickNextTask();
+                    } catch (InterruptedException e) {
+                        throw e;
+                    } catch (Exception e) {
+                        logger.error(workerName + ": Failed to pick next task " + optionalTask, e);
+                    }
+
                     if (!optionalTask.isPresent()) {
                         logger.info(workerName + ": No available task found");
-                        Thread.sleep(max(
-                                waitDurationIfNoTaskAvailable.toMillis(),
-                                10 // this allows to recognize InterruptedException in case there would be no wait on unavailable task
-                        ));
                     } else {
                         logger.info(workerName + ": Going to process next available task " + optionalTask);
-                        try {
-                            Task task = optionalTask.get();
-                            taskInProgress.set(task);
 
+                        Task task = optionalTask.get();
+                        taskInProgress.set(task);
+                        try {
+                            executeTask(task);
+                        } catch (InterruptedException e) {
+                            throw e;
+                        } catch (Exception failure) {
+                            logger.error(workerName + ": Failed to execute task " + optionalTask, failure);
                             try {
-                                executeTask(task);
+                                handleExecutionFailure(task, failure);
+                            } catch (InterruptedException e) {
+                                throw e;
                             } catch (Exception e) {
-                                logger.error(workerName + ": Failed to execute task " + optionalTask, e);
-                                handleExecutionFailure(task, e);
+                                logger.error(workerName + ": Failed to handle task failure for task " + optionalTask, e);
                             }
-                        } catch (Exception e) {
-                            logger.error(workerName + ": Failed to execute task " + optionalTask, e);
                         } finally {
                             taskInProgress.set(null);
                         }
-
-                        Thread.sleep(10); // this allows to recognize InterruptedException
                     }
+
+                    // this allows to recognize InterruptedException in case there would be no wait on unavailable task
+                    Thread.sleep((optionalTask.isPresent())
+                            ? 10
+                            : max(waitDurationIfNoTaskAvailable.toMillis(), 10)
+                    );
+
                 } catch (InterruptedException e) {
                     logger.warn(workerName + ": Worker thread has been interrupted ", e);
                     throw e; // rethrow exception
