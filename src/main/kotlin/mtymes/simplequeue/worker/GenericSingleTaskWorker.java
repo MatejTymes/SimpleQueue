@@ -116,7 +116,7 @@ public abstract class GenericSingleTaskWorker<Task> {
                 }
             }
 
-            logger.info(workerName + ": Heart beat thread has been shut down");
+            logger.info(workerName + ": Heart beat thread has been finished");
         });
     }
 
@@ -179,7 +179,7 @@ public abstract class GenericSingleTaskWorker<Task> {
                 }
             }
 
-            logger.info(workerName + ": Worker thread has been shut down");
+            logger.info(workerName + ": Worker thread has been finished");
         });
     }
 }
