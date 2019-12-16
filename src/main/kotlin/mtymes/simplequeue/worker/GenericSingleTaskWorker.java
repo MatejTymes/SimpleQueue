@@ -20,7 +20,7 @@ public abstract class GenericSingleTaskWorker<Task> {
 
     public abstract Optional<Task> pickNextTask() throws Exception;
 
-    public abstract void updateHeartBeat(Task task);
+    public abstract void updateHeartBeat(Task task) throws Exception;
 
     public abstract void executeTask(Task task) throws Exception;
 
@@ -34,6 +34,7 @@ public abstract class GenericSingleTaskWorker<Task> {
     private final Duration heartBeatPeriod;
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private final AtomicReference<Task> taskInProgress = new AtomicReference<>(null);
+    private final AtomicBoolean shutdownInitialized = new AtomicBoolean(false);
 
     private Runner runner;
 
@@ -68,8 +69,15 @@ public abstract class GenericSingleTaskWorker<Task> {
                 logger.error(workerName + ": Task worker WAS NOT running");
                 throw new IllegalStateException(this.getClass().getSimpleName() + " is not running");
             }
-            runner.shutdownNow().waitTillDone();
-            isRunning.set(false);
+            try {
+                shutdownInitialized.set(true);
+
+                runner.shutdownNow().waitTillDone();
+
+                isRunning.set(false);
+            } finally {
+                shutdownInitialized.set(false);
+            }
 
             logger.info(workerName + ": Task worker stopped");
         }
@@ -86,12 +94,22 @@ public abstract class GenericSingleTaskWorker<Task> {
                 if (task != null) {
                     try {
                         updateHeartBeat(task);
+                    } catch (InterruptedException e) {
+                        boolean isExpected = shutdownInitialized.get() || !isRunning.get();
+                        if (isExpected) {
+                            logger.info(workerName + ": Heart beat thread has been interrupted");
+                        } else {
+                            logger.warn(workerName + ": Heart beat thread has been interrupted", e);
+                        }
+                        break;
                     } catch (Exception e) {
                         logger.error(workerName + ": Failed to update hear beat", e);
                     }
                 }
                 Thread.sleep(heartBeatPeriod.toMillis());
             }
+
+            logger.info(workerName + ": Heart beat thread has been shut down");
         });
     }
 
@@ -142,14 +160,19 @@ public abstract class GenericSingleTaskWorker<Task> {
                     );
 
                 } catch (InterruptedException e) {
-                    logger.warn(workerName + ": Worker thread has been interrupted ", e);
-                    throw e; // rethrow exception
+                    boolean isExpected = shutdownInitialized.get() || !isRunning.get();
+                    if (isExpected) {
+                        logger.info(workerName + ": Worker thread has been interrupted");
+                    } else {
+                        logger.warn(workerName + ": Worker thread has been interrupted", e);
+                    }
+                    break;
                 } catch (Exception e) {
-                    logger.error(workerName + ": Failed to process next available task ", e);
+                    logger.error(workerName + ": Failed to process next available task", e);
                 }
             }
 
-            logger.warn(workerName + ": Worker thread has been shut down");
+            logger.info(workerName + ": Worker thread has been shut down");
         });
     }
 }
