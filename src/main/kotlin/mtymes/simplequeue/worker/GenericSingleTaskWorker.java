@@ -102,7 +102,7 @@ public abstract class GenericSingleTaskWorker<Task> {
                         }
                     }
 
-                    // this allows to recognize InterruptedException in case there would be no wait on unavailable task
+                    // this allows to recognize InterruptedException in case there would be no wait on heart beat
                     Thread.sleep(max(heartBeatPeriod.toMillis(), 10));
 
                 } catch (InterruptedException e) {
