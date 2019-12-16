@@ -90,23 +90,30 @@ public abstract class GenericSingleTaskWorker<Task> {
     private void registerHeartBeater(Runner runner) {
         runner.run(shutdownInfo -> {
             while (!shutdownInfo.wasShutdownTriggered()) {
-                Task task = taskInProgress.get();
-                if (task != null) {
-                    try {
-                        updateHeartBeat(task);
-                    } catch (InterruptedException e) {
-                        boolean isExpected = shutdownInitialized.get() || !isRunning.get();
-                        if (isExpected) {
-                            logger.info(workerName + ": Heart beat thread has been interrupted");
-                        } else {
-                            logger.warn(workerName + ": Heart beat thread has been interrupted", e);
+                try {
+                    Task task = taskInProgress.get();
+                    if (task != null) {
+                        try {
+                            updateHeartBeat(task);
+                        } catch (InterruptedException e) {
+                            throw e;
+                        } catch (Exception e) {
+                            logger.error(workerName + ": Failed to update hear beat", e);
                         }
-                        break;
-                    } catch (Exception e) {
-                        logger.error(workerName + ": Failed to update hear beat", e);
                     }
+
+                    // this allows to recognize InterruptedException in case there would be no wait on unavailable task
+                    Thread.sleep(max(heartBeatPeriod.toMillis(), 10));
+
+                } catch (InterruptedException e) {
+                    boolean isExpected = shutdownInitialized.get() || !isRunning.get();
+                    if (isExpected) {
+                        logger.info(workerName + ": Heart beat thread has been interrupted");
+                    } else {
+                        logger.warn(workerName + ": Heart beat thread has been interrupted", e);
+                    }
+                    break;
                 }
-                Thread.sleep(heartBeatPeriod.toMillis());
             }
 
             logger.info(workerName + ": Heart beat thread has been shut down");
