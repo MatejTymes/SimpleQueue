@@ -136,7 +136,7 @@ public abstract class GenericSingleTaskWorker<Task> {
                     }
 
                     if (!optionalTask.isPresent()) {
-                        logger.info(workerName + ": No available task found");
+                        logger.debug(workerName + ": No available task found");
                     } else {
                         logger.info(workerName + ": Going to process next available task " + optionalTask);
 
