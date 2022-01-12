@@ -56,19 +56,27 @@ abstract class GenericTaskDao(val clock: Clock = Clock()) {
     }
 
     protected fun submit(
-            coll: MongoCollection<Document>,
-            data: Document
+        coll: MongoCollection<Document>,
+        id: UUID,
+        data: Document
     ): Boolean {
         val now = clock.now()
         return coll.insert(docBuilder()
-                .putAll(data)
-                .putAll(
-                        "_id" to UUID.randomUUID(),
-                        "createdAt" to now,
-                        "progress" to ProgressState.available,
-                        "lastUpdatedAt" to now
-                )
-                .build())
+            .putAll(data)
+            .putAll(
+                "_id" to id,
+                "createdAt" to now,
+                "progress" to ProgressState.available,
+                "lastUpdatedAt" to now
+            )
+            .build())
+    }
+
+    protected fun submit(
+        coll: MongoCollection<Document>,
+        data: Document
+    ): Boolean {
+        return submit(coll, UUID.randomUUID()!!, data)
     }
 
     protected fun pickNextAvailable(
