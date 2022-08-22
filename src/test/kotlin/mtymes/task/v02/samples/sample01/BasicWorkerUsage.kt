@@ -1,4 +1,4 @@
-package mtymes.task.v02.samples
+package mtymes.task.v02.samples.sample01
 
 import mtymes.task.v02.scheduler.domain.WorkerId
 import mtymes.task.v02.worker.TaskWorker
@@ -6,7 +6,7 @@ import mtymes.task.v02.worker.sweatshop.HumbleSweatShop
 
 
 
-class Sample01_LazyWorker : TaskWorker<String> {
+class LazyWorker : TaskWorker<String> {
 
     private val tasksToProcess = mutableListOf("A", "B", "C")
 
@@ -26,7 +26,7 @@ class Sample01_LazyWorker : TaskWorker<String> {
 
 
 
-object Sample01_WorkerDoingWork {
+object WorkerDoingWork {
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -34,7 +34,7 @@ object Sample01_WorkerDoingWork {
         HumbleSweatShop().use { sweatShop ->
 
             sweatShop.addAndStartWorker(
-                Sample01_LazyWorker()
+                LazyWorker()
             )
 
             Thread.sleep(4_000)
@@ -44,7 +44,7 @@ object Sample01_WorkerDoingWork {
 
 
 
-object Sample01_ClosingSweatShopTooEarly {
+object ClosingSweatShopTooEarly {
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -52,7 +52,7 @@ object Sample01_ClosingSweatShopTooEarly {
         HumbleSweatShop().use { sweatShop ->
 
             sweatShop.addAndStartWorker(
-                Sample01_LazyWorker()
+                LazyWorker()
             )
 
             Thread.sleep(1_250)
@@ -62,7 +62,7 @@ object Sample01_ClosingSweatShopTooEarly {
 
 
 
-object Sample01_InterruptWorker {
+object InterruptWorker {
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -70,7 +70,7 @@ object Sample01_InterruptWorker {
         HumbleSweatShop().use { sweatShop ->
 
             val workerId = sweatShop.addAndStartWorker(
-                Sample01_LazyWorker()
+                LazyWorker()
             )
 
             Thread.sleep(1_250)
@@ -87,7 +87,7 @@ object Sample01_InterruptWorker {
 
 
 
-object Sample01_InterruptWorkerGracefully {
+object InterruptWorkerGracefully {
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -95,7 +95,7 @@ object Sample01_InterruptWorkerGracefully {
         HumbleSweatShop().use { sweatShop ->
 
             val workerId = sweatShop.addAndStartWorker(
-                Sample01_LazyWorker()
+                LazyWorker()
             )
 
             Thread.sleep(1_250)
