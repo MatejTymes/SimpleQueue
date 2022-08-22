@@ -1,7 +1,7 @@
-package mtymes.v02.scheduler.domain
+package mtymes.task.v02.scheduler.domain
 
 import javafixes.`object`.Microtype
-import mtymes.v02.common.host.HostUtil.Companion.shortLocalHostName
+import mtymes.task.v02.common.host.HostUtil.Companion.shortLocalHostName
 import org.apache.commons.lang3.RandomStringUtils
 import org.bson.Document
 import java.util.*

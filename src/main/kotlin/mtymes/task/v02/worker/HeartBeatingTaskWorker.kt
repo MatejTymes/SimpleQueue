@@ -1,6 +1,6 @@
-package mtymes.v02.work.worker
+package mtymes.task.v02.worker
 
-import mtymes.v02.scheduler.domain.WorkerId
+import mtymes.task.v02.scheduler.domain.WorkerId
 import java.time.Duration
 
 

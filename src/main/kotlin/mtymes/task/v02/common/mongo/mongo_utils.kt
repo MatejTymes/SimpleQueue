@@ -1,4 +1,4 @@
-package mtymes.v02.common.mongo
+package mtymes.task.v02.common.mongo
 
 import com.mongodb.MongoWriteException
 import com.mongodb.client.MongoCollection

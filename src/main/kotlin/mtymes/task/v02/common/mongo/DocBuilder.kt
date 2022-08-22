@@ -1,7 +1,7 @@
-package mtymes.v02.common.mongo
+package mtymes.task.v02.common.mongo
 
 import javafixes.`object`.Microtype
-import mtymes.v02.common.time.DateUtil.toDate
+import mtymes.task.v02.common.time.DateUtil.toDate
 import org.bson.Document
 import java.net.URI
 import java.time.LocalDate
@@ -12,8 +12,6 @@ import java.util.*
 class DocBuilder {
 
     companion object {
-
-        private val UTC_TIME_ZONE = TimeZone.getTimeZone("UTC")
 
         fun docBuilder() = DocBuilder()
 

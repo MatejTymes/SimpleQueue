@@ -1,9 +1,9 @@
-package mtymes.v02.scheduler.dao
+package mtymes.task.v02.scheduler.dao
 
 import com.mongodb.client.MongoCollection
-import mtymes.v02.common.mongo.DocBuilder.Companion.emptyDoc
-import mtymes.v02.scheduler.dao.UniversalScheduler.Companion.UNIVERSAL_SCHEDULER
-import mtymes.v02.scheduler.domain.*
+import mtymes.task.v02.common.mongo.DocBuilder.Companion.emptyDoc
+import mtymes.task.v02.scheduler.dao.UniversalScheduler.Companion.UNIVERSAL_SCHEDULER
+import mtymes.task.v02.scheduler.domain.*
 import org.bson.Document
 import java.time.Duration
 

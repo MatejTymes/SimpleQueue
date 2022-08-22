@@ -1,7 +1,7 @@
-package mtymes.v02.work.sweatshop
+package mtymes.task.v02.worker.sweatshop
 
-import mtymes.v02.scheduler.domain.WorkerId
-import mtymes.v02.work.worker.TaskWorker
+import mtymes.task.v02.scheduler.domain.WorkerId
+import mtymes.task.v02.worker.TaskWorker
 
 interface SweatShop : AutoCloseable {
 

@@ -1,9 +1,9 @@
-package mtymes.v02.work.sweatshop
+package mtymes.task.v02.worker.sweatshop
 
 import javafixes.concurrency.Runner
-import mtymes.v02.scheduler.domain.WorkerId
-import mtymes.v02.work.worker.HeartBeatingTaskWorker
-import mtymes.v02.work.worker.TaskWorker
+import mtymes.task.v02.scheduler.domain.WorkerId
+import mtymes.task.v02.worker.HeartBeatingTaskWorker
+import mtymes.task.v02.worker.TaskWorker
 import org.apache.commons.lang3.StringUtils.isBlank
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -17,10 +17,10 @@ import java.util.concurrent.atomic.AtomicReference
 
 // todo: mtymes - implement in better way
 // todo: mtymes - test
-class HumbleSweatShop : SweatShop {
+class TheHumbleSweatShop : SweatShop {
 
     companion object {
-        val logger = LoggerFactory.getLogger(HumbleSweatShop::class.java) as Logger
+        val logger = LoggerFactory.getLogger(TheHumbleSweatShop::class.java) as Logger
     }
 
     data class WorkContext<T>(

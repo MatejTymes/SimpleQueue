@@ -1,4 +1,4 @@
-package mtymes.v02.common.host
+package mtymes.task.v02.common.host
 
 import java.net.InetAddress
 import java.net.UnknownHostException
@@ -7,7 +7,7 @@ class HostUtil {
     companion object {
         fun longLocalHostName(): String {
             try {
-                return InetAddress.getLocalHost().canonicalHostName.toLowerCase()
+                return InetAddress.getLocalHost().canonicalHostName.lowercase()
             } catch (e: UnknownHostException) {
                 return "unknownHost"
             }
