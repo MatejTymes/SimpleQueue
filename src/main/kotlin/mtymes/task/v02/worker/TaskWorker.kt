@@ -6,7 +6,7 @@ import java.time.Duration
 
 interface TaskWorker<Task> {
 
-    fun pickNextTask(
+    fun fetchNextTaskToProcess(
         workerId: WorkerId
     ): Task?
 
@@ -19,7 +19,9 @@ interface TaskWorker<Task> {
         task: Task,
         workerId: WorkerId,
         exception: Exception
-    )
+    ) {
+        // do nothing
+    }
 
     fun taskToLoggableString(
         task: Task,

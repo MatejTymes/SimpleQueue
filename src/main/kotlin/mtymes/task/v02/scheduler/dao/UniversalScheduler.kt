@@ -49,7 +49,7 @@ class UniversalScheduler(
         const val MAX_EXECUTION_ATTEMPTS_COUNT = "maxAttemptsCount"
         const val EXECUTION_ATTEMPTS_LEFT = "attemptsLeft"
 
-        // todo: mtymes - add field TaskConfig.isSuspendable to prevent suspension of un-suspendable tasks (and also do a runtime check if proper flag is set on picking tasks)
+        // todo: mtymes - add field TaskConfig.isSuspendable to prevent suspension of un-suspendable tasks (and also do a runtime check if proper flag is set on fetching tasks)
         const val CAN_EXECUTE_AFTER = "canExecuteAfter"
 
         const val LAST_HEARTBEAT_AT = "lastHeartBeatAt"
@@ -130,7 +130,7 @@ class UniversalScheduler(
     }
 
     // todo: split into: startNextAvailableExecution/resumeNextAvailableSuspendedExecution/startOrResumeNextAvailableExecution
-    fun pickNextAvailableExecution(
+    fun fetchNextAvailableExecution(
         coll: MongoCollection<Document>,
         keepAliveForDuration: Duration,
         areTheseTasksSuspendable: Boolean,
@@ -141,7 +141,7 @@ class UniversalScheduler(
         if (areTheseTasksSuspendable) {
             val now = clock.now()
 
-            val possibleTasksToPick = coll.find(
+            val possibleTasksToFetch = coll.find(
                 docBuilder()
                     .putAll(additionalConstraint)
                     .putAll(
@@ -160,9 +160,9 @@ class UniversalScheduler(
                 )
             ).limit(5)
 
-            for (possibleTaskToPick in possibleTasksToPick) {
-                val taskId = TaskId(possibleTaskToPick.getString(TASK_ID))
-                val taskStatus = TaskStatus.valueOf(possibleTaskToPick.getString(STATUS))
+            for (possibleTaskToFetch in possibleTasksToFetch) {
+                val taskId = TaskId(possibleTaskToFetch.getString(TASK_ID))
+                val taskStatus = TaskStatus.valueOf(possibleTaskToFetch.getString(STATUS))
 
                 if (taskStatus == TaskStatus.available) {
                     val execution = startNewExecution(
@@ -178,7 +178,7 @@ class UniversalScheduler(
                         return execution
                     }
                 } else if (taskStatus == TaskStatus.suspended) {
-                    val lastExecutionId = ExecutionId(possibleTaskToPick.getString(LAST_EXECUTION_ID))
+                    val lastExecutionId = ExecutionId(possibleTaskToFetch.getString(LAST_EXECUTION_ID))
 
                     val execution = resumeSuspendedExecution(
                         coll = coll,
@@ -195,7 +195,7 @@ class UniversalScheduler(
                 }
             }
 
-            // todo: mtymes - if got some tasks, but all were actually picked, then maybe try again
+            // todo: mtymes - if got some tasks, but all were actually fetched, then maybe try again
 
             return null
         } else {

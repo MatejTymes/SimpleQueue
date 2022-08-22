@@ -13,7 +13,7 @@ data class SchedulerDefaults(
     val maxAttemptCount: Int = 1,
     val delayStartBy: Duration = Duration.ofSeconds(0),
 
-    // pick up task settings
+    // fetch task settings
     val afterStartKeepAliveFor: Duration,
     val additionalConstraint: Document = emptyDoc(),
     val sortOrder: Document = emptyDoc(),
@@ -51,14 +51,14 @@ class GenericTaskScheduler(
         )
     }
 
-    fun pickNextAvailableExecution(
+    fun fetchNextAvailableExecution(
         workerId: WorkerId,
         keepAliveFor: Duration = defaults.afterStartKeepAliveFor,
         additionalConstraint: Document = defaults.additionalConstraint,
         sortOrder: Document = defaults.sortOrder,
         areTasksSuspendable: Boolean = defaults.areTasksSuspendable,
     ): StartedExecutionSummary? {
-        return scheduler.pickNextAvailableExecution(
+        return scheduler.fetchNextAvailableExecution(
             coll = collection,
             keepAliveForDuration = keepAliveFor,
             areTheseTasksSuspendable = areTasksSuspendable,

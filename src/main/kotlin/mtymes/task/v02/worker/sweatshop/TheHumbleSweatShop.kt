@@ -127,16 +127,16 @@ class TheHumbleSweatShop : SweatShop {
 
             try {
 
-                // PICK TASK
+                // FETCH TASK
 
                 var task: T? = null
                 try {
-                    task = worker.pickNextTask(workerId)
+                    task = worker.fetchNextTaskToProcess(workerId)
                 } catch (e: InterruptedException) {
                     throw e
                 } catch (e: Exception) {
                     runAndIgnoreExceptions {
-                        logger.error("[${workerId}]: Failed to pick next task", e)
+                        logger.error("[${workerId}]: Failed to fetch next task", e)
                     }
                 }
 
@@ -226,7 +226,7 @@ class TheHumbleSweatShop : SweatShop {
                 }
 
 
-                // SLEEP DELAY BEFORE PICKING NEXT TASK
+                // SLEEP DELAY BEFORE FETCHING NEXT TASK
 
                 if (task == null) {
 
