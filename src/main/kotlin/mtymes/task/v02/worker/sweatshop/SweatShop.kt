@@ -9,7 +9,7 @@ interface SweatShop : AutoCloseable, Closeable {
     fun <T> addAndStartWorker(
         worker: TaskWorker<T>,
         workerId: WorkerId = WorkerId.uniqueWorkerId()
-    )
+    ): WorkerId
 
     fun stopAndRemoveWorker(
         workerId: WorkerId,

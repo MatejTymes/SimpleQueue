@@ -15,12 +15,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 
-// todo: mtymes - implement in better way
+// todo: mtymes - implement better alternatives (shared threads or coroutines)
 // todo: mtymes - test
-class TheHumbleSweatShop : SweatShop {
+class HumbleSweatShop : SweatShop {
 
     companion object {
-        val logger = LoggerFactory.getLogger(TheHumbleSweatShop::class.java) as Logger
+        val logger = LoggerFactory.getLogger(HumbleSweatShop::class.java) as Logger
     }
 
     data class WorkContext<T>(
@@ -41,7 +41,7 @@ class TheHumbleSweatShop : SweatShop {
     override fun <T> addAndStartWorker(
         worker: TaskWorker<T>,
         workerId: WorkerId
-    ) {
+    ): WorkerId {
         synchronized(workers) {
             assertIsNotClosed()
 
@@ -66,6 +66,8 @@ class TheHumbleSweatShop : SweatShop {
                 workContext = context,
                 worker = worker
             )
+
+            return workerId
         }
     }
 
@@ -105,6 +107,10 @@ class TheHumbleSweatShop : SweatShop {
             }
 
             isShutDown.set(true)
+
+            runAndIgnoreExceptions {
+                logger.info("SweatShop has been closed")
+            }
         }
     }
 
@@ -269,7 +275,11 @@ class TheHumbleSweatShop : SweatShop {
         }
 
         runAndIgnoreExceptions {
-            logger.info("[${workerId}]: Worker thread has been shut down")
+            if (workContext.shutDownGracefully.get()) {
+                logger.info("[${workerId}]: Worker thread has been shut down gracefully")
+            } else {
+                logger.info("[${workerId}]: Worker thread has been shut down")
+            }
         }
 
         if (workContext.shutDownGracefully.get()) {
