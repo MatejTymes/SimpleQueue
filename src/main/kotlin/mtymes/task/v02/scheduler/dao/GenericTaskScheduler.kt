@@ -74,11 +74,13 @@ class GenericTaskScheduler(
 
     fun markAsSucceeded(
         executionId: ExecutionId,
+        additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
     ) {
         scheduler.markAsSucceeded(
             coll = collection,
             executionId = executionId,
+            additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
     }
@@ -86,24 +88,39 @@ class GenericTaskScheduler(
     fun markAsFailedButCanRetry(
         executionId: ExecutionId,
         retryDelay: Duration = defaults.retryDelay,
+        additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
     ) {
         scheduler.markAsFailedButCanRetry(
             coll = collection,
             executionId = executionId,
             retryDelay = retryDelay,
+            additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
     }
 
     fun markAsFailedButCanNOTRetry(
         executionId: ExecutionId,
+        additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
     ) {
         scheduler.markAsFailedButCanNOTRetry(
             coll = collection,
             executionId = executionId,
+            additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
+        )
+    }
+
+    fun markTaskAsCancelled(
+        taskId: TaskId,
+        additionalTaskData: Document = emptyDoc()
+    ) {
+        scheduler.markTaskAsCancelled(
+            coll = collection,
+            taskId = taskId,
+            additionalTaskData = additionalTaskData
         )
     }
 }
