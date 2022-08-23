@@ -21,6 +21,7 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
+// todo: mtymes - replace emptyDoc/default values with nullable value
 // todo: mtymes - ability to fail if Execution is already in wanted state
 // todo: mtymes - add ttl index for this
 // todo: mtymes - add indexes - should be done by users of this class
