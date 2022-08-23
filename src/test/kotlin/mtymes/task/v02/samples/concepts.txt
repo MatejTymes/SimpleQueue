@@ -12,12 +12,12 @@ Sample03
 [ ] - exception handling
 [ ] - out of attempts
 [ ] - failure / retry
+[ ] - non-recoverable fail
 [ ] - delayed retry
-[ ] - final fail
 Sample04
 [ ] - cancel task/execution
 Sample05
-[ ] - time out
+[ ] - timed out execution/scheduled task
 [ ] - heart beat
 Sample06
 [ ] - invalid state transitions

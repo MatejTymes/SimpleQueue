@@ -95,4 +95,15 @@ class GenericTaskScheduler(
             additionalExecutionData = additionalExecutionData
         )
     }
+
+    fun markAsFailedButCanNOTRetry(
+        executionId: ExecutionId,
+        additionalExecutionData: Document = emptyDoc()
+    ) {
+        scheduler.markAsFailedButCanNOTRetry(
+            coll = collection,
+            executionId = executionId,
+            additionalExecutionData = additionalExecutionData
+        )
+    }
 }
