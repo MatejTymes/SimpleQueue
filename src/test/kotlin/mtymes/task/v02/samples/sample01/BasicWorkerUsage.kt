@@ -1,12 +1,12 @@
 package mtymes.task.v02.samples.sample01
 
 import mtymes.task.v02.scheduler.domain.WorkerId
-import mtymes.task.v02.worker.TaskWorker
+import mtymes.task.v02.worker.Worker
 import mtymes.task.v02.worker.sweatshop.HumbleSweatShop
 import java.util.concurrent.CopyOnWriteArrayList
 
 
-class LazyWorker : TaskWorker<String> {
+class LazyWorker : Worker<String> {
 
     private val tasksToProcess = CopyOnWriteArrayList(listOf("A", "B", "C"))
 

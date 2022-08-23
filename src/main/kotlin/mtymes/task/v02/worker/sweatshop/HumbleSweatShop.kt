@@ -3,7 +3,7 @@ package mtymes.task.v02.worker.sweatshop
 import javafixes.concurrency.Runner
 import mtymes.task.v02.scheduler.domain.WorkerId
 import mtymes.task.v02.worker.HeartBeatingTaskWorker
-import mtymes.task.v02.worker.TaskWorker
+import mtymes.task.v02.worker.Worker
 import org.apache.commons.lang3.StringUtils.isBlank
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -25,7 +25,7 @@ class HumbleSweatShop : SweatShop {
 
     data class WorkContext<T>(
         val workerId: WorkerId,
-        val worker: TaskWorker<T>,
+        val worker: Worker<T>,
         val runner: Runner,
         val taskInProgress: AtomicReference<T> = AtomicReference(null),
 
@@ -40,7 +40,7 @@ class HumbleSweatShop : SweatShop {
     val workers: MutableMap<WorkerId, WorkContext<*>> = mutableMapOf()
 
     override fun <T> addAndStartWorker(
-        worker: TaskWorker<T>,
+        worker: Worker<T>,
         workerId: WorkerId
     ): WorkerId {
         synchronized(workers) {
@@ -95,7 +95,7 @@ class HumbleSweatShop : SweatShop {
         }
     }
 
-    override fun registeredWorkers(): Map<WorkerId, TaskWorker<out Any?>> {
+    override fun registeredWorkers(): Map<WorkerId, Worker<out Any?>> {
         return workers.mapValues { entry ->
             entry.value.worker
         }
@@ -134,7 +134,7 @@ class HumbleSweatShop : SweatShop {
 
     private fun <T> startWorker(
         workContext: WorkContext<T>,
-        worker: TaskWorker<T>
+        worker: Worker<T>
     ): Future<Void>? = workContext.runner.run { shutdownInfo ->
 
         val workerId = workContext.workerId
@@ -307,7 +307,7 @@ class HumbleSweatShop : SweatShop {
 
     private fun <T> startHeartBeater(
         workContext: WorkContext<T>,
-        worker: TaskWorker<T>,
+        worker: Worker<T>,
         task: T
     ) {
         val workerId = workContext.workerId
@@ -361,7 +361,7 @@ class HumbleSweatShop : SweatShop {
     }
 
     private fun <T> taskToLoggableString(
-        worker: TaskWorker<T>,
+        worker: Worker<T>,
         task: T,
         workerId: WorkerId
     ): String? {

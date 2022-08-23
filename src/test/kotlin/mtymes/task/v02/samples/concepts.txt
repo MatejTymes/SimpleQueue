@@ -1,0 +1,20 @@
+[ ] - Task
+[ ] - Execution
+[ ] - TaskWorker
+[ ] - SweatShop
+[ ] - Scheduler
+[ ] - happy scenario
+[ ] - task to string
+[ ] - delay if no task present
+[ ] - cancellation
+[ ] - exception handling
+[ ] - failure / retry
+[ ] - delayed retry
+[ ] - out of attempts
+[ ] - final fail
+[ ] - time out
+[ ] - heart beat
+[ ] - delayed start
+[ ] - suspension
+[ ] - custom ordering
+[ ] - custom queries

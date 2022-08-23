@@ -7,7 +7,7 @@ import mtymes.task.v02.scheduler.dao.SchedulerDefaults
 import mtymes.task.v02.scheduler.domain.ExecutionId
 import mtymes.task.v02.scheduler.domain.WorkerId
 import mtymes.task.v02.test.mongo.emptyLocalCollection
-import mtymes.task.v02.worker.TaskWorker
+import mtymes.task.v02.worker.Worker
 import mtymes.task.v02.worker.sweatshop.HumbleSweatShop
 import org.bson.Document
 import java.time.Duration
@@ -64,9 +64,9 @@ class SimpleTaskDao(
 
 
 
-class SimpleTaskWorker(
+class SimpleWorker(
     val dao: SimpleTaskDao
-) : TaskWorker<TaskToProcess> {
+) : Worker<TaskToProcess> {
 
     override fun fetchNextTaskToProcess(
         workerId: WorkerId
@@ -98,7 +98,7 @@ object WorkerDoingWork {
 
         HumbleSweatShop().use { sweatShop ->
 
-            val worker = SimpleTaskWorker(dao)
+            val worker = SimpleWorker(dao)
 
             sweatShop.addAndStartWorker(worker)
 
@@ -123,8 +123,8 @@ object MultipleWorkersRegistered {
 
         HumbleSweatShop().use { sweatShop ->
 
-            val worker1 = SimpleTaskWorker(dao)
-            val worker2 = SimpleTaskWorker(dao)
+            val worker1 = SimpleWorker(dao)
+            val worker2 = SimpleWorker(dao)
 
             sweatShop.addAndStartWorker(worker1)
             sweatShop.addAndStartWorker(worker2)
@@ -150,7 +150,7 @@ object OneWorkerRegisteredMultipleTimes {
 
         HumbleSweatShop().use { sweatShop ->
 
-            val worker = SimpleTaskWorker(dao)
+            val worker = SimpleWorker(dao)
 
             sweatShop.addAndStartWorker(worker)
             sweatShop.addAndStartWorker(worker)
