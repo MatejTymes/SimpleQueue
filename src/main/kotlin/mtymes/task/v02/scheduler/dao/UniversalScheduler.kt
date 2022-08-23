@@ -292,7 +292,7 @@ class UniversalScheduler(
     fun markAsSucceeded(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        executionDataChanges: Document = emptyDoc()
+        additionalExecutionData: Document = emptyDoc()
     ) {
         val now = clock.now()
 
@@ -308,7 +308,7 @@ class UniversalScheduler(
             customExecutionUpdates = doc(
                 FINISHED_AT to now
             ),
-            executionDataChanges = executionDataChanges
+            additionalExecutionData = additionalExecutionData
         )
     }
 
@@ -316,7 +316,7 @@ class UniversalScheduler(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         retryDelayDuration: Duration,
-        executionDataChanges: Document = emptyDoc()
+        additionalExecutionData: Document = emptyDoc()
     ) {
         val now = clock.now()
 
@@ -343,14 +343,14 @@ class UniversalScheduler(
             customExecutionUpdates = doc(
                 FINISHED_AT to now
             ),
-            executionDataChanges = executionDataChanges
+            additionalExecutionData = additionalExecutionData
         )
     }
 
     fun markAsFailedButCanNOTRetry(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        executionDataChanges: Document = emptyDoc()
+        additionalExecutionData: Document = emptyDoc()
     ) {
         val now = clock.now()
 
@@ -366,14 +366,14 @@ class UniversalScheduler(
             customExecutionUpdates = doc(
                 FINISHED_AT to now
             ),
-            executionDataChanges = executionDataChanges
+            additionalExecutionData = additionalExecutionData
         )
     }
 
     fun markAsCancelled(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        executionDataChanges: Document = emptyDoc()
+        additionalExecutionData: Document = emptyDoc()
     ) {
         val now = clock.now()
 
@@ -389,7 +389,7 @@ class UniversalScheduler(
             customExecutionUpdates = doc(
                 FINISHED_AT to now
             ),
-            executionDataChanges = executionDataChanges
+            additionalExecutionData = additionalExecutionData
         )
     }
 
@@ -420,7 +420,7 @@ class UniversalScheduler(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         retryDelayDuration: Duration,
-        executionDataChanges: Document = emptyDoc()
+        additionalExecutionData: Document = emptyDoc()
     ) {
         val now = clock.now()
 
@@ -446,14 +446,14 @@ class UniversalScheduler(
                 // todo: mtymes - handle differently
                 SUSPENSION_COUNT to doc("\$sum" to listOf("\$\$ex." + SUSPENSION_COUNT, 1))
             ),
-            executionDataChanges = executionDataChanges
+            additionalExecutionData = additionalExecutionData
         )
     }
 
     fun markTasksWithoutHeartBeatAsTimedOut(
         coll: MongoCollection<Document>,
         retryDelayDuration: Duration?,
-        executionDataChanges: Document = emptyDoc()
+        additionalExecutionData: Document = emptyDoc()
     ) {
         val deadTasks: List<Document> = coll.find(
             doc(
@@ -486,7 +486,7 @@ class UniversalScheduler(
                     customExecutionUpdates = doc(
                         FINISHED_AT to now
                     ),
-                    executionDataChanges = executionDataChanges
+                    additionalExecutionData = additionalExecutionData
                 )
             } catch (e: Exception) {
                 TODO("todo: mtymes - log")
@@ -626,7 +626,7 @@ class UniversalScheduler(
         now: ZonedDateTime,
         customTaskUpdates: Document,
         customExecutionUpdates: Document,
-        executionDataChanges: Document // todo: mtymes - start using this
+        additionalExecutionData: Document
     ): Document? {
         val query = queryForExecution(
             executionId,
@@ -669,14 +669,14 @@ class UniversalScheduler(
                                                 )
                                                 .putAll(customExecutionUpdates)
                                                 .let {
-                                                    if (executionDataChanges.isEmpty()) {
+                                                    if (additionalExecutionData.isEmpty()) {
                                                         it
                                                     } else {
                                                         it.put(
                                                             DATA to doc(
                                                                 "\$mergeObjects" to listOf(
                                                                     "\$\$ex.data",
-                                                                    executionDataChanges
+                                                                    additionalExecutionData
                                                                 )
                                                             )
                                                         )
@@ -757,7 +757,7 @@ class UniversalScheduler(
         now: ZonedDateTime,
         customTaskUpdates: Document,
         customExecutionUpdates: Document,
-        executionDataChanges: Document
+        additionalExecutionData: Document
     ): Document? {
         return updateExecution(
             coll = coll,
@@ -769,7 +769,7 @@ class UniversalScheduler(
             now = now,
             customTaskUpdates = customTaskUpdates,
             customExecutionUpdates = customExecutionUpdates,
-            executionDataChanges = executionDataChanges
+            additionalExecutionData = additionalExecutionData
         )
     }
 

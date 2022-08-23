@@ -1,20 +1,30 @@
+Sample 01
 [ ] - Task
 [ ] - Execution
-[ ] - TaskWorker
+[ ] - Worker
 [ ] - SweatShop
+Sample02
 [ ] - Scheduler
 [ ] - happy scenario - custom payload
 [ ] - task to string
 [ ] - delay if no task present
-[ ] - cancellation
+Sample03
 [ ] - exception handling
 [ ] - failure / retry
 [ ] - delayed retry
 [ ] - out of attempts
 [ ] - final fail
+Sample04
+[ ] - cancel task/execution
+Sample05
 [ ] - time out
 [ ] - heart beat
+Sample06
+[ ] - invalid state transitions
+Sample07
 [ ] - delayed start
 [ ] - suspension
+Sample08
 [ ] - custom ordering
+Sample09
 [ ] - custom queries

@@ -20,10 +20,11 @@ data class SchedulerDefaults(
     val sortOrder: Document = emptyDoc(),
     val areTasksSuspendable: Boolean = false,
 
+    // task failure
+    val retryDelayDuration: Duration = Duration.ofSeconds(0),
 
     // remainder to process
 
-    val retryDelayDuration: Duration = Duration.ofSeconds(0),
     val suspendForDuration: Duration = Duration.ofSeconds(0),
 )
 
@@ -73,10 +74,25 @@ class GenericTaskScheduler(
 
     fun markAsSucceeded(
         executionId: ExecutionId,
+        additionalExecutionData: Document = emptyDoc()
     ) {
         scheduler.markAsSucceeded(
             coll = collection,
             executionId = executionId,
+            additionalExecutionData = additionalExecutionData
+        )
+    }
+
+    fun markAsFailedButCanRetry(
+        executionId: ExecutionId,
+        retryDelayDuration: Duration = defaults.retryDelayDuration,
+        additionalExecutionData: Document = emptyDoc()
+    ) {
+        scheduler.markAsFailedButCanRetry(
+            coll = collection,
+            executionId = executionId,
+            retryDelayDuration = retryDelayDuration,
+            additionalExecutionData = additionalExecutionData
         )
     }
 }
