@@ -194,7 +194,13 @@ object InterruptWorkerGracefully {
                 println("- ${summary}")
             }
 
+
             Thread.sleep(1_250)
+
+
+            sweatShop.workerSummaries().forEach { summary ->
+                println("- ${summary}")
+            }
         }
     }
 }
