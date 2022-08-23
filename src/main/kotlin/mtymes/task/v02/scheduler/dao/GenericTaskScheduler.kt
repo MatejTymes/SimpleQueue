@@ -10,6 +10,7 @@ import java.time.Duration
 data class SchedulerDefaults(
     // submit task settings
     val ttlDuration: Duration,
+    val taskIdGenerator: () -> TaskId = { TaskId.uniqueTaskId() },
     val maxAttemptCount: Int = 1,
     val delayStartBy: Duration = Duration.ofSeconds(0),
 
@@ -36,12 +37,14 @@ class GenericTaskScheduler(
 
     fun submitTask(
         customData: Document,
+        taskId: TaskId = defaults.taskIdGenerator.invoke(),
         ttlDuration: Duration = defaults.ttlDuration,
         maxAttemptCount: Int = defaults.maxAttemptCount,
         delayStartBy: Duration = defaults.delayStartBy
     ): TaskId? {
         return scheduler.submitTask(
             coll = collection,
+            taskId = taskId,
             config = TaskConfig(
                 maxAttemptCount = maxAttemptCount
             ),

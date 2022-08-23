@@ -3,7 +3,7 @@
 [ ] - TaskWorker
 [ ] - SweatShop
 [ ] - Scheduler
-[ ] - happy scenario
+[ ] - happy scenario - custom payload
 [ ] - task to string
 [ ] - delay if no task present
 [ ] - cancellation

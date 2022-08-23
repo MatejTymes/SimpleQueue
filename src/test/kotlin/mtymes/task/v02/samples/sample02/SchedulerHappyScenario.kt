@@ -7,6 +7,7 @@ import mtymes.task.v02.scheduler.dao.SchedulerDefaults
 import mtymes.task.v02.scheduler.domain.ExecutionId
 import mtymes.task.v02.scheduler.domain.WorkerId
 import mtymes.task.v02.test.mongo.emptyLocalCollection
+import mtymes.task.v02.test.task.TaskViewer.displayTinyTasksSummary
 import mtymes.task.v02.worker.Worker
 import mtymes.task.v02.worker.sweatshop.HumbleSweatShop
 import org.bson.Document
@@ -192,5 +193,7 @@ object OneWorkerRegisteredMultipleTimes {
 
             Thread.sleep(4_000)
         }
+
+        displayTinyTasksSummary(coll, setOf("executions.workerId"))
     }
 }

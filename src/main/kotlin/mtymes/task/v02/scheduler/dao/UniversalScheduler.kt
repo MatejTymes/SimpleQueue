@@ -23,7 +23,7 @@ import java.util.*
 // todo: mtymes - add ttl index for this
 // todo: mtymes - add indexes - should be done by users of this class
 
-// todo: mtymes - rename to GenericScheduler
+// todo: mtymes - add ability to provide custom ExecutionId
 // todo: mtymes - update ttl - to bigger to smaller value
 class UniversalScheduler(
     val clock: Clock = UTCClock()
@@ -98,11 +98,10 @@ class UniversalScheduler(
         config: TaskConfig,
         data: Document,
         ttlDuration: Duration,
+        taskId: TaskId = uniqueTaskId(),
         delayStartBy: Duration = Duration.ofSeconds(0)
     ): TaskId? {
         val now = clock.now()
-
-        val taskId = uniqueTaskId()
 
         val success = coll.insert(
             doc(

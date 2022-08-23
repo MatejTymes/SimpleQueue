@@ -7,11 +7,9 @@ import org.bson.Document
 import java.util.*
 
 
-class TaskId(value: UUID) : Microtype<UUID>(value) {
-    constructor(value: String) : this(UUID.fromString(value))
-
+class TaskId(value: String) : Microtype<String>(value) {
     companion object {
-        fun uniqueTaskId() = TaskId(UUID.randomUUID())
+        fun uniqueTaskId() = TaskId(UUID.randomUUID().toString())
     }
 }
 
