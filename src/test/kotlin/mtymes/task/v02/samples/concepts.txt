@@ -10,9 +10,9 @@ Sample02
 [ ] - delay if no task present
 Sample03
 [ ] - exception handling
+[ ] - out of attempts
 [ ] - failure / retry
 [ ] - delayed retry
-[ ] - out of attempts
 [ ] - final fail
 Sample04
 [ ] - cancel task/execution

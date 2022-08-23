@@ -88,7 +88,6 @@ data class StartedExecutionSummary(
     val execution: Execution,
 
     val wasSuspended: Boolean
-    // todo: mtymes - add lastSuspensionStage
 )
 
 data class TaskSummary(

@@ -233,9 +233,9 @@ class HumbleSweatShop : SweatShop {
                         runAndIgnoreExceptions {
                             val taskString: String? = taskToLoggableString(worker, task, workerId)
                             if (isBlank(taskString)) {
-                                logger.warn("[${workerId}]: Failed to execute task", e)
+                                logger.info("[${workerId}]: Failed to execute task", e)
                             } else {
-                                logger.warn("[${workerId}]: Failed to execute task '${taskString}'", e)
+                                logger.info("[${workerId}]: Failed to execute task '${taskString}'", e)
                             }
                         }
 

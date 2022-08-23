@@ -73,7 +73,7 @@ class UniversalScheduler(
         const val EXECUTION_ID = "id"
         // todo: mtymes - shouldn't this be optional
         const val WORKER_ID = "workerId"
-        const val STARTED_AT = "startadAt"
+        const val STARTED_AT = "startedAt"
         const val SUSPENDED_AT = "suspendedAt"
         const val LAST_UN_SUSPENDED_AT = "lastUnSuspendedAt"
         const val SUSPENSION_COUNT = "suspensionCount"
@@ -534,7 +534,7 @@ class UniversalScheduler(
                     STATUS_UPDATED_AT to now,
                     LAST_EXECUTION_ID to executionId,
                     LAST_EXECUTION_STATE to ExecutionStatus.running,
-                    LAST_HEARTBEAT_AT to now,
+//                    LAST_HEARTBEAT_AT to now,
                     KILLABLE_AFTER to keepAliveUntil,
                     LAST_UPDATED_AT to now,
                 ),
@@ -590,7 +590,7 @@ class UniversalScheduler(
                     STATUS to TaskStatus.inProgress,
                     STATUS_UPDATED_AT to now,
                     LAST_EXECUTION_STATE to ExecutionStatus.running,
-                    LAST_HEARTBEAT_AT to now,
+//                    LAST_HEARTBEAT_AT to now,
                     KILLABLE_AFTER to keepAliveUntil,
                     EXECUTIONS + ".\$." + STATUS to ExecutionStatus.running,
                     EXECUTIONS + ".\$." + STATUS_UPDATED_AT to now,
