@@ -25,6 +25,7 @@ class HumbleSweatShop : SweatShop {
 
     data class WorkContext<T>(
         val workerId: WorkerId,
+        val worker: TaskWorker<T>,
         val runner: Runner,
         val taskInProgress: AtomicReference<T> = AtomicReference(null),
 
@@ -55,8 +56,12 @@ class HumbleSweatShop : SweatShop {
                 else 1
             val runner = Runner.runner(numberOfThreads)
 
+            runAndIgnoreExceptions {
+                logger.info("${this.javaClass.simpleName} registered worker with WorkerId '${workerId}' of type '${worker.javaClass.simpleName}'")
+            }
             val context: WorkContext<T> = WorkContext(
                 workerId = workerId,
+                worker = worker,
                 runner = runner,
                 hasHeartBeatSupport = hasHeartBeatSupport
             )
@@ -90,6 +95,12 @@ class HumbleSweatShop : SweatShop {
         }
     }
 
+    override fun registeredWorkers(): Map<WorkerId, TaskWorker<out Any?>> {
+        return workers.mapValues { entry ->
+            entry.value.worker
+        }
+    }
+
     override fun close() {
         synchronized(workers) {
             if (isShutDown.get()) {
@@ -109,14 +120,14 @@ class HumbleSweatShop : SweatShop {
             isShutDown.set(true)
 
             runAndIgnoreExceptions {
-                logger.info("SweatShop has been closed")
+                logger.info("${this.javaClass.simpleName} has been closed")
             }
         }
     }
 
     private fun assertIsNotClosed() {
         if (isShutDown.get()) {
-            throw IllegalStateException("SweatShop is already closed")
+            throw IllegalStateException("${this.javaClass.simpleName} is already closed")
         }
     }
 
@@ -127,6 +138,10 @@ class HumbleSweatShop : SweatShop {
     ): Future<Void>? = workContext.runner.run { shutdownInfo ->
 
         val workerId = workContext.workerId
+
+        runAndIgnoreExceptions {
+            logger.info("[${workerId}]: Worker just started")
+        }
 
         var taskNotFoundNTimesInARow = 0L
         while (!shutdownInfo.wasShutdownTriggered() && !workContext.shutDownGracefully.get()) {
@@ -234,6 +249,7 @@ class HumbleSweatShop : SweatShop {
 
                 // SLEEP DELAY BEFORE FETCHING NEXT TASK
 
+                // todo: mtymes - don't want to sleep in case of gracefull shutdown (that does not throw interrupted exception - so we could wait for really long time)
                 if (task == null) {
 
                     // default to 1 minute if fails to get the sleep duration

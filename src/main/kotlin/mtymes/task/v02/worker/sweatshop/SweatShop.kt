@@ -15,4 +15,6 @@ interface SweatShop : AutoCloseable, Closeable {
         workerId: WorkerId,
         stopGracefully: Boolean
     ): Boolean
+
+    fun registeredWorkers(): Map<WorkerId, TaskWorker<out Any?>>
 }

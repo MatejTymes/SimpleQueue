@@ -1,0 +1,161 @@
+package mtymes.task.v02.samples.sample02
+
+import com.mongodb.client.MongoCollection
+import mtymes.task.v02.common.mongo.DocBuilder.Companion.doc
+import mtymes.task.v02.scheduler.dao.GenericTaskScheduler
+import mtymes.task.v02.scheduler.dao.SchedulerDefaults
+import mtymes.task.v02.scheduler.domain.ExecutionId
+import mtymes.task.v02.scheduler.domain.WorkerId
+import mtymes.task.v02.test.mongo.emptyLocalCollection
+import mtymes.task.v02.worker.TaskWorker
+import mtymes.task.v02.worker.sweatshop.HumbleSweatShop
+import org.bson.Document
+import java.time.Duration
+
+
+data class TaskToProcess(
+    val executionId: ExecutionId,
+    val request: String
+)
+
+
+
+class SimpleTaskDao(
+    tasksCollection: MongoCollection<Document>
+) {
+    val scheduler = GenericTaskScheduler(
+        collection = tasksCollection,
+        defaults = SchedulerDefaults(
+            ttlDuration = Duration.ofDays(7),
+            afterStartKeepAliveFor = Duration.ofMinutes(5)
+        )
+    )
+
+    companion object {
+        const val REQUEST = "request"
+    }
+
+    fun submitTask(
+        request: String
+    ) {
+        scheduler.submitTask(
+            doc(REQUEST to request)
+        )
+    }
+
+    fun fetchNextTaskExecution(
+        workerId: WorkerId
+    ): TaskToProcess? {
+        return scheduler.fetchNextAvailableExecution(workerId)
+            ?.let { summary ->
+                TaskToProcess(
+                    executionId = summary.execution.executionId,
+                    request = summary.task.data.getString(REQUEST)
+                )
+            }
+    }
+
+    fun markAsSucceeded(
+        executionId: ExecutionId
+    ) {
+        scheduler.markAsSucceeded(executionId)
+    }
+}
+
+
+
+class SimpleTaskWorker(
+    val dao: SimpleTaskDao
+) : TaskWorker<TaskToProcess> {
+
+    override fun fetchNextTaskToProcess(
+        workerId: WorkerId
+    ): TaskToProcess? {
+        return dao.fetchNextTaskExecution(workerId)
+    }
+
+    override fun executeTask(task: TaskToProcess, workerId: WorkerId) {
+        // i'm lazy and just pretending i do something
+        Thread.sleep(1_000)
+
+        dao.markAsSucceeded(task.executionId)
+    }
+}
+
+
+
+object WorkerDoingWork {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val coll = emptyLocalCollection("sample02tasks")
+
+        val dao = SimpleTaskDao(coll)
+
+        dao.submitTask("A")
+        dao.submitTask("B")
+        dao.submitTask("C")
+
+        HumbleSweatShop().use { sweatShop ->
+
+            val worker = SimpleTaskWorker(dao)
+
+            sweatShop.addAndStartWorker(worker)
+
+            Thread.sleep(4_000)
+        }
+    }
+}
+
+
+
+object MultipleWorkersRegistered {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val coll = emptyLocalCollection("sample02tasks")
+
+        val dao = SimpleTaskDao(coll)
+
+        dao.submitTask("A")
+        dao.submitTask("B")
+        dao.submitTask("C")
+
+        HumbleSweatShop().use { sweatShop ->
+
+            val worker1 = SimpleTaskWorker(dao)
+            val worker2 = SimpleTaskWorker(dao)
+
+            sweatShop.addAndStartWorker(worker1)
+            sweatShop.addAndStartWorker(worker2)
+
+            Thread.sleep(4_000)
+        }
+    }
+}
+
+
+
+object OneWorkerRegisteredMultipleTimes {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val coll = emptyLocalCollection("sample02tasks")
+
+        val dao = SimpleTaskDao(coll)
+
+        dao.submitTask("A")
+        dao.submitTask("B")
+        dao.submitTask("C")
+
+        HumbleSweatShop().use { sweatShop ->
+
+            val worker = SimpleTaskWorker(dao)
+
+            sweatShop.addAndStartWorker(worker)
+            sweatShop.addAndStartWorker(worker)
+
+            Thread.sleep(4_000)
+        }
+    }
+}

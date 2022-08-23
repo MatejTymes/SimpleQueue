@@ -3,19 +3,17 @@ package mtymes.task.v02.samples.sample01
 import mtymes.task.v02.scheduler.domain.WorkerId
 import mtymes.task.v02.worker.TaskWorker
 import mtymes.task.v02.worker.sweatshop.HumbleSweatShop
-
+import java.util.concurrent.CopyOnWriteArrayList
 
 
 class LazyWorker : TaskWorker<String> {
 
-    private val tasksToProcess = mutableListOf("A", "B", "C")
+    private val tasksToProcess = CopyOnWriteArrayList(listOf("A", "B", "C"))
 
-    override fun fetchNextTaskToProcess(workerId: WorkerId): String? {
-        return if (tasksToProcess.isEmpty()) {
-            null
-        } else {
-            tasksToProcess.removeAt(0)
-        }
+    override fun fetchNextTaskToProcess(
+        workerId: WorkerId
+    ): String? {
+        return tasksToProcess.removeFirstOrNull()
     }
 
     override fun executeTask(task: String, workerId: WorkerId) {
@@ -33,9 +31,71 @@ object WorkerDoingWork {
 
         HumbleSweatShop().use { sweatShop ->
 
+            val worker = LazyWorker()
+
             sweatShop.addAndStartWorker(
-                LazyWorker()
+                worker
             )
+
+            Thread.sleep(4_000)
+        }
+    }
+}
+
+
+
+object CustomWorkerId {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+
+        HumbleSweatShop().use { sweatShop ->
+
+            val worker = LazyWorker()
+
+            sweatShop.addAndStartWorker(
+                worker = worker,
+                workerId = WorkerId("LazyDrone")
+            )
+
+            Thread.sleep(4_000)
+        }
+    }
+}
+
+
+
+object MultipleWorkersRegistered {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+
+        HumbleSweatShop().use { sweatShop ->
+
+            val worker1 = LazyWorker()
+            val worker2 = LazyWorker()
+
+            sweatShop.addAndStartWorker(worker1)
+            sweatShop.addAndStartWorker(worker2)
+
+            Thread.sleep(4_000)
+        }
+    }
+}
+
+
+
+object OneWorkerRegisteredMultipleTimes {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+
+        HumbleSweatShop().use { sweatShop ->
+
+            val worker = LazyWorker()
+
+            sweatShop.addAndStartWorker(worker)
+            sweatShop.addAndStartWorker(worker)
 
             Thread.sleep(4_000)
         }
@@ -51,9 +111,9 @@ object ClosingSweatShopTooEarly {
 
         HumbleSweatShop().use { sweatShop ->
 
-            sweatShop.addAndStartWorker(
-                LazyWorker()
-            )
+            val worker = LazyWorker()
+
+            sweatShop.addAndStartWorker(worker)
 
             Thread.sleep(1_250)
         }
@@ -69,9 +129,9 @@ object InterruptWorker {
 
         HumbleSweatShop().use { sweatShop ->
 
-            val workerId = sweatShop.addAndStartWorker(
-                LazyWorker()
-            )
+            val worker = LazyWorker()
+
+            val workerId = sweatShop.addAndStartWorker(worker)
 
             Thread.sleep(1_250)
 
