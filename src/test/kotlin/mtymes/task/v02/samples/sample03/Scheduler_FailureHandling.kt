@@ -170,14 +170,15 @@ object FailThenSucceed {
         val executionId2 = dao.fetchNextTaskExecution(workerId)!!.executionId
         dao.markAsSucceeded(executionId2, "So glad it's over. I'm not doing this again")
 
-        val isThereAnythingLeft = dao.fetchNextTaskExecution(workerId) != null
-        println("isThereAnythingLeft = ${isThereAnythingLeft}")
-
 
         displayTinyTasksSummary(
             coll,
             setOf("maxAttemptsCount", "attemptsLeft")
         )
+
+
+        val isThereAnythingLeft = dao.fetchNextTaskExecution(workerId) != null
+        println("isThereAnythingLeft = ${isThereAnythingLeft}")
     }
 }
 
@@ -199,14 +200,15 @@ object UnrecoverableFailure {
         val executionId1 = dao.fetchNextTaskExecution(workerId)!!.executionId
         dao.markAsFailedAndCanNOTRetry(executionId1, IllegalStateException("OK. So the building burned down!!! I think I can go home now"))
 
-        val isThereAnythingLeft = dao.fetchNextTaskExecution(workerId) != null
-        println("isThereAnythingLeft = ${isThereAnythingLeft}")
-
 
         displayTinyTasksSummary(
             coll,
             setOf("maxAttemptsCount", "attemptsLeft")
         )
+
+
+        val isThereAnythingLeft = dao.fetchNextTaskExecution(workerId) != null
+        println("isThereAnythingLeft = ${isThereAnythingLeft}")
     }
 }
 

@@ -1,3 +1,11 @@
+Why
+[ ] not only queue tasks but see inProgress info as well as history of retries/failures/cancelations for later analysis
+[ ] when using separate queueing mechanism and separate persistence of progress, those two got out of sync
+[ ] any node should be allowed to die, had some difficulties if that happened with other solutions (e.g.: artemis)
+[ ] had some custom requirements which could not be supported OOTB by existing solutions and required workarounds
+[ ] already used this approach for millions of tasks where they've been processed for multiple days
+
+Just explain
 [ ] - Task
 [ ] - Executions/ActiveExecution
 Sample 01
@@ -20,11 +28,11 @@ Sample05
 [ ] - timed out execution/scheduled task
 [ ] - heart beat
 Sample06
-[ ] - invalid state transitions
-Sample07
 [ ] - delayed start
 [ ] - suspension
-Sample08
+Sample07
 [ ] - custom ordering
-Sample09
+Sample08
 [ ] - custom queries
+Sample09
+[ ] - invalid state transitions
