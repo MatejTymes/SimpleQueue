@@ -52,7 +52,7 @@ class UniversalScheduler(
         const val EXECUTION_ATTEMPTS_LEFT = "attemptsLeft"
 
         // todo: mtymes - add field TaskConfig.isSuspendable to prevent suspension of un-suspendable tasks (and also do a runtime check if proper flag is set on fetching tasks)
-        const val CAN_EXECUTE_AFTER = "canExecuteAfter"
+        const val CAN_BE_EXECUTED_AS_OF = "canBeExecutedAsOf"
 
         const val LAST_HEARTBEAT_AT = "lastHeartBeatAt"
         const val KILLABLE_AFTER = "killableAfter"
@@ -114,7 +114,7 @@ class UniversalScheduler(
                 MAX_EXECUTION_ATTEMPTS_COUNT to config.maxAttemptCount,
 
                 EXECUTION_ATTEMPTS_LEFT to config.maxAttemptCount,
-                CAN_EXECUTE_AFTER to now.plus(delayStartBy),
+                CAN_BE_EXECUTED_AS_OF to now.plus(delayStartBy),
 
                 STATUS to TaskStatus.available,
                 STATUS_UPDATED_AT to now,
@@ -137,7 +137,7 @@ class UniversalScheduler(
         areTheseTasksSuspendable: Boolean,
         additionalConstraint: Document = emptyDoc(),
         workerId: WorkerId = uniqueWorkerId(),
-        sortOrder: Document = doc(CAN_EXECUTE_AFTER to 1)
+        sortOrder: Document = doc(CAN_BE_EXECUTED_AS_OF to 1)
     ): StartedExecutionSummary? {
         if (areTheseTasksSuspendable) {
             val now = clock.now()
@@ -147,7 +147,7 @@ class UniversalScheduler(
                     .putAll(additionalConstraint)
                     .putAll(
                         STATUS to doc("\$in", listOf(TaskStatus.available, TaskStatus.suspended)),
-                        CAN_EXECUTE_AFTER to doc("\$lte", now),
+                        CAN_BE_EXECUTED_AS_OF to doc("\$lte", now),
                         EXECUTION_ATTEMPTS_LEFT to doc("\$gte", 1)
                     )
                     .build()
@@ -334,11 +334,11 @@ class UniversalScheduler(
             toExecutionStatus = ExecutionStatus.failed,
             now = now,
             customTaskUpdates = doc(
-                CAN_EXECUTE_AFTER to doc(
+                CAN_BE_EXECUTED_AS_OF to doc(
                     "\$cond" to listOf(
                         doc("\$gt" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 0)),
                         now.plus(retryDelay),
-                        "\$" + CAN_EXECUTE_AFTER
+                        "\$" + CAN_BE_EXECUTED_AS_OF
                     )
                 )
             ),
@@ -435,7 +435,7 @@ class UniversalScheduler(
             toExecutionStatus = ExecutionStatus.suspended,
             now = now,
             customTaskUpdates = doc(
-                CAN_EXECUTE_AFTER to now.plus(retryDelay),
+                CAN_BE_EXECUTED_AS_OF to now.plus(retryDelay),
 
                 // $inc - section
                 // todo: mtymes - handle differently
@@ -481,7 +481,7 @@ class UniversalScheduler(
                     toExecutionStatus = ExecutionStatus.timedOut,
                     now = now,
                     customTaskUpdates = if (executionAttemptsLeft > 0) {
-                        doc(CAN_EXECUTE_AFTER to now.plus(retryDelay))
+                        doc(CAN_BE_EXECUTED_AS_OF to now.plus(retryDelay))
                     } else {
                         emptyDoc()
                     },
@@ -515,7 +515,7 @@ class UniversalScheduler(
                 .putAll(
                     TASK_ID to taskId,
                     STATUS to TaskStatus.available,
-                    CAN_EXECUTE_AFTER to doc("\$lte", now),
+                    CAN_BE_EXECUTED_AS_OF to doc("\$lte", now),
                     EXECUTION_ATTEMPTS_LEFT to doc("\$gte", 1)
                 )
                 .build(),
@@ -540,6 +540,9 @@ class UniversalScheduler(
                     KILLABLE_AFTER to keepAliveUntil,
                     LAST_UPDATED_AT to now,
                 ),
+//                "\$unset" to doc(
+//                    CAN_BE_EXECUTED_AS_OF to 1
+//                ),
                 "\$inc" to doc(
                     EXECUTION_ATTEMPTS_LEFT to -1
                 )
@@ -583,7 +586,7 @@ class UniversalScheduler(
                             STATUS to ExecutionStatus.suspended,
                         )
                     ),
-                    CAN_EXECUTE_AFTER to doc("\$lte", now),
+                    CAN_BE_EXECUTED_AS_OF to doc("\$lte", now),
                     EXECUTION_ATTEMPTS_LEFT to doc("\$gte", 1)
                 )
                 .build(),
@@ -601,6 +604,9 @@ class UniversalScheduler(
                     EXECUTIONS + ".\$." + LAST_UPDATED_AT to now,
                     LAST_UPDATED_AT to now,
                 ),
+//                "\$unset" to doc(
+//                    CAN_BE_EXECUTED_AS_OF to 1
+//                ),
                 "\$inc" to doc(
                     EXECUTION_ATTEMPTS_LEFT to -1
                 )
