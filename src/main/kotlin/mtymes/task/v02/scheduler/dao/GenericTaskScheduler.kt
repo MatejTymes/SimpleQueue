@@ -129,11 +129,13 @@ class GenericTaskScheduler(
 
     fun markExecutionAsCancelled(
         executionId: ExecutionId,
+        additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
     ) {
         scheduler.markAsCancelled(
             coll = collection,
             executionId = executionId,
+            additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
     }
