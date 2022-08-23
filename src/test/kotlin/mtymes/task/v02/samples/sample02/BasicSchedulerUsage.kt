@@ -64,7 +64,7 @@ class SimpleTaskDao(
 
 
 
-class SimpleWorker(
+open class SimpleWorker(
     val dao: SimpleTaskDao
 ) : Worker<TaskToProcess> {
 
@@ -109,6 +109,41 @@ object WorkerDoingWork {
 
 
 
+class ReadableSimpleWorker(
+    dao: SimpleTaskDao
+) : SimpleWorker(dao) {
+
+    override fun taskToLoggableString(task: TaskToProcess, workerId: WorkerId): String {
+        return task.request
+    }
+}
+
+
+
+object MoreReadableWorkerDoingWork {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val coll = emptyLocalCollection("sample02tasks")
+
+        val dao = SimpleTaskDao(coll)
+
+        dao.submitTask("A")
+        dao.submitTask("B")
+        dao.submitTask("C")
+
+        HumbleSweatShop().use { sweatShop ->
+
+            val worker = ReadableSimpleWorker(dao)
+
+            sweatShop.addAndStartWorker(worker)
+
+            Thread.sleep(4_000)
+        }
+    }
+}
+
+
 object MultipleWorkersRegistered {
 
     @JvmStatic
@@ -123,8 +158,8 @@ object MultipleWorkersRegistered {
 
         HumbleSweatShop().use { sweatShop ->
 
-            val worker1 = SimpleWorker(dao)
-            val worker2 = SimpleWorker(dao)
+            val worker1 = ReadableSimpleWorker(dao)
+            val worker2 = ReadableSimpleWorker(dao)
 
             sweatShop.addAndStartWorker(worker1)
             sweatShop.addAndStartWorker(worker2)
@@ -150,7 +185,7 @@ object OneWorkerRegisteredMultipleTimes {
 
         HumbleSweatShop().use { sweatShop ->
 
-            val worker = SimpleWorker(dao)
+            val worker = ReadableSimpleWorker(dao)
 
             sweatShop.addAndStartWorker(worker)
             sweatShop.addAndStartWorker(worker)
