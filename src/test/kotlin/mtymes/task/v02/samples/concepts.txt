@@ -4,13 +4,14 @@ Why
 [ ] any node should be allowed to die, had some difficulties if that happened with other solutions (e.g.: artemis)
 [ ] had some custom requirements which could not be supported OOTB by existing solutions and required workarounds
 [ ] already used this approach for millions of tasks where they've been processed for multiple days
+[ ] this one is generic enough so it could be used for almost all of our existing solutions
 
 Just explain
 [ ] - Task
 [ ] - Executions/ActiveExecution
 Sample 01
-[ ] - Worker
-[ ] - SweatShop
+[ ] - Worker - a bit smarter than a listener
+[ ] - SweatShop - able to kill a worker if needed or embrace new fresh meat
 Sample02
 [ ] - Scheduler
 [ ] - happy scenario - custom payload
@@ -36,3 +37,10 @@ Sample08
 [ ] - custom queries
 Sample09
 [ ] - invalid state transitions
+
+What is still missing
+[ ] - record only last execution
+[ ] - unlimited executions
+
+The tricky bit
+[ ] - indexes

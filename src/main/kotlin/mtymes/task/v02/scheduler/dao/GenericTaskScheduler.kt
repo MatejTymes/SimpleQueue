@@ -21,11 +21,11 @@ data class SchedulerDefaults(
     val areTasksSuspendable: Boolean = false,
 
     // task failure
-    val retryDelayDuration: Duration = Duration.ofSeconds(0),
+    val retryDelay: Duration = Duration.ofSeconds(0),
 
     // remainder to process
 
-    val suspendForDuration: Duration = Duration.ofSeconds(0),
+    val suspendFor: Duration = Duration.ofSeconds(0),
 )
 
 
@@ -64,7 +64,7 @@ class GenericTaskScheduler(
     ): StartedExecutionSummary? {
         return scheduler.fetchNextAvailableExecution(
             coll = collection,
-            keepAliveForDuration = keepAliveFor,
+            keepAliveFor = keepAliveFor,
             areTheseTasksSuspendable = areTasksSuspendable,
             additionalConstraint = additionalConstraint,
             workerId = workerId,
@@ -85,13 +85,13 @@ class GenericTaskScheduler(
 
     fun markAsFailedButCanRetry(
         executionId: ExecutionId,
-        retryDelayDuration: Duration = defaults.retryDelayDuration,
+        retryDelay: Duration = defaults.retryDelay,
         additionalExecutionData: Document = emptyDoc()
     ) {
         scheduler.markAsFailedButCanRetry(
             coll = collection,
             executionId = executionId,
-            retryDelayDuration = retryDelayDuration,
+            retryDelay = retryDelay,
             additionalExecutionData = additionalExecutionData
         )
     }

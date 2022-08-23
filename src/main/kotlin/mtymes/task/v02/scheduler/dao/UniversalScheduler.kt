@@ -20,11 +20,13 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
+// todo: mtymes - ability to fail if Execution is already in wanted state
 // todo: mtymes - add ttl index for this
 // todo: mtymes - add indexes - should be done by users of this class
 
 // todo: mtymes - add ability to provide custom ExecutionId
 // todo: mtymes - update ttl - to bigger to smaller value
+// todo: mtymes - ttl on final state
 class UniversalScheduler(
     val clock: Clock = UTCClock()
 ) {
@@ -71,7 +73,7 @@ class UniversalScheduler(
         // EXECUTION FIELDS
 
         const val EXECUTION_ID = "id"
-        // todo: mtymes - shouldn't this be optional
+        // todo: mtymes - differentiate between startedBy: Worker, suspendedBy: Worker, resumedBy: Worker, cancelledBy/finalizedBy: Worker
         const val WORKER_ID = "workerId"
         const val STARTED_AT = "startedAt"
         const val SUSPENDED_AT = "suspendedAt"
@@ -131,7 +133,7 @@ class UniversalScheduler(
     // todo: split into: startNextAvailableExecution/resumeNextAvailableSuspendedExecution/startOrResumeNextAvailableExecution
     fun fetchNextAvailableExecution(
         coll: MongoCollection<Document>,
-        keepAliveForDuration: Duration,
+        keepAliveFor: Duration,
         areTheseTasksSuspendable: Boolean,
         additionalConstraint: Document = emptyDoc(),
         workerId: WorkerId = uniqueWorkerId(),
@@ -166,7 +168,7 @@ class UniversalScheduler(
                 if (taskStatus == TaskStatus.available) {
                     val execution = startNewExecution(
                         coll = coll,
-                        keepAliveForDuration = keepAliveForDuration,
+                        keepAliveFor = keepAliveFor,
                         workerId = workerId,
                         taskId = Optional.of(taskId),
                         additionalQuery = additionalConstraint,
@@ -183,7 +185,7 @@ class UniversalScheduler(
                         coll = coll,
                         taskId = taskId,
                         lastExpectedExecutionId =  lastExecutionId,
-                        keepAliveForDuration = keepAliveForDuration,
+                        keepAliveFor = keepAliveFor,
                         workerId = workerId,
                         additionalQuery = additionalConstraint
                     )
@@ -200,7 +202,7 @@ class UniversalScheduler(
         } else {
             val execution = startNewExecution(
                 coll = coll,
-                keepAliveForDuration = keepAliveForDuration,
+                keepAliveFor = keepAliveFor,
                 workerId = workerId,
                 taskId = Optional.empty(),
                 additionalQuery = additionalConstraint,
@@ -267,10 +269,10 @@ class UniversalScheduler(
     fun registerHeartBeat(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        keepAliveForDuration: Duration
+        keepAliveFor: Duration
     ): Boolean {
         val now = clock.now()
-        val keepAliveUntil = now.plus(keepAliveForDuration)
+        val keepAliveUntil = now.plus(keepAliveFor)
 
         val result = coll.updateOne(
             queryForExecution(
@@ -315,7 +317,7 @@ class UniversalScheduler(
     fun markAsFailedButCanRetry(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        retryDelayDuration: Duration,
+        retryDelay: Duration,
         additionalExecutionData: Document = emptyDoc()
     ) {
         val now = clock.now()
@@ -335,7 +337,7 @@ class UniversalScheduler(
                 CAN_EXECUTE_AFTER to doc(
                     "\$cond" to listOf(
                         doc("\$gt" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 0)),
-                        now.plus(retryDelayDuration),
+                        now.plus(retryDelay),
                         "\$" + CAN_EXECUTE_AFTER
                     )
                 )
@@ -419,7 +421,7 @@ class UniversalScheduler(
     fun markAsSuspended(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        retryDelayDuration: Duration,
+        retryDelay: Duration,
         additionalExecutionData: Document = emptyDoc()
     ) {
         val now = clock.now()
@@ -433,7 +435,7 @@ class UniversalScheduler(
             toExecutionStatus = ExecutionStatus.suspended,
             now = now,
             customTaskUpdates = doc(
-                CAN_EXECUTE_AFTER to now.plus(retryDelayDuration),
+                CAN_EXECUTE_AFTER to now.plus(retryDelay),
 
                 // $inc - section
                 // todo: mtymes - handle differently
@@ -452,7 +454,7 @@ class UniversalScheduler(
 
     fun markTasksWithoutHeartBeatAsTimedOut(
         coll: MongoCollection<Document>,
-        retryDelayDuration: Duration?,
+        retryDelay: Duration?,
         additionalExecutionData: Document = emptyDoc()
     ) {
         val deadTasks: List<Document> = coll.find(
@@ -479,7 +481,7 @@ class UniversalScheduler(
                     toExecutionStatus = ExecutionStatus.timedOut,
                     now = now,
                     customTaskUpdates = if (executionAttemptsLeft > 0) {
-                        doc(CAN_EXECUTE_AFTER to now.plus(retryDelayDuration))
+                        doc(CAN_EXECUTE_AFTER to now.plus(retryDelay))
                     } else {
                         emptyDoc()
                     },
@@ -496,14 +498,14 @@ class UniversalScheduler(
 
     private fun startNewExecution(
         coll: MongoCollection<Document>,
-        keepAliveForDuration: Duration,
+        keepAliveFor: Duration,
         workerId: WorkerId,
         taskId: Optional<TaskId>,
         additionalQuery: Document = emptyDoc(),
         sortOrder: Document
     ): StartedExecutionSummary? {
         val now = clock.now()
-        val keepAliveUntil = now.plus(keepAliveForDuration)
+        val keepAliveUntil = now.plus(keepAliveFor)
 
         val executionId = ExecutionId(UUID.randomUUID())
 
@@ -560,12 +562,12 @@ class UniversalScheduler(
         coll: MongoCollection<Document>,
         taskId: TaskId,
         lastExpectedExecutionId: ExecutionId,
-        keepAliveForDuration: Duration,
+        keepAliveFor: Duration,
         workerId: WorkerId,
         additionalQuery: Document = emptyDoc()
     ): StartedExecutionSummary? {
         val now = clock.now()
-        val keepAliveUntil = now.plus(keepAliveForDuration)
+        val keepAliveUntil = now.plus(keepAliveFor)
 
         val modifiedTask = coll.findOneAndUpdate(
             docBuilder()

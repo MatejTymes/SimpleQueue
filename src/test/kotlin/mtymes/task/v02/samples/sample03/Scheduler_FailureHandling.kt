@@ -93,6 +93,20 @@ class FailureSupportingTaskDao(
             )
         )
     }
+
+    fun markAsFailed(
+        executionId: ExecutionId,
+        e: Exception,
+        retryDelay: Duration
+    ) {
+        scheduler.markAsFailedButCanRetry(
+            executionId = executionId,
+            additionalExecutionData = doc(
+                "failureMessage" to e.message
+            ),
+            retryDelay = retryDelay
+        )
+    }
 }
 
 
