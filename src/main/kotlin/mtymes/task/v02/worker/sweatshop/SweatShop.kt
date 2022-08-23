@@ -4,6 +4,13 @@ import mtymes.task.v02.scheduler.domain.WorkerId
 import mtymes.task.v02.worker.Worker
 import java.io.Closeable
 
+data class WorkerSummary(
+    val workerId: WorkerId,
+    val worker: Worker<out Any?>,
+    val isWorking: Boolean,
+    val isGracefullyDying: Boolean
+)
+
 interface SweatShop : AutoCloseable, Closeable {
 
     fun <T> addAndStartWorker(
@@ -16,5 +23,5 @@ interface SweatShop : AutoCloseable, Closeable {
         stopGracefully: Boolean
     ): Boolean
 
-    fun registeredWorkers(): Map<WorkerId, Worker<out Any?>>
+    fun workerSummaries(): List<WorkerSummary>
 }

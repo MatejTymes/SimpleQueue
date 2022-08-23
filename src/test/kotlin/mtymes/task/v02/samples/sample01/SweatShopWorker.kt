@@ -1,6 +1,7 @@
 package mtymes.task.v02.samples.sample01
 
 import mtymes.task.v02.scheduler.domain.WorkerId
+import mtymes.task.v02.scheduler.domain.WorkerId.Companion.uniqueWorkerId
 import mtymes.task.v02.worker.Worker
 import mtymes.task.v02.worker.sweatshop.HumbleSweatShop
 import java.util.concurrent.CopyOnWriteArrayList
@@ -55,7 +56,12 @@ object CustomWorkerId {
 
             sweatShop.addAndStartWorker(
                 worker = worker,
-                workerId = WorkerId("LazyDrone")
+                workerId = uniqueWorkerId("LazyDrone")
+            )
+
+            sweatShop.addAndStartWorker(
+                worker = worker,
+                workerId = WorkerId("DobbyTheElf")
             )
 
             Thread.sleep(4_000)
@@ -78,6 +84,11 @@ object MultipleWorkersRegistered {
             sweatShop.addAndStartWorker(worker1)
             sweatShop.addAndStartWorker(worker2)
 
+            Thread.sleep(250)
+            sweatShop.workerSummaries().forEach { summary ->
+                println("- ${summary}")
+            }
+
             Thread.sleep(4_000)
         }
     }
@@ -97,7 +108,17 @@ object OneWorkerRegisteredMultipleTimes {
             sweatShop.addAndStartWorker(worker)
             sweatShop.addAndStartWorker(worker)
 
-            Thread.sleep(4_000)
+            Thread.sleep(250)
+            sweatShop.workerSummaries().forEach { summary ->
+                println("- ${summary}")
+            }
+
+            Thread.sleep(1_000)
+            sweatShop.workerSummaries().forEach { summary ->
+                println("- ${summary}")
+            }
+
+            Thread.sleep(3_000)
         }
     }
 }
@@ -140,6 +161,10 @@ object InterruptWorker {
                 stopGracefully = false
             )
 
+            sweatShop.workerSummaries().forEach { summary ->
+                println("- ${summary}")
+            }
+
             Thread.sleep(1_250)
         }
     }
@@ -164,6 +189,10 @@ object InterruptWorkerGracefully {
                 workerId = workerId,
                 stopGracefully = true
             )
+
+            sweatShop.workerSummaries().forEach { summary ->
+                println("- ${summary}")
+            }
 
             Thread.sleep(1_250)
         }

@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 
 // todo: mtymes - implement better alternatives (shared threads or coroutines)
-// todo: mtymes - test
+// todo: mtymes - test properly
 class HumbleSweatShop : SweatShop {
 
     companion object {
@@ -29,15 +29,15 @@ class HumbleSweatShop : SweatShop {
         val runner: Runner,
         val taskInProgress: AtomicReference<T> = AtomicReference(null),
 
-        val shutDownGracefully: AtomicBoolean = AtomicBoolean(false),
+        val isBeingGracefullyShutDown: AtomicBoolean = AtomicBoolean(false),
 
         val hasHeartBeatSupport: Boolean,
         val lastHeartBeaterId: AtomicReference<UUID> = AtomicReference(null),
         val lastHeartBeater: AtomicReference<Future<*>> = AtomicReference(null)
     )
 
-    val isShutDown: AtomicBoolean = AtomicBoolean(false)
-    val workers: MutableMap<WorkerId, WorkContext<*>> = mutableMapOf()
+    private val isShutDown: AtomicBoolean = AtomicBoolean(false)
+    private val workers: MutableMap<WorkerId, WorkContext<*>> = mutableMapOf()
 
     override fun <T> addAndStartWorker(
         worker: Worker<T>,
@@ -81,23 +81,43 @@ class HumbleSweatShop : SweatShop {
         stopGracefully: Boolean
     ): Boolean {
         synchronized(workers) {
-            val context = workers.remove(workerId)
-            if (context == null) {
-                return false
+            if (stopGracefully) {
+                val context = workers.get(workerId)
+                if (context == null) {
+                    // worker not recognized
+                    return false
+                } else {
+                    if (context.isBeingGracefullyShutDown.get()) {
+                        // already being gracefully shut down
+                        return false
+                    } else {
+                        context.isBeingGracefullyShutDown.set(true)
+                        return true
+                    }
+                }
             } else {
-                if (stopGracefully) {
-                    context.shutDownGracefully.set(true)
+                val context = workers.remove(workerId)
+                if (context == null) {
+                    // worker not recognized
+                    return false
                 } else {
                     context.runner.shutdownNow()
+                    return true
                 }
-                return true
             }
         }
     }
 
-    override fun registeredWorkers(): Map<WorkerId, Worker<out Any?>> {
-        return workers.mapValues { entry ->
-            entry.value.worker
+    override fun workerSummaries(): List<WorkerSummary> {
+        synchronized(workers) {
+            return workers.values.map { context ->
+                WorkerSummary(
+                    workerId = context.workerId,
+                    worker = context.worker,
+                    isWorking = context.taskInProgress.get() != null,
+                    isGracefullyDying = context.isBeingGracefullyShutDown.get()
+                )
+            }
         }
     }
 
@@ -144,7 +164,7 @@ class HumbleSweatShop : SweatShop {
         }
 
         var taskNotFoundNTimesInARow = 0L
-        while (!shutdownInfo.wasShutdownTriggered() && !workContext.shutDownGracefully.get()) {
+        while (!shutdownInfo.wasShutdownTriggered() && !workContext.isBeingGracefullyShutDown.get()) {
 
             try {
 
@@ -277,9 +297,9 @@ class HumbleSweatShop : SweatShop {
                 runAndIgnoreExceptions {
                     val isExpected = shutdownInfo.wasShutdownTriggered()
                     if (isExpected) {
-                        logger.info("${workerId}]: Worker thread has been interrupted")
+                        logger.info("[${workerId}]: Worker thread has been interrupted")
                     } else {
-                        logger.error("${workerId}]: Worker thread has been interrupted", e)
+                        logger.error("[${workerId}]: Worker thread has been interrupted", e)
                     }
                 }
                 break
@@ -290,17 +310,23 @@ class HumbleSweatShop : SweatShop {
             }
         }
 
-        runAndIgnoreExceptions {
-            if (workContext.shutDownGracefully.get()) {
-                logger.info("[${workerId}]: Worker thread has been shut down gracefully")
-            } else {
-                logger.info("[${workerId}]: Worker thread has been shut down")
+        if (workContext.isBeingGracefullyShutDown.get()) {
+            runAndIgnoreExceptions {
+                synchronized(workers) {
+                    workers.remove(workerId)
+                }
             }
-        }
 
-        if (workContext.shutDownGracefully.get()) {
+            runAndIgnoreExceptions {
+                logger.info("[${workerId}]: Worker thread has been shut down gracefully")
+            }
+
             runAndIgnoreExceptions {
                 workContext.runner.shutdownNow()
+            }
+        } else {
+            runAndIgnoreExceptions {
+                logger.info("[${workerId}]: Worker thread has been shut down")
             }
         }
     }

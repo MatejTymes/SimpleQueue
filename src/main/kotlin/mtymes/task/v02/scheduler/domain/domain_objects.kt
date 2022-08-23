@@ -2,9 +2,9 @@ package mtymes.task.v02.scheduler.domain
 
 import javafixes.`object`.Microtype
 import mtymes.task.v02.common.host.HostUtil.Companion.shortLocalHostName
-import org.apache.commons.lang3.RandomStringUtils
 import org.bson.Document
 import java.util.*
+import java.util.concurrent.atomic.AtomicLong
 
 
 class TaskId(value: String) : Microtype<String>(value) {
@@ -20,9 +20,18 @@ class ExecutionId(value: UUID) : Microtype<UUID>(value) {
 class WorkerId(value: String) : Microtype<String>(value) {
 
     companion object {
+        private val counter = AtomicLong(0L)
+
         fun uniqueWorkerId(): WorkerId {
+            return WorkerId(shortLocalHostName() + "-" + counter.incrementAndGet())
 //            return WorkerId(shortLocalHostName() + "-" + UUID.randomUUID())
-            return WorkerId(shortLocalHostName() + ":" + RandomStringUtils.randomAlphanumeric(8))
+//            return WorkerId(shortLocalHostName() + ":" + RandomStringUtils.randomAlphanumeric(8))
+        }
+
+        fun uniqueWorkerId(taskName: String): WorkerId {
+            return WorkerId(shortLocalHostName() + "-" + taskName + "-" + counter.incrementAndGet())
+//            return WorkerId(shortLocalHostName() + "-" + UUID.randomUUID())
+//            return WorkerId(shortLocalHostName() + ":" + RandomStringUtils.randomAlphanumeric(8))
         }
     }
 }
