@@ -2,7 +2,6 @@ package mtymes.task.v02.samples.sample05
 
 import com.mongodb.client.MongoCollection
 import mtymes.task.v02.common.mongo.DocBuilder.Companion.doc
-import mtymes.task.v02.common.time.UTCClock
 import mtymes.task.v02.scheduler.dao.GenericTaskScheduler
 import mtymes.task.v02.scheduler.dao.SchedulerDefaults
 import mtymes.task.v02.scheduler.domain.ExecutionId
@@ -10,8 +9,8 @@ import mtymes.task.v02.scheduler.domain.WorkerId
 import mtymes.task.v02.test.mongo.emptyLocalCollection
 import mtymes.task.v02.test.task.TaskViewer
 import org.bson.Document
+import printTimedString
 import java.time.Duration
-import java.util.*
 
 
 data class TaskToProcess(
@@ -28,7 +27,9 @@ class SuspendingTaskDao(
         defaults = SchedulerDefaults(
             maxAttemptCount = 3,
             ttlDuration = Duration.ofDays(7),
-            afterStartKeepAliveFor = Duration.ofMinutes(5)
+            afterStartKeepAliveFor = Duration.ofMinutes(5),
+
+            fetchSuspendedTasksAsWell = true
         )
     )
 
@@ -45,12 +46,12 @@ class SuspendingTaskDao(
             delayStartBy = delayStartBy
         )
 
-        println("\nsubmitted Task '${request}'")
+        printTimedString("submitted Task '${request}'")
     }
 
     fun fetchNextTaskExecution(
         workerId: WorkerId,
-        fetchSuspendedTasksAsWell: Boolean = false
+        fetchSuspendedTasksAsWell: Boolean = scheduler.defaults.fetchSuspendedTasksAsWell
     ): TaskToProcess? {
         val result = scheduler.fetchNextAvailableExecution(
             workerId = workerId,
@@ -63,9 +64,9 @@ class SuspendingTaskDao(
         }
 
         if (result != null) {
-            println("\nfetched Execution ${result.executionId}")
+            printTimedString("fetched Execution ${result.executionId}")
         } else {
-            println("\ndid NOT fetch any Execution" + if(!fetchSuspendedTasksAsWell) " (fetching only NON-SUSPENDED tasks)" else "")
+            printTimedString("did NOT fetch any Execution" + if(!fetchSuspendedTasksAsWell) " (fetching only NON-SUSPENDED tasks)" else "")
         }
 
         return result
@@ -80,9 +81,9 @@ class SuspendingTaskDao(
             suspendFor = suspendFor
         )
         if (result != null) {
-            println("\nmarked Execution ${executionId} as SUSPENDED for ${suspendFor}")
+            printTimedString("marked Execution ${executionId} as SUSPENDED for ${suspendFor}")
         } else {
-            println("\ndid NOT mark Execution ${executionId} as SUSPENDED")
+            printTimedString("did NOT mark Execution ${executionId} as SUSPENDED")
         }
     }
 
@@ -97,9 +98,9 @@ class SuspendingTaskDao(
             )
         )
         if (result != null) {
-            println("\nmarked Execution ${executionId} as SUCCEEDED")
+            printTimedString("marked Execution ${executionId} as SUCCEEDED")
         } else {
-            println("\ndid NOT mark Execution ${executionId} as SUCCEEDED")
+            printTimedString("did NOT mark Execution ${executionId} as SUCCEEDED")
         }
     }
 }
@@ -119,7 +120,6 @@ object DelayedStart {
             delayStartBy = Duration.ofSeconds(1)
         )
 
-        printCurrentTime()
         TaskViewer.displayTinyTasksSummary(
             coll,
             setOf("maxAttemptsCount", "attemptsLeft", "canBeExecutedAsOf")
@@ -131,7 +131,6 @@ object DelayedStart {
         Thread.sleep(1_100)
 
 
-        printCurrentTime()
         dao.fetchNextTaskExecution(workerId)
 
         TaskViewer.displayTinyTasksSummary(
@@ -186,29 +185,21 @@ object TaskSuspension {
             suspendFor = Duration.ofSeconds(1)
         )
 
-        printCurrentTime()
         TaskViewer.displayTinyTasksSummary(
             coll,
             setOf("maxAttemptsCount", "attemptsLeft", "canBeExecutedAsOf", "executions.suspensionCount")
         )
         dao.fetchNextTaskExecution(
-            workerId = workerId,
-            fetchSuspendedTasksAsWell = true
+            workerId = workerId
         )
 
 
         Thread.sleep(1_100)
 
 
-        printCurrentTime()
         dao.fetchNextTaskExecution(
-            workerId = workerId,
-            fetchSuspendedTasksAsWell = true
+            workerId = workerId
         )
     }
 }
 
-
-private fun printCurrentTime() {
-    println("\n\nnow = ${Date.from(UTCClock().now().toInstant())}")
-}
