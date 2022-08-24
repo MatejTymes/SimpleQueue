@@ -174,7 +174,7 @@ object FailToCancelTaskInProgress {
             dao.markTaskAsCancelled(taskToProcess.taskId, "clearing out the queue")
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            printTimedString(e.message!!)
         }
 
 
