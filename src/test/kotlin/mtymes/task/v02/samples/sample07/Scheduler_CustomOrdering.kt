@@ -148,7 +148,7 @@ object ChangingPriorityOnTheGo {
     @JvmStatic
     fun main(args: Array<String>) {
         val workerId = WorkerId("UnluckyInternDoingManualWork")
-        val coll = emptyLocalCollection("sample05tasks")
+        val coll = emptyLocalCollection("sample07tasks")
         val dao = PriorityOrderedTasksDao(coll)
 
         val taskIdA = dao.submitTask("A", 5)
@@ -170,7 +170,7 @@ object JumpQueueOnFailure {
     @JvmStatic
     fun main(args: Array<String>) {
         val workerId = WorkerId("UnluckyInternDoingManualWork")
-        val coll = emptyLocalCollection("sample05tasks")
+        val coll = emptyLocalCollection("sample07tasks")
         val dao = PriorityOrderedTasksDao(coll)
 
         dao.submitTask("A", 5)

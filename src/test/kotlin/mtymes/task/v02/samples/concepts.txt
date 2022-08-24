@@ -4,7 +4,7 @@ Why
 [ ] any node should be allowed to die, had some difficulties if that happened with other solutions (e.g.: artemis)
 [ ] had some custom requirements which could not be supported OOTB by existing solutions and required workarounds
 [ ] already used this approach for millions of tasks where they've been processed for multiple days
-[ ] this one is generic enough, so it could be used for almost all of our existing solutions
+[ ] this one is generic enough, so it could be used for almost all of our existing solutions (or all with minor additional modifications)
 
 Just explain
 [ ] - Task
@@ -34,7 +34,7 @@ Sample06
 Sample07
 [ ] - custom ordering
 Sample08
-[ ] - custom queries
+[ ] - custom fetch criteria
 Sample09
 [ ] - invalid state transitions
 
