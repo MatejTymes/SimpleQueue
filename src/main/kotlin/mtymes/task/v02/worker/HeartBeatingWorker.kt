@@ -4,7 +4,7 @@ import mtymes.task.v02.scheduler.domain.WorkerId
 import java.time.Duration
 
 
-interface HeartBeatingTaskWorker<Task> : Worker<Task> {
+interface HeartBeatingWorker<Task> : Worker<Task> {
 
     fun heartBeatInterval(
         task: Task,

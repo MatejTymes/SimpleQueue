@@ -56,9 +56,9 @@ class UniversalScheduler(
         const val CAN_BE_EXECUTED_AS_OF = "canBeExecutedAsOf"
 
         const val LAST_HEARTBEAT_AT = "lastHeartBeatAt"
-        const val KILLABLE_AFTER = "killableAfter"
         const val LAST_EXECUTION_ID = "lastExecutionId"
         const val LAST_EXECUTION_STATE = "lastExecutionState"
+        const val LAST_EXECUTION_TIMES_OUT_AFTER = "lastExecutionTimesOutAfter"
 
         // todo: mtymes - add flag - retainOnlyLastExecution
 
@@ -82,6 +82,7 @@ class UniversalScheduler(
         const val LAST_UN_SUSPENDED_AT = "lastUnSuspendedAt"
         const val SUSPENSION_COUNT = "suspensionCount"
         const val FINISHED_AT = "finishedAt"
+        const val TIMES_OUT_AFTER = "timesOutAfter"
 
     }
 
@@ -317,8 +318,9 @@ class UniversalScheduler(
             ),
             doc(
                 "\$set" to doc(
-                    LAST_HEARTBEAT_AT to now,
-                    KILLABLE_AFTER to keepAliveUntil,
+                    LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
+                    EXECUTIONS + ".\$." + LAST_HEARTBEAT_AT to now,
+                    EXECUTIONS + ".\$." + TIMES_OUT_AFTER to keepAliveUntil,
                 )
             )
         )
@@ -544,7 +546,7 @@ class UniversalScheduler(
             doc(
                 STATUS to TaskStatus.inProgress,
                 LAST_EXECUTION_STATE to ExecutionStatus.running,
-                KILLABLE_AFTER to (doc("\$lt" to clock.now())),
+                LAST_EXECUTION_TIMES_OUT_AFTER to (doc("\$lt" to clock.now())),
             )
         ).toList()
 
@@ -612,6 +614,7 @@ class UniversalScheduler(
                         STATUS to ExecutionStatus.running,
                         STATUS_UPDATED_AT to now,
                         DATA to emptyDoc(),
+                        TIMES_OUT_AFTER to keepAliveUntil,
                         LAST_UPDATED_AT to now,
                     )
                 ),
@@ -621,7 +624,7 @@ class UniversalScheduler(
                     LAST_EXECUTION_ID to executionId,
                     LAST_EXECUTION_STATE to ExecutionStatus.running,
 //                    LAST_HEARTBEAT_AT to now,
-                    KILLABLE_AFTER to keepAliveUntil,
+                    LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
                     LAST_UPDATED_AT to now,
                 ),
 //                "\$unset" to doc(
@@ -680,11 +683,12 @@ class UniversalScheduler(
                     STATUS_UPDATED_AT to now,
                     LAST_EXECUTION_STATE to ExecutionStatus.running,
 //                    LAST_HEARTBEAT_AT to now,
-                    KILLABLE_AFTER to keepAliveUntil,
+                    LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
                     EXECUTIONS + ".\$." + STATUS to ExecutionStatus.running,
                     EXECUTIONS + ".\$." + STATUS_UPDATED_AT to now,
                     EXECUTIONS + ".\$." + LAST_UN_SUSPENDED_AT to now,
                     EXECUTIONS + ".\$." + WORKER_ID to workerId,
+                    EXECUTIONS + ".\$." + TIMES_OUT_AFTER to keepAliveUntil,
                     EXECUTIONS + ".\$." + LAST_UPDATED_AT to now,
                     LAST_UPDATED_AT to now,
                 ),

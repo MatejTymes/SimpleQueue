@@ -9,9 +9,13 @@ import mtymes.task.v02.scheduler.domain.TaskId
 import mtymes.task.v02.scheduler.domain.WorkerId
 import mtymes.task.v02.test.mongo.emptyLocalCollection
 import mtymes.task.v02.test.task.TaskViewer.displayTinyTasksSummary
+import mtymes.task.v02.worker.HeartBeatingWorker
+import mtymes.task.v02.worker.sweatshop.HumbleSweatShop
 import org.bson.Document
 import printTimedString
 import java.time.Duration
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 
 data class TaskToProcess(
@@ -133,7 +137,7 @@ object TaskDoesNOTTimeOutAutomatically {
 
         displayTinyTasksSummary(
             coll,
-            setOf("killableAfter")
+            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
         )
 
 
@@ -143,7 +147,7 @@ object TaskDoesNOTTimeOutAutomatically {
 
         displayTinyTasksSummary(
             coll,
-            setOf("killableAfter")
+            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
         )
     }
 }
@@ -172,7 +176,7 @@ object CallingTaskToMarkExecutionAsTimedOut {
 
         displayTinyTasksSummary(
             coll,
-            setOf("killableAfter")
+            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
         )
 
         try {
@@ -185,13 +189,13 @@ object CallingTaskToMarkExecutionAsTimedOut {
 
         displayTinyTasksSummary(
             coll,
-            setOf("killableAfter")
+            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
         )
     }
 }
 
 
-object HeartBeatExtendsKeepAlivePerios {
+object HeartBeatExtendsKeepAlivePeriod {
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -219,7 +223,84 @@ object HeartBeatExtendsKeepAlivePerios {
 
         displayTinyTasksSummary(
             coll,
-            setOf("killableAfter")
+            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
+        )
+    }
+}
+
+
+
+class LazyHeartBeatingWorker(
+    val dao: TimeOutingTasksDao,
+    val coll: MongoCollection<Document>
+) : HeartBeatingWorker<TaskToProcess> {
+
+    override fun heartBeatInterval(task: TaskToProcess, workerId: WorkerId): Duration {
+        return Duration.ofSeconds(2)
+    }
+
+    override fun updateHeartBeat(task: TaskToProcess, workerId: WorkerId) {
+        dao.registerHeartBeat(
+            executionId = task.executionId,
+            keepAliveFor = Duration.ofSeconds(3)
+        )
+
+        displayTinyTasksSummary(
+            coll,
+            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
+        )
+    }
+
+    override fun fetchNextTaskToProcess(workerId: WorkerId): TaskToProcess? {
+        return dao.fetchNextTaskExecution(
+            workerId = workerId,
+            afterStartKeepAliveFor = Duration.ofSeconds(3)
+        )
+    }
+
+    override fun executeTask(task: TaskToProcess, workerId: WorkerId) {
+        // some complex sleeping
+        Thread.sleep(7_000)
+
+        dao.markAsSucceeded(task.executionId)
+    }
+
+    override fun taskToLoggableString(task: TaskToProcess, workerId: WorkerId): String {
+        return task.request
+    }
+}
+
+
+
+object WorkerWithHeartBeatShowcase {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val coll = emptyLocalCollection("sample06tasks")
+        val dao = TimeOutingTasksDao(coll)
+
+        dao.submitTask("A")
+
+        val executor = Executors.newScheduledThreadPool(1)
+
+        executor.scheduleAtFixedRate({ dao.findAndMarkTimedOutTasks() }, 0, 1, TimeUnit.SECONDS)
+
+        try {
+            HumbleSweatShop().use { sweatShop ->
+
+                val worker = LazyHeartBeatingWorker(dao, coll)
+
+                sweatShop.addAndStartWorker(worker)
+
+                Thread.sleep(8_500)
+            }
+        } finally {
+            executor.shutdownNow()
+        }
+
+        displayTinyTasksSummary(
+            coll,
+            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
         )
     }
 }

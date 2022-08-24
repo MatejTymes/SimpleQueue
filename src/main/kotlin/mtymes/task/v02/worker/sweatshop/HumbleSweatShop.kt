@@ -2,7 +2,7 @@ package mtymes.task.v02.worker.sweatshop
 
 import javafixes.concurrency.Runner
 import mtymes.task.v02.scheduler.domain.WorkerId
-import mtymes.task.v02.worker.HeartBeatingTaskWorker
+import mtymes.task.v02.worker.HeartBeatingWorker
 import mtymes.task.v02.worker.Worker
 import org.apache.commons.lang3.StringUtils.isBlank
 import org.slf4j.Logger
@@ -50,7 +50,7 @@ class HumbleSweatShop : SweatShop {
                 throw IllegalArgumentException("WorkerId '${workerId}' already used for a different registered worker")
             }
 
-            val hasHeartBeatSupport = worker is HeartBeatingTaskWorker<*>
+            val hasHeartBeatSupport = worker is HeartBeatingWorker<*>
             val numberOfThreads =
                 if (hasHeartBeatSupport) 2
                 else 1
@@ -341,9 +341,9 @@ class HumbleSweatShop : SweatShop {
         val heartBeaterId = randomUUID()
         workContext.lastHeartBeaterId.set(heartBeaterId)
 
-        val heartBeatingTaskWorker = worker as HeartBeatingTaskWorker<T>
+        val heartBeatingWorker = worker as HeartBeatingWorker<T>
         // we should fail and don't start task processing if we're unable to get the heart beat interval
-        val heartBeatInterval = heartBeatingTaskWorker.heartBeatInterval(task, workerId)
+        val heartBeatInterval = heartBeatingWorker.heartBeatInterval(task, workerId)
         val heartBeater: Future<Void> = workContext.runner.run { shutdownInfo ->
             while (
                 !shutdownInfo.wasShutdownTriggered() &&
@@ -352,13 +352,17 @@ class HumbleSweatShop : SweatShop {
                 try {
                     Thread.sleep(heartBeatInterval.toMillis())
 
-                    heartBeatingTaskWorker.updateHeartBeat(
+                    heartBeatingWorker.updateHeartBeat(
                         task = task,
                         workerId = workerId
                     )
                 } catch (e: InterruptedException) {
                     runAndIgnoreExceptions {
-                        logger.info("[${workerId}]: Heart beat thread has been interrupted")
+                        if (heartBeaterId.equals(workContext.lastHeartBeaterId.get())) {
+                            logger.error("[${workerId}]: Heart beat thread has been interrupted", e)
+                        } else {
+                            logger.info("[${workerId}]: Heart beat thread has finished")
+                        }
                     }
                     break
                 } catch (e: Exception) {
