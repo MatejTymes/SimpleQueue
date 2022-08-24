@@ -10,7 +10,9 @@ import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.*
 import java.util.UUID.randomUUID
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -30,11 +32,31 @@ class HumbleSweatShop : SweatShop {
         val taskInProgress: AtomicReference<T> = AtomicReference(null),
 
         val isBeingGracefullyShutDown: AtomicBoolean = AtomicBoolean(false),
+        val gracefulShutdownCountDown: CountDownLatch = CountDownLatch(1),
 
         val hasHeartBeatSupport: Boolean,
         val lastHeartBeaterId: AtomicReference<UUID> = AtomicReference(null),
         val lastHeartBeater: AtomicReference<Future<*>> = AtomicReference(null)
-    )
+    ) {
+        fun shutDownGracefully() {
+            isBeingGracefullyShutDown.set(true)
+            try {
+                gracefulShutdownCountDown.countDown()
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+
+        fun isBeingGracefullyShutDown(): Boolean {
+            return isBeingGracefullyShutDown.get()
+        }
+
+        fun sleepIfNoShutdown(
+            sleepDuration: Duration
+        ) {
+            gracefulShutdownCountDown.await(sleepDuration.toMillis(), TimeUnit.MILLISECONDS)
+        }
+    }
 
     private val isShutDown: AtomicBoolean = AtomicBoolean(false)
     private val workers: MutableMap<WorkerId, WorkContext<*>> = mutableMapOf()
@@ -87,11 +109,11 @@ class HumbleSweatShop : SweatShop {
                     // worker not recognized
                     return false
                 } else {
-                    if (context.isBeingGracefullyShutDown.get()) {
+                    if (context.isBeingGracefullyShutDown()) {
                         // already being gracefully shut down
                         return false
                     } else {
-                        context.isBeingGracefullyShutDown.set(true)
+                        context.shutDownGracefully()
                         return true
                     }
                 }
@@ -115,7 +137,7 @@ class HumbleSweatShop : SweatShop {
                     workerId = context.workerId,
                     worker = context.worker,
                     isWorking = context.taskInProgress.get() != null,
-                    isGracefullyDying = context.isBeingGracefullyShutDown.get()
+                    isGracefullyDying = context.isBeingGracefullyShutDown()
                 )
             }
         }
@@ -164,7 +186,7 @@ class HumbleSweatShop : SweatShop {
         }
 
         var taskNotFoundNTimesInARow = 0L
-        while (!shutdownInfo.wasShutdownTriggered() && !workContext.isBeingGracefullyShutDown.get()) {
+        while (!shutdownInfo.wasShutdownTriggered() && !workContext.isBeingGracefullyShutDown()) {
 
             try {
 
@@ -269,7 +291,6 @@ class HumbleSweatShop : SweatShop {
 
                 // SLEEP DELAY BEFORE FETCHING NEXT TASK
 
-                // todo: mtymes - don't want to sleep in case of gracefull shutdown (that does not throw interrupted exception - so we could wait for really long time)
                 if (task == null) {
 
                     // default to 1 minute if fails to get the sleep duration
@@ -284,7 +305,8 @@ class HumbleSweatShop : SweatShop {
                             logger.error("${workerId}]: Failed to evaluate sleep duration if no task was available", e)
                         }
                     }
-                    Thread.sleep(sleepDuration.toMillis())
+                    // don't use Thread.sleep(..) as it would wait for the whole duration on graceful shutdown
+                    workContext.sleepIfNoShutdown(sleepDuration)
 
                 } else {
 
@@ -310,7 +332,7 @@ class HumbleSweatShop : SweatShop {
             }
         }
 
-        if (workContext.isBeingGracefullyShutDown.get()) {
+        if (workContext.isBeingGracefullyShutDown()) {
             runAndIgnoreExceptions {
                 synchronized(workers) {
                     workers.remove(workerId)
