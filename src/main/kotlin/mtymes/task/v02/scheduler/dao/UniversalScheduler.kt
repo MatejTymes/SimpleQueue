@@ -3,7 +3,6 @@ package mtymes.task.v02.scheduler.dao
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.FindOneAndUpdateOptions
 import com.mongodb.client.model.ReturnDocument
-import com.mongodb.client.result.UpdateResult
 import mtymes.task.v02.common.mongo.DocBuilder
 import mtymes.task.v02.common.mongo.DocBuilder.Companion.doc
 import mtymes.task.v02.common.mongo.DocBuilder.Companion.docBuilder
@@ -98,6 +97,7 @@ class UniversalScheduler(
     ) : ToTaskStatus
 
 
+    // todo: mtymes - fail if task is not submitted
     fun submitTask(
         coll: MongoCollection<Document>,
         config: TaskConfig,
@@ -105,7 +105,7 @@ class UniversalScheduler(
         ttlDuration: Duration,
         taskId: TaskId = uniqueTaskId(),
         delayStartBy: Duration = Duration.ofSeconds(0)
-    ): TaskId? {
+    ): TaskId {
         val now = clock.now()
 
         val success = coll.insert(
@@ -129,7 +129,7 @@ class UniversalScheduler(
         if (success) {
             return taskId
         } else {
-            return null
+            throw IllegalStateException("Failed to submit Task with TaskId '${taskId}' and content ${data}")
         }
     }
 
@@ -233,10 +233,10 @@ class UniversalScheduler(
         coll: MongoCollection<Document>,
         taskId: TaskId,
         additionalTaskData: Document
-    ): Boolean {
+    ): Document? {
         val now = clock.now()
 
-        val result = coll.updateOne(
+        val result = coll.findOneAndUpdate(
             doc(
                 TASK_ID to taskId
             ),
@@ -251,10 +251,12 @@ class UniversalScheduler(
                         }
                     )
                     .build()
-            )
+            ),
+            FindOneAndUpdateOptions()
+                .returnDocument(ReturnDocument.AFTER)
         )
 
-        return result.modifiedCount > 0
+        return result
     }
 
     fun updateExecutionData(
@@ -262,10 +264,10 @@ class UniversalScheduler(
         executionId: ExecutionId,
         additionalExecutionData: Document,
         mustBeInProgress: Boolean
-    ): Boolean {
+    ): Document? {
         val now = clock.now()
 
-        val result: UpdateResult = coll.updateOne(
+        val result = coll.findOneAndUpdate(
             if (mustBeInProgress) {
                 queryForExecution(
                     executionId,
@@ -290,10 +292,12 @@ class UniversalScheduler(
                         }
                     )
                     .build(),
-            )
+            ),
+            FindOneAndUpdateOptions()
+                .returnDocument(ReturnDocument.AFTER)
         )
 
-        return result.matchedCount > 0
+        return result
     }
 
     // todo: mtymes - add field affectsLastUpdatesAt
@@ -462,7 +466,9 @@ class UniversalScheduler(
                         }
                     )
                     .build()
-            )
+            ),
+            FindOneAndUpdateOptions()
+                .returnDocument(ReturnDocument.AFTER)
         )
 
         if (modifiedTask == null) {

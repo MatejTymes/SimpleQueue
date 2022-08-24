@@ -33,15 +33,11 @@ class SimpleTaskDao(
         )
     )
 
-    companion object {
-        const val REQUEST = "request"
-    }
-
     fun submitTask(
         request: String
     ) {
         scheduler.submitTask(
-            doc(REQUEST to request)
+            doc("request" to request)
         )
         printTimedString("submitted Task '${request}'")
     }
@@ -53,7 +49,7 @@ class SimpleTaskDao(
             ?.let { summary ->
                 TaskToProcess(
                     executionId = summary.execution.executionId,
-                    request = summary.task.data.getString(REQUEST)
+                    request = summary.task.data.getString("request")
                 )
             }
 

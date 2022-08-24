@@ -33,16 +33,12 @@ class SuspendingTaskDao(
         )
     )
 
-    companion object {
-        const val REQUEST = "request"
-    }
-
     fun submitTask(
         request: String,
         delayStartBy: Duration = Duration.ofSeconds(0)
     ) {
         scheduler.submitTask(
-            customData = doc(REQUEST to request),
+            customData = doc("request" to request),
             delayStartBy = delayStartBy
         )
 
@@ -59,7 +55,7 @@ class SuspendingTaskDao(
         )?.let { summary ->
             TaskToProcess(
                 executionId = summary.execution.executionId,
-                request = summary.task.data.getString(REQUEST)
+                request = summary.task.data.getString("request")
             )
         }
 

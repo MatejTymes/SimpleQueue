@@ -34,15 +34,11 @@ class CancellationSupportingTaskDao(
         )
     )
 
-    companion object {
-        const val REQUEST = "request"
-    }
-
     fun submitTask(
         request: String
     ): TaskId? {
         val taskId = scheduler.submitTask(
-            DocBuilder.doc(REQUEST to request)
+            DocBuilder.doc("request" to request)
         )
 
         printTimedString("submitted Task '${request}'")
@@ -58,7 +54,7 @@ class CancellationSupportingTaskDao(
                 TaskToProcess(
                     taskId = summary.task.taskId,
                     executionId = summary.execution.executionId,
-                    request = summary.task.data.getString(REQUEST)
+                    request = summary.task.data.getString("request")
                 )
             }
 

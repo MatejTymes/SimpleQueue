@@ -43,7 +43,7 @@ class GenericTaskScheduler(
         ttlDuration: Duration = defaults.ttlDuration,
         maxAttemptCount: Int = defaults.maxAttemptCount,
         delayStartBy: Duration = defaults.delayStartBy
-    ): TaskId? {
+    ): TaskId {
         return scheduler.submitTask(
             coll = collection,
             taskId = taskId,
@@ -150,6 +150,17 @@ class GenericTaskScheduler(
             suspendFor = suspendFor,
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
+        )
+    }
+
+    fun updateTaskData(
+        taskId: TaskId,
+        additionalTaskData: Document
+    ): Document? {
+        return scheduler.updateTaskData(
+            coll = collection,
+            taskId = taskId,
+            additionalTaskData = additionalTaskData
         )
     }
 }
