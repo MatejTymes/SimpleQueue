@@ -11,6 +11,7 @@ import mtymes.task.v02.scheduler.domain.WorkerId
 import mtymes.task.v02.test.mongo.emptyLocalCollection
 import mtymes.task.v02.test.task.TaskViewer
 import org.bson.Document
+import printTimedString
 import java.time.Duration
 
 
@@ -40,15 +41,19 @@ class CancellationSupportingTaskDao(
     fun submitTask(
         request: String
     ): TaskId? {
-        return scheduler.submitTask(
+        val taskId = scheduler.submitTask(
             DocBuilder.doc(REQUEST to request)
         )
+
+        printTimedString("submitted Task '${request}'")
+
+        return taskId
     }
 
     fun fetchNextTaskExecution(
         workerId: WorkerId
     ): TaskToProcess? {
-        return scheduler.fetchNextAvailableExecution(workerId)
+        val result = scheduler.fetchNextAvailableExecution(workerId)
             ?.let { summary ->
                 TaskToProcess(
                     taskId = summary.task.taskId,
@@ -56,18 +61,31 @@ class CancellationSupportingTaskDao(
                     request = summary.task.data.getString(REQUEST)
                 )
             }
+
+        if (result != null) {
+            printTimedString("fetched Execution ${result.executionId}")
+        } else {
+            printTimedString("did NOT fetch any Execution")
+        }
+
+        return result
     }
 
     fun markTaskAsCancelled(
         taskId: TaskId,
         cancellationReason: String
     ) {
-        scheduler.markTaskAsCancelled(
+        val result = scheduler.markTaskAsCancelled(
             taskId = taskId,
             additionalTaskData = doc(
                 "cancellationReason" to cancellationReason
             )
         )
+        if (result != null) {
+            printTimedString("marked Task ${taskId} as CANCELLED")
+        } else {
+            printTimedString("did NOT mark Task ${taskId} as CANCELLED")
+        }
     }
 
     fun markExecutionAsCancelled(
@@ -75,7 +93,7 @@ class CancellationSupportingTaskDao(
         cancellationReason: String,
         incNumber: String
     ) {
-        scheduler.markExecutionAsCancelled(
+        val result = scheduler.markExecutionAsCancelled(
             executionId = executionId,
             additionalTaskData = doc(
                 "cancellationReason" to cancellationReason
@@ -84,6 +102,11 @@ class CancellationSupportingTaskDao(
                 "incNumber" to incNumber
             )
         )
+        if (result != null) {
+            printTimedString("marked Execution ${executionId} as CANCELLED")
+        } else {
+            printTimedString("did NOT mark Execution ${executionId} as CANCELLED")
+        }
     }
 }
 
@@ -102,13 +125,12 @@ object CancelTask {
         dao.markTaskAsCancelled(taskId, "clearing out the queue")
 
 
-        val fetchedNext = dao.fetchNextTaskExecution(workerId)
+        dao.fetchNextTaskExecution(workerId)
 
         TaskViewer.displayTinyTasksSummary(
             coll,
             setOf("maxAttemptsCount", "attemptsLeft")
         )
-        println("isThereAnythingAvailable = ${fetchedNext != null}")
     }
 }
 
@@ -129,13 +151,12 @@ object CancelExecution {
         dao.markExecutionAsCancelled(executionId1, "subject no longer needed", "EO-66")
 
 
-        val fetchedNext = dao.fetchNextTaskExecution(workerId)
+        dao.fetchNextTaskExecution(workerId)
 
         TaskViewer.displayTinyTasksSummary(
             coll,
             setOf("maxAttemptsCount", "attemptsLeft")
         )
-        println("isThereAnythingAvailable = ${fetchedNext != null}")
     }
 }
 

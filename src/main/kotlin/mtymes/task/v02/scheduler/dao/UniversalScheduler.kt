@@ -477,7 +477,7 @@ class UniversalScheduler(
             val currentTaskStatus = TaskStatus.valueOf(task.getString(STATUS))
             if (currentTaskStatus != fromTaskStatus) {
                 throw UnexpectedStatusException(
-                    "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected '${fromTaskStatus}', but got '${currentTaskStatus}' Task status instead"
+                    "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected '${fromTaskStatus}' but got '${currentTaskStatus}' Task status instead"
                 )
             }
 
@@ -831,7 +831,7 @@ class UniversalScheduler(
                 } else {
                     throw UnexpectedStatusException(
                         "Failed to mark Task '${taskId}' as '${toTaskStatus}' and Execution '${executionId}' as '${toExecutionStatus}'" +
-                                "as expected '${fromTaskStatus}' Task and '${fromExecutionStatus}' Execution, but got '${currentTaskStatus}' Task and '${currentExecutionStatus}' Execution instead"
+                                "as expected '${fromTaskStatus}' Task and '${fromExecutionStatus}' Execution but got '${currentTaskStatus}' Task and '${currentExecutionStatus}' Execution instead"
                     )
                 }
             }
