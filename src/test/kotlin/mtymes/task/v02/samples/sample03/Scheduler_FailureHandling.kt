@@ -2,7 +2,6 @@ package mtymes.task.v02.samples.sample03
 
 import com.mongodb.client.MongoCollection
 import mtymes.task.v02.common.mongo.DocBuilder.Companion.doc
-import mtymes.task.v02.common.time.UTCClock
 import mtymes.task.v02.scheduler.dao.GenericTaskScheduler
 import mtymes.task.v02.scheduler.dao.SchedulerDefaults
 import mtymes.task.v02.scheduler.domain.ExecutionId
@@ -12,8 +11,8 @@ import mtymes.task.v02.test.task.TaskViewer.displayTinyTasksSummary
 import mtymes.task.v02.worker.Worker
 import mtymes.task.v02.worker.sweatshop.HumbleSweatShop
 import org.bson.Document
+import printTimedString
 import java.time.Duration
-import java.util.*
 
 
 data class TaskToProcess(
@@ -45,54 +44,78 @@ class FailureSupportingTaskDao(
         scheduler.submitTask(
             doc(REQUEST to request)
         )
+        printTimedString("submitted Task '${request}'")
     }
 
     fun fetchNextTaskExecution(
         workerId: WorkerId
     ): TaskToProcess? {
-        return scheduler.fetchNextAvailableExecution(workerId)
+        val result = scheduler.fetchNextAvailableExecution(workerId)
             ?.let { summary ->
                 TaskToProcess(
                     executionId = summary.execution.executionId,
                     request = summary.task.data.getString(REQUEST)
                 )
             }
+
+        if (result != null) {
+            printTimedString("fetched Execution ${result.executionId}")
+        } else {
+            printTimedString("did NOT fetch any Execution")
+        }
+
+        return result
     }
 
     fun markAsSucceeded(
         executionId: ExecutionId,
         message: String
     ) {
-        scheduler.markAsSucceeded(
+        val result = scheduler.markAsSucceeded(
             executionId = executionId,
             additionalExecutionData = doc(
                 "successMessage" to message
             )
         )
+        if (result != null) {
+            printTimedString("marked Execution ${executionId} as SUCCEEDED")
+        } else {
+            printTimedString("did NOT mark Execution ${executionId} as SUCCEEDED")
+        }
     }
 
     fun markAsFailed(
         executionId: ExecutionId,
         e: Exception
     ) {
-        scheduler.markAsFailedButCanRetry(
+        val result = scheduler.markAsFailedButCanRetry(
             executionId = executionId,
             additionalExecutionData = doc(
                 "failureMessage" to e.message
             )
         )
+        if (result != null) {
+            printTimedString("marked Execution ${executionId} as FAILED")
+        } else {
+            printTimedString("did NOT mark Execution ${executionId} as FAILED")
+        }
     }
 
     fun markAsFailedAndCanNOTRetry(
         executionId: ExecutionId,
         e: Exception
     ) {
-        scheduler.markAsFailedButCanNOTRetry(
+        val result = scheduler.markAsFailedButCanNOTRetry(
             executionId = executionId,
             additionalExecutionData = doc(
                 "failureMessage" to e.message
             )
         )
+        if (result != null) {
+            printTimedString("marked Execution ${executionId} as FAILED WITHOUT RETRY")
+        } else {
+            printTimedString("did NOT mark Execution ${executionId} as FAILED WITHOUT RETRY")
+        }
     }
 
     fun markAsFailed(
@@ -100,13 +123,18 @@ class FailureSupportingTaskDao(
         e: Exception,
         retryDelay: Duration
     ) {
-        scheduler.markAsFailedButCanRetry(
+        val result = scheduler.markAsFailedButCanRetry(
             executionId = executionId,
             additionalExecutionData = doc(
                 "failureMessage" to e.message
             ),
             retryDelay = retryDelay
         )
+        if (result != null) {
+            printTimedString("marked Execution ${executionId} as FAILED with retry delay of ${retryDelay}")
+        } else {
+            printTimedString("did NOT mark Execution ${executionId} as FAILED")
+        }
     }
 }
 
@@ -153,7 +181,7 @@ object WorkerFailing {
 
             sweatShop.addAndStartWorker(worker)
 
-            Thread.sleep(5_000)
+            Thread.sleep(4_500)
         }
 
         displayTinyTasksSummary(
@@ -179,6 +207,13 @@ object FailThenSucceed {
         val executionId1 = dao.fetchNextTaskExecution(workerId)!!.executionId
         dao.markAsFailed(executionId1, IllegalStateException("It should have worked"))
 
+
+        displayTinyTasksSummary(
+            coll,
+            setOf("maxAttemptsCount", "attemptsLeft")
+        )
+
+
         val executionId2 = dao.fetchNextTaskExecution(workerId)!!.executionId
         dao.markAsSucceeded(executionId2, "So glad it's over. I'm not doing this again")
 
@@ -189,8 +224,7 @@ object FailThenSucceed {
         )
 
 
-        val isThereAnythingLeft = dao.fetchNextTaskExecution(workerId) != null
-        println("isThereAnythingLeft = ${isThereAnythingLeft}")
+        dao.fetchNextTaskExecution(workerId)
     }
 }
 
@@ -217,8 +251,7 @@ object UnrecoverableFailure {
         )
 
 
-        val isThereAnythingLeft = dao.fetchNextTaskExecution(workerId) != null
-        println("isThereAnythingLeft = ${isThereAnythingLeft}")
+        dao.fetchNextTaskExecution(workerId)
     }
 }
 
@@ -238,35 +271,28 @@ object DelayedRetryAfterFailure {
         val executionId1 = dao.fetchNextTaskExecution(workerId)!!.executionId
         dao.markAsFailed(
             executionId1,
-            IllegalStateException("Hmm. So I't not as easy as I thought."),
+            IllegalStateException("Hmm. So It's not as easy as I thought."),
             Duration.ofSeconds(2)
         )
 
 
-        var fetchedNext = dao.fetchNextTaskExecution(workerId)
+        dao.fetchNextTaskExecution(workerId)
 
-        printCurrentTime()
         displayTinyTasksSummary(
             coll,
             setOf("maxAttemptsCount", "attemptsLeft", "canBeExecutedAsOf")
         )
-        println("isThereAnythingAvailable = ${fetchedNext != null}")
+
 
 
         Thread.sleep(2_500)
 
 
-        fetchedNext = dao.fetchNextTaskExecution(workerId)
+        dao.fetchNextTaskExecution(workerId)
 
-        printCurrentTime()
         displayTinyTasksSummary(
             coll,
             setOf("maxAttemptsCount", "attemptsLeft", "canBeExecutedAsOf")
         )
-        println("isThereAnythingAvailable = ${fetchedNext != null}")
-    }
-
-    private fun printCurrentTime() {
-        println("\n\nnow = ${Date.from(UTCClock().now().toInstant())}")
     }
 }
