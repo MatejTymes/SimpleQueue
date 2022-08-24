@@ -11,6 +11,7 @@ import mtymes.task.v02.test.task.TaskViewer.displayTinyTasksSummary
 import mtymes.task.v02.worker.Worker
 import mtymes.task.v02.worker.sweatshop.HumbleSweatShop
 import org.bson.Document
+import printTimedString
 import java.time.Duration
 
 
@@ -42,24 +43,38 @@ class SimpleTaskDao(
         scheduler.submitTask(
             doc(REQUEST to request)
         )
+        printTimedString("submitted Task '${request}'")
     }
 
     fun fetchNextTaskExecution(
         workerId: WorkerId
     ): TaskToProcess? {
-        return scheduler.fetchNextAvailableExecution(workerId)
+        val result = scheduler.fetchNextAvailableExecution(workerId)
             ?.let { summary ->
                 TaskToProcess(
                     executionId = summary.execution.executionId,
                     request = summary.task.data.getString(REQUEST)
                 )
             }
+
+        if (result != null) {
+            printTimedString("fetched Execution ${result.executionId} [${result.request}]")
+        } else {
+            printTimedString("did NOT fetch any Execution")
+        }
+
+        return result
     }
 
     fun markAsSucceeded(
         executionId: ExecutionId
     ) {
-        scheduler.markAsSucceeded(executionId)
+        val result = scheduler.markAsSucceeded(executionId)
+        if (result != null) {
+            printTimedString("marked Execution ${executionId} as SUCCEEDED")
+        } else {
+            printTimedString("did NOT mark Execution ${executionId} as SUCCEEDED")
+        }
     }
 }
 
