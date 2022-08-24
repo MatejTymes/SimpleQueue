@@ -229,10 +229,38 @@ class UniversalScheduler(
         }
     }
 
+    fun updateTaskData(
+        coll: MongoCollection<Document>,
+        taskId: TaskId,
+        additionalTaskData: Document
+    ): Boolean {
+        val now = clock.now()
+
+        val result = coll.updateOne(
+            doc(
+                TASK_ID to taskId
+            ),
+            doc(
+                "\$set" to docBuilder()
+                    .putAll(
+                        LAST_UPDATED_AT to now
+                    )
+                    .putAll(
+                        additionalTaskData.mapKeys { entry ->
+                            DATA + "." + entry.key
+                        }
+                    )
+                    .build()
+            )
+        )
+
+        return result.modifiedCount > 0
+    }
+
     fun updateExecutionData(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        data: Document,
+        additionalExecutionData: Document,
         mustBeInProgress: Boolean
     ): Boolean {
         val now = clock.now()
@@ -257,7 +285,7 @@ class UniversalScheduler(
                         LAST_UPDATED_AT to now
                     )
                     .putAll(
-                        data.mapKeys { entry ->
+                        additionalExecutionData.mapKeys { entry ->
                             EXECUTIONS + ".\$." + DATA + "." + entry.key
                         }
                     )
