@@ -1,7 +1,6 @@
 package mtymes.task.v02.samples.sample04
 
 import com.mongodb.client.MongoCollection
-import mtymes.task.v02.common.mongo.DocBuilder
 import mtymes.task.v02.common.mongo.DocBuilder.Companion.doc
 import mtymes.task.v02.scheduler.dao.GenericTaskScheduler
 import mtymes.task.v02.scheduler.dao.SchedulerDefaults
@@ -38,7 +37,7 @@ class CancellationSupportingTaskDao(
         request: String
     ): TaskId? {
         val taskId = scheduler.submitTask(
-            DocBuilder.doc("request" to request)
+            doc("request" to request)
         )
 
         printTimedString("submitted Task '${request}'")

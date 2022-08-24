@@ -123,7 +123,7 @@ object PickTasksBasedOnPriority {
     @JvmStatic
     fun main(args: Array<String>) {
         val workerId = WorkerId("UnluckyInternDoingManualWork")
-        val coll = emptyLocalCollection("sample05tasks")
+        val coll = emptyLocalCollection("sample07tasks")
         val dao = PriorityOrderedTasksDao(coll)
 
         dao.submitTask("A", 5)

@@ -23,11 +23,16 @@ data class SchedulerDefaults(
     val customSortOrder: Document = doc(CAN_BE_EXECUTED_AS_OF to 1),
     val fetchSuspendedTasksAsWell: Boolean = false,
 
-    // task failure
+    // failure
     val retryDelay: Duration = Duration.ofSeconds(0),
 
     // suspension
     val suspendFor: Duration = Duration.ofSeconds(0),
+
+    // timeout
+    val timeoutRetryDelay: Duration = Duration.ofSeconds(0)
+
+    // todo: mtymes - add default HeartBeat duration
 )
 
 // todo: mtymes - replace Document? return type with domain object
@@ -161,6 +166,30 @@ class GenericTaskScheduler(
             coll = collection,
             taskId = taskId,
             additionalTaskData = additionalTaskData
+        )
+    }
+
+    fun findAndMarkTimedOutTasks(
+        retryDelay: Duration = defaults.timeoutRetryDelay,
+        additionalTaskData: Document = emptyDoc(),
+        additionalExecutionData: Document = emptyDoc()
+    ) {
+        scheduler.findAndMarkTimedOutTasks(
+            coll = collection,
+            retryDelay = retryDelay,
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData
+        )
+    }
+
+    fun registerHeartBeat(
+        executionId: ExecutionId,
+        keepAliveFor: Duration
+    ): Boolean {
+        return scheduler.registerHeartBeat(
+            coll = collection,
+            executionId = executionId,
+            keepAliveFor = keepAliveFor
         )
     }
 }

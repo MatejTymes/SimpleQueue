@@ -532,7 +532,9 @@ class UniversalScheduler(
         )
     }
 
-    fun markTasksWithoutHeartBeatAsTimedOut(
+    // todo: mtymes - allow to make this code a bit more dynamic - so the client could evaluate for example data to update based on task/execution data
+    // todo: mtymes - maybe add custom query criteria
+    fun findAndMarkTimedOutTasks(
         coll: MongoCollection<Document>,
         retryDelay: Duration?,
         additionalTaskData: Document = emptyDoc(),
@@ -836,8 +838,8 @@ class UniversalScheduler(
                     return null
                 } else {
                     throw UnexpectedStatusException(
-                        "Failed to mark Task '${taskId}' as '${toTaskStatus}' and Execution '${executionId}' as '${toExecutionStatus}'" +
-                                "as expected '${fromTaskStatus}' Task and '${fromExecutionStatus}' Execution but got '${currentTaskStatus}' Task and '${currentExecutionStatus}' Execution instead"
+                        "Failed to mark Task '${taskId}' as '${expectedToTaskStatus}' and Execution '${executionId}' as '${toExecutionStatus}'" +
+                                " as expected '${fromTaskStatus}' Task and '${fromExecutionStatus}' Execution but got '${currentTaskStatus}' Task and '${currentExecutionStatus}' Execution instead"
                     )
                 }
             }
