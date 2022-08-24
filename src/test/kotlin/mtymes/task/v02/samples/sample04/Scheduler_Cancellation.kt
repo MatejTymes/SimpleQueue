@@ -142,3 +142,35 @@ object CancelExecution {
         println("isThereAnythingAvailable = ${fetchedNext != null}")
     }
 }
+
+
+
+object FailToCancelTaskInProgress {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val coll = emptyLocalCollection("sample04tasks")
+
+        val dao = CancellationSupportingTaskDao(coll)
+
+        dao.submitTask("A")
+
+        val workerId = WorkerId("UnluckyInternDoingManualWork")
+
+
+        try {
+
+            val taskToProcess = dao.fetchNextTaskExecution(workerId)!!
+            dao.markTaskAsCancelled(taskToProcess.taskId, "clearing out the queue")
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+
+        TaskViewer.displayTinyTasksSummary(
+            coll,
+            setOf("maxAttemptsCount", "attemptsLeft")
+        )
+    }
+}

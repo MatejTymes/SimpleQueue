@@ -28,7 +28,7 @@ import java.util.*
 
 // todo: mtymes - add ability to provide custom ExecutionId
 // todo: mtymes - update ttl - to bigger to smaller value
-// todo: mtymes - ttl on final state
+// todo: mtymes - update ttl on final state
 class UniversalScheduler(
     val clock: Clock = UTCClock()
 ) {
@@ -441,15 +441,18 @@ class UniversalScheduler(
     ) {
         val now = clock.now()
 
-        coll.findOneAndUpdate(
+        val fromTaskStatus = TaskStatus.available
+        val toTaskStatus = TaskStatus.cancelled
+
+        val modifiedTask = coll.findOneAndUpdate(
             doc(
                 TASK_ID to taskId,
-                STATUS to TaskStatus.available
+                STATUS to fromTaskStatus
             ),
             doc(
                 "\$set" to docBuilder()
                     .putAll(
-                        STATUS to TaskStatus.cancelled,
+                        STATUS to toTaskStatus,
                         STATUS_UPDATED_AT to now,
                         LAST_UPDATED_AT to now
                     )
@@ -461,9 +464,29 @@ class UniversalScheduler(
                     .build()
             )
         )
+
+        if (modifiedTask == null) {
+            val task: Document? = coll.findOne(
+                doc(TASK_ID to taskId)
+            )
+
+            if (task == null) {
+                throw ExecutionNotFoundException("Task '${taskId}' NOT FOUND")
+            }
+
+            val currentTaskStatus = TaskStatus.valueOf(task.getString(STATUS))
+            if (currentTaskStatus != fromTaskStatus) {
+                throw UnexpectedStatusException(
+                    "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected '${fromTaskStatus}', but got '${currentTaskStatus}' Task status instead"
+                )
+            }
+
+            throw UnknownFailureReasonException(
+                "Not sure why Task '${taskId}' was not marked as ${toTaskStatus}"
+            )
+        }
     }
 
-    // todo: mtymes - add suspension phase
     // todo: mtymes - fail if suspending non-suspendable task
     fun markAsSuspended(
         coll: MongoCollection<Document>,
@@ -781,7 +804,9 @@ class UniversalScheduler(
             val taskId = TaskId(task.getString(TASK_ID))
             val lastExecutionId = ExecutionId(task.getString(LAST_EXECUTION_ID))
             if (executionId != lastExecutionId) {
-                throw NotLastExecutionException("Execution '${executionId}' for Task '${taskId}' is NOT LAST execution (Execution '${lastExecutionId}' is)")
+                throw NotLastExecutionException(
+                    "Execution '${executionId}' for Task '${taskId}' is NOT LAST execution (Execution '${lastExecutionId}' is)"
+                )
             }
 
             val executions = task.getList(EXECUTIONS, Document::class.java)
@@ -803,12 +828,15 @@ class UniversalScheduler(
                     return null
                 } else {
                     throw UnexpectedStatusException(
-                        "Expected '${fromTaskStatus}' Task and '${fromExecutionStatus}' Execution, but got '${currentTaskStatus}' Task and '${currentExecutionStatus}' Execution instead"
+                        "Failed to mark Task '${taskId}' as '${toTaskStatus}' and Execution '${executionId}' as '${toExecutionStatus}'" +
+                                "as expected '${fromTaskStatus}' Task and '${fromExecutionStatus}' Execution, but got '${currentTaskStatus}' Task and '${currentExecutionStatus}' Execution instead"
                     )
                 }
             }
 
-            throw UnknownFailureReasonException("Not sure why Execution '${executionId}' was not marked as succeeded")
+            throw UnknownFailureReasonException(
+                "Not sure why Execution '${executionId}' was not marked as ${toExecutionStatus}"
+            )
         }
     }
 
