@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 
-// todo: mtymes - implement better alternatives (shared threads or coroutines)
+// todo: mtymes - implement other alternatives (shared threads or coroutines) and compare performance/stability
 // todo: mtymes - test properly
 class HumbleSweatShop : SweatShop {
 
