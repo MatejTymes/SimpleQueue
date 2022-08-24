@@ -1,7 +1,6 @@
 package mtymes.task.v02.samples.sample03
 
 import com.mongodb.client.MongoCollection
-import mtymes.task.v02.common.mongo.DocBuilder
 import mtymes.task.v02.common.mongo.DocBuilder.Companion.doc
 import mtymes.task.v02.common.time.UTCClock
 import mtymes.task.v02.scheduler.dao.GenericTaskScheduler
@@ -44,7 +43,7 @@ class FailureSupportingTaskDao(
         request: String
     ) {
         scheduler.submitTask(
-            DocBuilder.doc(REQUEST to request)
+            doc(REQUEST to request)
         )
     }
 
@@ -144,7 +143,6 @@ object WorkerFailing {
     @JvmStatic
     fun main(args: Array<String>) {
         val coll = emptyLocalCollection("sample03tasks")
-
         val dao = FailureSupportingTaskDao(coll)
 
         dao.submitTask("A")
@@ -171,13 +169,11 @@ object FailThenSucceed {
 
     @JvmStatic
     fun main(args: Array<String>) {
+        val workerId = WorkerId("UnluckyInternDoingManualWork")
         val coll = emptyLocalCollection("sample03tasks")
-
         val dao = FailureSupportingTaskDao(coll)
 
         dao.submitTask("A")
-
-        val workerId = WorkerId("UnluckyInternDoingManualWork")
 
 
         val executionId1 = dao.fetchNextTaskExecution(workerId)!!.executionId
@@ -204,13 +200,11 @@ object UnrecoverableFailure {
 
     @JvmStatic
     fun main(args: Array<String>) {
+        val workerId = WorkerId("UnluckyInternDoingManualWork")
         val coll = emptyLocalCollection("sample03tasks")
-
         val dao = FailureSupportingTaskDao(coll)
 
         dao.submitTask("A")
-
-        val workerId = WorkerId("UnluckyInternDoingManualWork")
 
 
         val executionId1 = dao.fetchNextTaskExecution(workerId)!!.executionId
@@ -234,13 +228,12 @@ object DelayedRetryAfterFailure {
 
     @JvmStatic
     fun main(args: Array<String>) {
+        val workerId = WorkerId("UnluckyInternDoingManualWork")
         val coll = emptyLocalCollection("sample03tasks")
-
         val dao = FailureSupportingTaskDao(coll)
 
         dao.submitTask("A")
 
-        val workerId = WorkerId("UnluckyInternDoingManualWork")
 
         val executionId1 = dao.fetchNextTaskExecution(workerId)!!.executionId
         dao.markAsFailed(

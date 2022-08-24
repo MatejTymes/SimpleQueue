@@ -93,11 +93,9 @@ object CancelTask {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val coll = emptyLocalCollection("sample04tasks")
-
-        val dao = CancellationSupportingTaskDao(coll)
-
         val workerId = WorkerId("UnluckyInternDoingManualWork")
+        val coll = emptyLocalCollection("sample04tasks")
+        val dao = CancellationSupportingTaskDao(coll)
 
 
         val taskId = dao.submitTask("A")!!
@@ -120,13 +118,11 @@ object CancelExecution {
 
     @JvmStatic
     fun main(args: Array<String>) {
+        val workerId = WorkerId("UnluckyInternDoingManualWork")
         val coll = emptyLocalCollection("sample04tasks")
-
         val dao = CancellationSupportingTaskDao(coll)
 
         dao.submitTask("A")
-
-        val workerId = WorkerId("UnluckyInternDoingManualWork")
 
 
         val executionId1 = dao.fetchNextTaskExecution(workerId)!!.executionId
@@ -149,13 +145,11 @@ object FailToCancelTaskInProgress {
 
     @JvmStatic
     fun main(args: Array<String>) {
+        val workerId = WorkerId("UnluckyInternDoingManualWork")
         val coll = emptyLocalCollection("sample04tasks")
-
         val dao = CancellationSupportingTaskDao(coll)
 
         dao.submitTask("A")
-
-        val workerId = WorkerId("UnluckyInternDoingManualWork")
 
 
         try {

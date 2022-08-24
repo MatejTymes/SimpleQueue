@@ -21,18 +21,16 @@ data class SchedulerDefaults(
     val afterStartKeepAliveFor: Duration,
     val additionalConstraint: Document = emptyDoc(),
     val customSortOrder: Document = doc(CAN_BE_EXECUTED_AS_OF to 1),
-    val areTasksSuspendable: Boolean = false,
+    val fetchSuspendedTasksAsWell: Boolean = false,
 
     // task failure
     val retryDelay: Duration = Duration.ofSeconds(0),
 
-    // remainder to process
-
+    // suspension
     val suspendFor: Duration = Duration.ofSeconds(0),
 )
 
-
-// todo: mtymes - should workerId be mandatory
+// todo: mtymes - replace Document? return type with domain object
 class GenericTaskScheduler(
     val collection: MongoCollection<Document>,
     val defaults: SchedulerDefaults,
@@ -63,12 +61,12 @@ class GenericTaskScheduler(
         keepAliveFor: Duration = defaults.afterStartKeepAliveFor,
         additionalConstraint: Document = defaults.additionalConstraint,
         customSortOrder: Document = defaults.customSortOrder,
-        areTasksSuspendable: Boolean = defaults.areTasksSuspendable,
+        fetchSuspendedTasksAsWell: Boolean = defaults.fetchSuspendedTasksAsWell,
     ): StartedExecutionSummary? {
         return scheduler.fetchNextAvailableExecution(
             coll = collection,
             keepAliveFor = keepAliveFor,
-            areTheseTasksSuspendable = areTasksSuspendable,
+            fetchSuspendedTasksAsWell = fetchSuspendedTasksAsWell,
             additionalConstraint = additionalConstraint,
             workerId = workerId,
             sortOrder = customSortOrder
@@ -79,8 +77,8 @@ class GenericTaskScheduler(
         executionId: ExecutionId,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
-    ) {
-        scheduler.markAsSucceeded(
+    ): Document? {
+        return scheduler.markAsSucceeded(
             coll = collection,
             executionId = executionId,
             additionalTaskData = additionalTaskData,
@@ -93,8 +91,8 @@ class GenericTaskScheduler(
         retryDelay: Duration = defaults.retryDelay,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
-    ) {
-        scheduler.markAsFailedButCanRetry(
+    ): Document? {
+        return scheduler.markAsFailedButCanRetry(
             coll = collection,
             executionId = executionId,
             retryDelay = retryDelay,
@@ -107,8 +105,8 @@ class GenericTaskScheduler(
         executionId: ExecutionId,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
-    ) {
-        scheduler.markAsFailedButCanNOTRetry(
+    ): Document? {
+        return scheduler.markAsFailedButCanNOTRetry(
             coll = collection,
             executionId = executionId,
             additionalTaskData = additionalTaskData,
@@ -119,8 +117,8 @@ class GenericTaskScheduler(
     fun markTaskAsCancelled(
         taskId: TaskId,
         additionalTaskData: Document = emptyDoc()
-    ) {
-        scheduler.markTaskAsCancelled(
+    ): Document? {
+        return scheduler.markTaskAsCancelled(
             coll = collection,
             taskId = taskId,
             additionalTaskData = additionalTaskData
@@ -131,10 +129,25 @@ class GenericTaskScheduler(
         executionId: ExecutionId,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
-    ) {
-        scheduler.markAsCancelled(
+    ): Document? {
+        return scheduler.markAsCancelled(
             coll = collection,
             executionId = executionId,
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData
+        )
+    }
+
+    fun markAsSuspended(
+        executionId: ExecutionId,
+        suspendFor: Duration = defaults.suspendFor,
+        additionalTaskData: Document = emptyDoc(),
+        additionalExecutionData: Document = emptyDoc()
+    ): Document? {
+        return scheduler.markAsSuspended(
+            coll = collection,
+            executionId = executionId,
+            suspendFor = suspendFor,
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )

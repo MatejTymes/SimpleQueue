@@ -137,12 +137,12 @@ class UniversalScheduler(
     fun fetchNextAvailableExecution(
         coll: MongoCollection<Document>,
         keepAliveFor: Duration,
-        areTheseTasksSuspendable: Boolean,
+        fetchSuspendedTasksAsWell: Boolean,
         additionalConstraint: Document = emptyDoc(),
         workerId: WorkerId = uniqueWorkerId(),
         sortOrder: Document = doc(CAN_BE_EXECUTED_AS_OF to 1)
     ): StartedExecutionSummary? {
-        if (areTheseTasksSuspendable) {
+        if (fetchSuspendedTasksAsWell) {
             val now = clock.now()
 
             val possibleTasksToFetch = coll.find(
@@ -327,10 +327,10 @@ class UniversalScheduler(
         executionId: ExecutionId,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
-    ) {
+    ): Document? {
         val now = clock.now()
 
-        updateExecution(
+        return updateExecution(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
@@ -353,10 +353,10 @@ class UniversalScheduler(
         retryDelay: Duration,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
-    ) {
+    ): Document? {
         val now = clock.now()
 
-        updateExecution(
+        return updateExecution(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
@@ -389,10 +389,10 @@ class UniversalScheduler(
         executionId: ExecutionId,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
-    ) {
+    ): Document? {
         val now = clock.now()
 
-        updateExecution(
+        return updateExecution(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
@@ -414,10 +414,10 @@ class UniversalScheduler(
         executionId: ExecutionId,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
-    ) {
+    ): Document? {
         val now = clock.now()
 
-        updateExecution(
+        return updateExecution(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
@@ -438,7 +438,7 @@ class UniversalScheduler(
         coll: MongoCollection<Document>,
         taskId: TaskId,
         additionalTaskData: Document = DocBuilder.emptyDoc()
-    ) {
+    ): Document? {
         val now = clock.now()
 
         val fromTaskStatus = TaskStatus.available
@@ -485,19 +485,21 @@ class UniversalScheduler(
                 "Not sure why Task '${taskId}' was not marked as ${toTaskStatus}"
             )
         }
+
+        return modifiedTask
     }
 
     // todo: mtymes - fail if suspending non-suspendable task
     fun markAsSuspended(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        retryDelay: Duration,
+        suspendFor: Duration,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
-    ) {
+    ): Document? {
         val now = clock.now()
 
-        updateExecution(
+        return updateExecution(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
@@ -506,7 +508,7 @@ class UniversalScheduler(
             toExecutionStatus = ExecutionStatus.suspended,
             now = now,
             customTaskUpdates = doc(
-                CAN_BE_EXECUTED_AS_OF to now.plus(retryDelay),
+                CAN_BE_EXECUTED_AS_OF to now.plus(suspendFor),
 
                 // $inc - section
                 // todo: mtymes - handle differently
