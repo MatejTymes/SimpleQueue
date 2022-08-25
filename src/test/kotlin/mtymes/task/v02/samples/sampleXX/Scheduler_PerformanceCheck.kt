@@ -224,6 +224,7 @@ object InsertionAndFetchingPerformance {
 
                 } finally {
                     insertionRunner.shutdownNow()
+                    fetchingRunner.shutdownNow()
                 }
             }
         }
