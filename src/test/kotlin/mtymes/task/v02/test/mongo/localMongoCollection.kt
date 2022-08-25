@@ -1,7 +1,6 @@
 package mtymes.task.v02.test.mongo
 
 import com.mongodb.client.MongoCollection
-import mtymes.task.v02.common.mongo.DocBuilder.Companion.emptyDoc
 import org.bson.Document
 
 
@@ -14,7 +13,9 @@ fun localCollection(collectionName: String): MongoCollection<Document> {
 }
 
 fun emptyLocalCollection(collectionName: String): MongoCollection<Document> {
-    val coll = localCollection(collectionName)
-    coll.deleteMany(emptyDoc())
-    return coll
+    val mongo = LocalTestMongo()
+
+    val db = mongo.database()
+    db.getCollection(collectionName).drop()
+    return db.getCollection(collectionName)
 }
