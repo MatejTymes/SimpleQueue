@@ -1,4 +1,5 @@
 buildscript {
+    // todo: mtymes - update to latest gradle and kotlin version
     ext.kotlin_version = '1.5.31'
     repositories {
         mavenCentral()

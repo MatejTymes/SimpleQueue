@@ -291,29 +291,27 @@ class HumbleSweatShop : SweatShop {
 
                 // SLEEP DELAY BEFORE FETCHING NEXT TASK
 
-                if (task == null) {
-
-                    // default to 1 minute if fails to get the sleep duration
-                    var sleepDuration: Duration = Duration.ofMinutes(1)
-                    try {
+                // default to 1 minute if fails to get the sleep duration
+                var sleepDuration: Duration = Duration.ofMinutes(1)
+                try {
+                    if (task != null) {
+                        sleepDuration = worker.sleepDurationIfTaskWasProcessed(
+                            workerId
+                        )
+                    } else {
                         sleepDuration = worker.sleepDurationIfNoTaskWasAvailable(
                             taskNotFoundNTimesInARow,
                             workerId
                         )
-                    } catch (e: Exception) {
-                        runAndIgnoreExceptions {
-                            logger.error("${workerId}]: Failed to evaluate sleep duration if no task was available", e)
-                        }
                     }
-                    // don't use Thread.sleep(..) as it would wait for the whole duration on graceful shutdown
-                    workContext.sleepIfNoShutdown(sleepDuration)
-
-                } else {
-
-                    // this allows to recognize InterruptedException in case there would be no wait on unavailable task
-                    Thread.sleep(1)
-
+                } catch (e: Exception) {
+                    runAndIgnoreExceptions {
+                        logger.error("${workerId}]: Failed to evaluate sleep duration before fetching next task", e)
+                    }
                 }
+                // don't use Thread.sleep(..) as it would wait for the whole duration in case of graceful shutdown
+                // (graceful shutdown = no InterruptedException)
+                workContext.sleepIfNoShutdown(sleepDuration)
 
             } catch (e: InterruptedException) {
                 runAndIgnoreExceptions {

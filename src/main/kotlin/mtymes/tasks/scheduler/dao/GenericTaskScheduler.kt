@@ -9,6 +9,7 @@ import mtymes.tasks.scheduler.domain.*
 import org.bson.Document
 import java.time.Duration
 
+// todo: mtymes - turn into Builder which will then have lazy configs: e.g.: SubmitTaskConfig, FetchExecutionConfig, FailureConfig, ...
 // todo: mtymes - replace emptyDoc/default values with nullable value
 data class SchedulerDefaults(
     // submit task settings
@@ -158,17 +159,6 @@ class GenericTaskScheduler(
         )
     }
 
-    fun updateTaskData(
-        taskId: TaskId,
-        additionalTaskData: Document
-    ): Document? {
-        return scheduler.updateTaskData(
-            coll = collection,
-            taskId = taskId,
-            additionalTaskData = additionalTaskData
-        )
-    }
-
     fun findAndMarkTimedOutTasks(
         retryDelay: Duration = defaults.timeoutRetryDelay,
         additionalTaskData: Document = emptyDoc(),
@@ -190,6 +180,30 @@ class GenericTaskScheduler(
             coll = collection,
             executionId = executionId,
             keepAliveFor = keepAliveFor
+        )
+    }
+
+    fun updateTaskData(
+        taskId: TaskId,
+        additionalTaskData: Document
+    ): Document? {
+        return scheduler.updateTaskData(
+            coll = collection,
+            taskId = taskId,
+            additionalTaskData = additionalTaskData
+        )
+    }
+
+    fun updateExecutionData(
+        executionId: ExecutionId,
+        additionalExecutionData: Document,
+        mustBeInProgress: Boolean
+    ): Document? {
+        return scheduler.updateExecutionData(
+            coll = collection,
+            executionId = executionId,
+            additionalExecutionData = additionalExecutionData,
+            mustBeInProgress = mustBeInProgress
         )
     }
 }

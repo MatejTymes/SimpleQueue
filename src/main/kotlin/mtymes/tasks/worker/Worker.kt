@@ -42,4 +42,10 @@ interface Worker<Task> {
             else -> Duration.ofSeconds(60)
         }
     }
+
+    fun sleepDurationIfTaskWasProcessed(
+        workerId: WorkerId
+    ): Duration {
+        return Duration.ofMillis(1)
+    }
 }

@@ -41,7 +41,7 @@ class UniversalScheduler(
         const val DATA = "data"
         const val STATUS = "status"
         const val STATUS_UPDATED_AT = "statusUpdatedAt"
-        const val LAST_UPDATED_AT = "lastUpdatedAt"
+        const val UPDATED_AT = "updatedAt"
 
         // TASK FIELDS
 
@@ -53,9 +53,9 @@ class UniversalScheduler(
         const val EXECUTION_ATTEMPTS_LEFT = "attemptsLeft"
 
         // todo: mtymes - add field TaskConfig.isSuspendable to prevent suspension of un-suspendable tasks (and also do a runtime check if proper flag is set on fetching tasks)
+
         const val CAN_BE_EXECUTED_AS_OF = "canBeExecutedAsOf"
 
-        const val LAST_HEARTBEAT_AT = "lastHeartBeatAt"
         const val LAST_EXECUTION_ID = "lastExecutionId"
         const val LAST_EXECUTION_STATE = "lastExecutionState"
         const val LAST_EXECUTION_TIMES_OUT_AFTER = "lastExecutionTimesOutAfter"
@@ -81,8 +81,9 @@ class UniversalScheduler(
         const val SUSPENDED_AT = "suspendedAt"
         const val LAST_UN_SUSPENDED_AT = "lastUnSuspendedAt"
         const val SUSPENSION_COUNT = "suspensionCount"
-        const val FINISHED_AT = "finishedAt"
+        const val LAST_HEARTBEAT_AT = "lastHeartBeatAt"
         const val TIMES_OUT_AFTER = "timesOutAfter"
+        const val FINISHED_AT = "finishedAt"
 
     }
 
@@ -123,7 +124,7 @@ class UniversalScheduler(
                 STATUS to TaskStatus.available,
                 STATUS_UPDATED_AT to now,
 
-                LAST_UPDATED_AT to now,
+                UPDATED_AT to now,
             )
         )
 
@@ -244,7 +245,7 @@ class UniversalScheduler(
             doc(
                 "\$set" to docBuilder()
                     .putAll(
-                        LAST_UPDATED_AT to now
+                        UPDATED_AT to now
                     )
                     .putAll(
                         additionalTaskData.mapKeys { entry ->
@@ -284,8 +285,8 @@ class UniversalScheduler(
             doc(
                 "\$set" to docBuilder()
                     .putAll(
-                        EXECUTIONS + ".\$." + LAST_UPDATED_AT to now,
-                        LAST_UPDATED_AT to now
+                        EXECUTIONS + ".\$." + UPDATED_AT to now,
+                        UPDATED_AT to now
                     )
                     .putAll(
                         additionalExecutionData.mapKeys { entry ->
@@ -460,7 +461,7 @@ class UniversalScheduler(
                     .putAll(
                         STATUS to toTaskStatus,
                         STATUS_UPDATED_AT to now,
-                        LAST_UPDATED_AT to now
+                        UPDATED_AT to now
                     )
                     .putAll(
                         additionalTaskData.mapKeys { entry ->
@@ -615,7 +616,7 @@ class UniversalScheduler(
                         STATUS_UPDATED_AT to now,
                         DATA to emptyDoc(),
                         TIMES_OUT_AFTER to keepAliveUntil,
-                        LAST_UPDATED_AT to now,
+                        UPDATED_AT to now,
                     )
                 ),
                 "\$set" to doc(
@@ -625,7 +626,7 @@ class UniversalScheduler(
                     LAST_EXECUTION_STATE to ExecutionStatus.running,
 //                    LAST_HEARTBEAT_AT to now,
                     LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
-                    LAST_UPDATED_AT to now,
+                    UPDATED_AT to now,
                 ),
 //                "\$unset" to doc(
 //                    CAN_BE_EXECUTED_AS_OF to 1
@@ -689,8 +690,8 @@ class UniversalScheduler(
                     EXECUTIONS + ".\$." + LAST_UN_SUSPENDED_AT to now,
                     EXECUTIONS + ".\$." + WORKER_ID to workerId,
                     EXECUTIONS + ".\$." + TIMES_OUT_AFTER to keepAliveUntil,
-                    EXECUTIONS + ".\$." + LAST_UPDATED_AT to now,
-                    LAST_UPDATED_AT to now,
+                    EXECUTIONS + ".\$." + UPDATED_AT to now,
+                    UPDATED_AT to now,
                 ),
 //                "\$unset" to doc(
 //                    CAN_BE_EXECUTED_AS_OF to 1
@@ -762,7 +763,7 @@ class UniversalScheduler(
                                                 .putAll(
                                                     STATUS to toExecutionStatus,
                                                     STATUS_UPDATED_AT to now,
-                                                    LAST_UPDATED_AT to now
+                                                    UPDATED_AT to now
                                                 )
                                                 .putAll(customExecutionUpdates)
                                                 .let {
@@ -787,7 +788,7 @@ class UniversalScheduler(
                             )
                         )
                     ),
-                    LAST_UPDATED_AT to now
+                    UPDATED_AT to now
                 )
                 .putAll(
                     additionalTaskData.mapKeys { entry ->
