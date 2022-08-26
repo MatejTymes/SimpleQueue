@@ -2,10 +2,10 @@ package mtymes.tasks.samples.sample05
 
 import com.mongodb.client.MongoCollection
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
+import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericTaskScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
-import mtymes.tasks.scheduler.domain.ExecutionId
-import mtymes.tasks.scheduler.domain.WorkerId
+import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer
 import org.bson.Document
@@ -25,11 +25,20 @@ class SuspendingTaskDao(
     val scheduler = GenericTaskScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(
-            maxAttemptCount = 3,
-            ttlDuration = Duration.ofDays(7),
-            afterStartKeepAliveFor = Duration.ofMinutes(5),
 
-            fetchSuspendedTasksAsWell = true
+            submitTaskOptions = SubmitTaskOptions(
+                ttl = Durations.SEVEN_DAYS,
+                maxAttemptsCount = 3
+            ),
+
+            fetchNextExecutionOptions = FetchNextExecutionOptions(
+                keepAliveFor = Durations.FIVE_MINUTES,
+                fetchSuspendedTasksAsWell = true
+            ),
+
+            markAsSuspendedOptions = MarkAsSuspendedOptions(
+                suspendFor = Durations.ZERO_SECONDS
+            )
         )
     )
 
@@ -39,7 +48,9 @@ class SuspendingTaskDao(
     ) {
         scheduler.submitTask(
             customData = doc("request" to request),
-            delayStartBy = delayStartBy
+            options = scheduler.defaults.submitTaskOptions!!.copy(
+                delayStartBy = delayStartBy
+            )
         )
 
         printTimedString("submitted Task '${request}'")
@@ -47,11 +58,13 @@ class SuspendingTaskDao(
 
     fun fetchNextTaskExecution(
         workerId: WorkerId,
-        fetchSuspendedTasksAsWell: Boolean = scheduler.defaults.fetchSuspendedTasksAsWell
+        fetchSuspendedTasksAsWell: Boolean = scheduler.defaults.fetchNextExecutionOptions!!.fetchSuspendedTasksAsWell
     ): TaskToProcess? {
         val result = scheduler.fetchNextAvailableExecution(
             workerId = workerId,
-            fetchSuspendedTasksAsWell = fetchSuspendedTasksAsWell
+            options = scheduler.defaults.fetchNextExecutionOptions!!.copy(
+                fetchSuspendedTasksAsWell = fetchSuspendedTasksAsWell
+            )
         )?.let { summary ->
             TaskToProcess(
                 executionId = summary.execution.executionId,
@@ -74,7 +87,9 @@ class SuspendingTaskDao(
     ) {
         val result = scheduler.markAsSuspended(
             executionId = executionId,
-            suspendFor = suspendFor
+            options = scheduler.defaults.markAsSuspendedOptions!!.copy(
+                suspendFor = suspendFor
+            )
         )
         if (result != null) {
             printTimedString("marked Execution ${executionId} as SUSPENDED for ${suspendFor}")

@@ -2,15 +2,13 @@ package mtymes.tasks.samples.sample08
 
 import com.mongodb.client.MongoCollection
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
+import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericTaskScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
-import mtymes.tasks.scheduler.domain.ExecutionId
-import mtymes.tasks.scheduler.domain.TaskId
-import mtymes.tasks.scheduler.domain.WorkerId
+import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import org.bson.Document
 import printTimedString
-import java.time.Duration
 
 data class TaskToProcess(
     val executionId: ExecutionId,
@@ -25,8 +23,14 @@ class CustomQueryTasksDao(
     val scheduler = GenericTaskScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(
-            ttlDuration = Duration.ofDays(7),
-            afterStartKeepAliveFor = Duration.ofMinutes(5)
+
+            submitTaskOptions = SubmitTaskOptions(
+                ttl = Durations.SEVEN_DAYS
+            ),
+
+            fetchNextExecutionOptions = FetchNextExecutionOptions(
+                keepAliveFor = Durations.FIVE_MINUTES
+            )
         )
     )
 
@@ -52,7 +56,7 @@ class CustomQueryTasksDao(
         val result = scheduler
             .fetchNextAvailableExecution(
                 workerId = workerId,
-                additionalConstraint = doc(
+                additionalConstraints = doc(
                     "data.group" to forGroup
                 )
             )?.let { summary ->
@@ -72,7 +76,6 @@ class CustomQueryTasksDao(
         return result
     }
 }
-
 
 
 object FetchTasksBasedOnCustomQuery {

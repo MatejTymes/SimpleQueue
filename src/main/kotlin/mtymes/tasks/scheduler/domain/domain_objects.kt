@@ -42,6 +42,7 @@ class WorkerId(value: String) : Microtype<String>(value) {
 }
 
 enum class TaskStatus {
+    // todo: mtymes - add paused state
     available,
     inProgress,
     suspended,
@@ -61,12 +62,6 @@ enum class ExecutionStatus {
     timedOut
 }
 
-data class TaskConfig(
-    val maxAttemptCount: Int
-    // todo: mtymes - add isSuspendable
-    // todo: mtymes - recordAllExecutions
-)
-
 /*
  todo: mtymes
    RuntimeConfig
@@ -79,24 +74,27 @@ data class TaskConfig(
 data class Task(
     val taskId: TaskId,
     val data: Document,
-    val status: TaskStatus
+    val status: TaskStatus,
+    val maxAttemptsCount: Int,
+    val attemptsLeft: Int,
+    // todo: mtymes - add isSuspendable
+    // todo: mtymes - recordAllExecutions
 )
 
 data class Execution(
     val executionId: ExecutionId,
     val data: Document,
-    val status: ExecutionStatus
+    val status: ExecutionStatus,
 )
 
 data class StartedExecutionSummary(
     val task: Task,
     val execution: Execution,
 
-    val wasSuspended: Boolean
+    val wasAwokenFromSuspension: Boolean
 )
 
 data class TaskSummary(
     val task: Task,
     val executions: List<Execution>,
-    val config: TaskConfig
 )

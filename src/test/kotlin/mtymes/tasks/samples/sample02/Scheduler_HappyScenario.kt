@@ -2,9 +2,13 @@ package mtymes.tasks.samples.sample02
 
 import com.mongodb.client.MongoCollection
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
+import mtymes.tasks.common.time.Durations.FIVE_MINUTES
+import mtymes.tasks.common.time.Durations.SEVEN_DAYS
 import mtymes.tasks.scheduler.dao.GenericTaskScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.domain.ExecutionId
+import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
+import mtymes.tasks.scheduler.domain.SubmitTaskOptions
 import mtymes.tasks.scheduler.domain.WorkerId
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
@@ -12,7 +16,6 @@ import mtymes.tasks.worker.Worker
 import mtymes.tasks.worker.sweatshop.HumbleSweatShop
 import org.bson.Document
 import printTimedString
-import java.time.Duration
 
 
 data class TaskToProcess(
@@ -28,8 +31,14 @@ class SimpleTaskDao(
     val scheduler = GenericTaskScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(
-            ttlDuration = Duration.ofDays(7),
-            afterStartKeepAliveFor = Duration.ofMinutes(5)
+
+            submitTaskOptions = SubmitTaskOptions(
+                ttl = SEVEN_DAYS
+            ),
+
+            fetchNextExecutionOptions = FetchNextExecutionOptions(
+                keepAliveFor = FIVE_MINUTES
+            )
         )
     )
 

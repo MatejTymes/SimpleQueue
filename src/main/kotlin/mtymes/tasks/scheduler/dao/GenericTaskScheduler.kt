@@ -1,39 +1,35 @@
 package mtymes.tasks.scheduler.dao
 
 import com.mongodb.client.MongoCollection
-import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
-import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_AS_OF
+import mtymes.tasks.common.time.Durations.ZERO_SECONDS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.UNIVERSAL_SCHEDULER
 import mtymes.tasks.scheduler.domain.*
+import mtymes.tasks.scheduler.domain.TaskId.Companion.uniqueTaskId
 import org.bson.Document
-import java.time.Duration
 
-// todo: mtymes - turn into Builder which will then have lazy configs: e.g.: SubmitTaskConfig, FetchExecutionConfig, FailureConfig, ...
 // todo: mtymes - replace emptyDoc/default values with nullable value
+// todo: mtymes - rename to DefaultOptions
 data class SchedulerDefaults(
-    // submit task settings
-    val ttlDuration: Duration,
-    val taskIdGenerator: () -> TaskId = { TaskId.uniqueTaskId() },
-    val maxAttemptCount: Int = 1,
-    val delayStartBy: Duration = Duration.ofSeconds(0),
 
-    // fetch task settings
-    val afterStartKeepAliveFor: Duration,
-    val additionalConstraint: Document = emptyDoc(),
-    val customSortOrder: Document = doc(CAN_BE_EXECUTED_AS_OF to 1),
-    val fetchSuspendedTasksAsWell: Boolean = false,
+    // PARTIAL OPTIONS SECTION
 
-    // failure
-    val retryDelay: Duration = Duration.ofSeconds(0),
+    @Deprecated("replace with non partial options")
+    val partialSubmitTaskOptions: PartialSubmitTaskOptions? = null,
 
-    // suspension
-    val suspendFor: Duration = Duration.ofSeconds(0),
+    // DEFAULT OPTIONS SECTION
 
-    // timeout
-    val timeoutRetryDelay: Duration = Duration.ofSeconds(0)
+    val submitTaskOptions: SubmitTaskOptions? = null,
 
-    // todo: mtymes - add default HeartBeat duration
+    val fetchNextExecutionOptions: FetchNextExecutionOptions? = null,
+
+    val markAsFailedButCanRetryOptions: MarkAsFailedButCanRetryOptions? = null,
+
+    val markAsSuspendedOptions: MarkAsSuspendedOptions? = null,
+
+    val markDeadExecutionsAsTimedOutOptions: MarkDeadExecutionsAsTimedOutOptions? = null,
+
+    val registerHeartBeatOptions: RegisterHeartBeatOptions? = null
 )
 
 // todo: mtymes - replace Document? return type with domain object
@@ -42,40 +38,79 @@ class GenericTaskScheduler(
     val defaults: SchedulerDefaults,
     val scheduler: UniversalScheduler = UNIVERSAL_SCHEDULER
 ) {
+    @Deprecated("replace with non partial options")
+    fun submitTask(
+        customData: Document,
+        options: PartialSubmitTaskOptions? = null
+    ): TaskId {
+        val usedOptions: PartialSubmitTaskOptions = getOptionsToUse(
+            "options", options,
+            "this.defaults.partialSubmitTaskOptions", defaults.partialSubmitTaskOptions
+        )
+
+        return scheduler.submitTask(
+            coll = collection,
+            data = customData,
+            options = SubmitTaskOptions(
+                taskIdGenerator = usedOptions.taskIdGenerator ?: { uniqueTaskId() },
+                maxAttemptsCount = usedOptions.maxAttemptsCount,
+                ttl = usedOptions.ttl!!,
+                delayStartBy = usedOptions.delayStartBy ?: ZERO_SECONDS
+            )
+        )
+    }
 
     fun submitTask(
         customData: Document,
-        taskId: TaskId = defaults.taskIdGenerator.invoke(),
-        ttlDuration: Duration = defaults.ttlDuration,
-        maxAttemptCount: Int = defaults.maxAttemptCount,
-        delayStartBy: Duration = defaults.delayStartBy
+        options: SubmitTaskOptions
     ): TaskId {
         return scheduler.submitTask(
             coll = collection,
-            taskId = taskId,
-            config = TaskConfig(
-                maxAttemptCount = maxAttemptCount
-            ),
             data = customData,
-            ttlDuration = ttlDuration,
-            delayStartBy = delayStartBy
+            options = options
+        )
+    }
+
+    fun submitTask(
+        customData: Document
+    ): TaskId {
+        return submitTask(
+            customData = customData,
+            options = defaultOptions(
+                "this.defaults.submitTaskOptions",
+                defaults.submitTaskOptions
+            )
         )
     }
 
     fun fetchNextAvailableExecution(
         workerId: WorkerId,
-        keepAliveFor: Duration = defaults.afterStartKeepAliveFor,
-        additionalConstraint: Document = defaults.additionalConstraint,
-        customSortOrder: Document = defaults.customSortOrder,
-        fetchSuspendedTasksAsWell: Boolean = defaults.fetchSuspendedTasksAsWell,
+        options: FetchNextExecutionOptions,
+        additionalConstraints: Document? = null,
+        customSortOrder: Document? = null
     ): StartedExecutionSummary? {
         return scheduler.fetchNextAvailableExecution(
             coll = collection,
-            keepAliveFor = keepAliveFor,
-            fetchSuspendedTasksAsWell = fetchSuspendedTasksAsWell,
-            additionalConstraint = additionalConstraint,
             workerId = workerId,
+            options = options,
+            additionalConstraints = additionalConstraints,
             sortOrder = customSortOrder
+        )
+    }
+
+    fun fetchNextAvailableExecution(
+        workerId: WorkerId,
+        additionalConstraints: Document? = null,
+        customSortOrder: Document? = null
+    ): StartedExecutionSummary? {
+        return fetchNextAvailableExecution(
+            workerId = workerId,
+            options = defaultOptions(
+                "this.defaults.fetchNextExecutionOptions",
+                defaults.fetchNextExecutionOptions
+            ),
+            additionalConstraints = additionalConstraints,
+            customSortOrder = customSortOrder
         )
     }
 
@@ -94,14 +129,30 @@ class GenericTaskScheduler(
 
     fun markAsFailedButCanRetry(
         executionId: ExecutionId,
-        retryDelay: Duration = defaults.retryDelay,
+        options: MarkAsFailedButCanRetryOptions,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
     ): Document? {
         return scheduler.markAsFailedButCanRetry(
             coll = collection,
             executionId = executionId,
-            retryDelay = retryDelay,
+            options = options,
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData
+        )
+    }
+
+    fun markAsFailedButCanRetry(
+        executionId: ExecutionId,
+        additionalTaskData: Document = emptyDoc(),
+        additionalExecutionData: Document = emptyDoc()
+    ): Document? {
+        return markAsFailedButCanRetry(
+            executionId = executionId,
+            options = defaultOptions(
+                "this.defaults.markAsFailedButCanRetryOptions",
+                defaults.markAsFailedButCanRetryOptions
+            ),
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
@@ -146,27 +197,57 @@ class GenericTaskScheduler(
 
     fun markAsSuspended(
         executionId: ExecutionId,
-        suspendFor: Duration = defaults.suspendFor,
+        options: MarkAsSuspendedOptions,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
     ): Document? {
         return scheduler.markAsSuspended(
             coll = collection,
             executionId = executionId,
-            suspendFor = suspendFor,
+            options = options,
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
     }
 
-    fun findAndMarkTimedOutTasks(
-        retryDelay: Duration = defaults.timeoutRetryDelay,
+    fun markAsSuspended(
+        executionId: ExecutionId,
+        additionalTaskData: Document = emptyDoc(),
+        additionalExecutionData: Document = emptyDoc()
+    ): Document? {
+        return markAsSuspended(
+            executionId = executionId,
+            options = defaultOptions(
+                "this.defaults.markAsSuspendedOptions",
+                defaults.markAsSuspendedOptions
+            ),
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData
+        )
+    }
+
+    fun markDeadExecutionsAsTimedOut(
+        options: MarkDeadExecutionsAsTimedOutOptions,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
     ) {
-        scheduler.findAndMarkTimedOutTasks(
+        scheduler.markDeadExecutionsAsTimedOut(
             coll = collection,
-            retryDelay = retryDelay,
+            options = options,
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData
+        )
+    }
+
+    fun markDeadExecutionsAsTimedOut(
+        additionalTaskData: Document = emptyDoc(),
+        additionalExecutionData: Document = emptyDoc()
+    ) {
+        return markDeadExecutionsAsTimedOut(
+            options = defaultOptions(
+                "this.defaults.markDeadExecutionsAsTimedOutOptions",
+                defaults.markDeadExecutionsAsTimedOutOptions
+            ),
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
@@ -174,12 +255,32 @@ class GenericTaskScheduler(
 
     fun registerHeartBeat(
         executionId: ExecutionId,
-        keepAliveFor: Duration
+        options: RegisterHeartBeatOptions,
+        additionalTaskData: Document = emptyDoc(),
+        additionalExecutionData: Document = emptyDoc()
     ): Boolean {
         return scheduler.registerHeartBeat(
             coll = collection,
             executionId = executionId,
-            keepAliveFor = keepAliveFor
+            options = options,
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData
+        )
+    }
+
+    fun registerHeartBeat(
+        executionId: ExecutionId,
+        additionalTaskData: Document = emptyDoc(),
+        additionalExecutionData: Document = emptyDoc()
+    ): Boolean {
+        return registerHeartBeat(
+            executionId = executionId,
+            options = defaultOptions(
+                "this.defaults.registerHeartBeatOptions",
+                defaults.registerHeartBeatOptions
+            ),
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData
         )
     }
 
@@ -196,14 +297,45 @@ class GenericTaskScheduler(
 
     fun updateExecutionData(
         executionId: ExecutionId,
-        additionalExecutionData: Document,
-        mustBeInProgress: Boolean
+        options: UpdateExecutionDataOptions,
+        additionalTaskData: Document = emptyDoc(),
+        additionalExecutionData: Document
     ): Document? {
         return scheduler.updateExecutionData(
             coll = collection,
             executionId = executionId,
-            additionalExecutionData = additionalExecutionData,
-            mustBeInProgress = mustBeInProgress
+            options = options,
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData
         )
+    }
+
+    private fun <T> defaultOptions(fieldPath: String, value: T?): T {
+        return (value ?: throw IllegalStateException("'${fieldPath}' is NOT DEFINED"))
+    }
+
+
+    @Deprecated("replace with non partial options")
+    private fun <T : CanBePartiallyDefined> getOptionsToUse(
+        optionsParameterName: String,
+        options: T?,
+        defaultOptionsFieldPath: String,
+        defaultOptions: T?
+    ): T {
+        val usedOptions: T
+        if (options != null) {
+            usedOptions = options.also {
+                it.checkIsValid("${optionsParameterName}.")
+            }
+        } else {
+            if (defaultOptions != null) {
+                usedOptions = defaultOptions.also {
+                    it.checkIsValid("${defaultOptionsFieldPath}.")
+                }
+            } else {
+                throw IllegalStateException("Neither '${optionsParameterName}' parameter nor '${defaultOptionsFieldPath}' field are defined")
+            }
+        }
+        return usedOptions
     }
 }

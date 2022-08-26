@@ -1,5 +1,11 @@
 package mtymes.tasks.worker
 
+import mtymes.tasks.common.time.Durations.ONE_MILLISECOND
+import mtymes.tasks.common.time.Durations.ONE_MINUTE
+import mtymes.tasks.common.time.Durations.ONE_SECOND
+import mtymes.tasks.common.time.Durations.TEN_SECONDS
+import mtymes.tasks.common.time.Durations.THIRTY_SECONDS
+import mtymes.tasks.common.time.Durations.THREE_SECONDS
 import mtymes.tasks.scheduler.domain.WorkerId
 import java.time.Duration
 
@@ -35,17 +41,17 @@ interface Worker<Task> {
         workerId: WorkerId
     ): Duration {
         return when(taskNotFoundNTimesInARow) {
-            1L -> Duration.ofSeconds(1)
-            2L -> Duration.ofSeconds(3)
-            3L -> Duration.ofSeconds(10)
-            4L -> Duration.ofSeconds(30)
-            else -> Duration.ofSeconds(60)
+            1L -> ONE_SECOND
+            2L -> THREE_SECONDS
+            3L -> TEN_SECONDS
+            4L -> THIRTY_SECONDS
+            else -> ONE_MINUTE
         }
     }
 
     fun sleepDurationIfTaskWasProcessed(
         workerId: WorkerId
     ): Duration {
-        return Duration.ofMillis(1)
+        return ONE_MILLISECOND
     }
 }

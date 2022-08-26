@@ -2,10 +2,10 @@ package mtymes.tasks.samples.sample03
 
 import com.mongodb.client.MongoCollection
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
+import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericTaskScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
-import mtymes.tasks.scheduler.domain.ExecutionId
-import mtymes.tasks.scheduler.domain.WorkerId
+import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
 import mtymes.tasks.worker.Worker
@@ -21,16 +21,24 @@ data class TaskToProcess(
 )
 
 
-
 class FailureSupportingTaskDao(
     tasksCollection: MongoCollection<Document>
 ) {
     val scheduler = GenericTaskScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(
-            maxAttemptCount = 3,
-            ttlDuration = Duration.ofDays(7),
-            afterStartKeepAliveFor = Duration.ofMinutes(5)
+            submitTaskOptions = SubmitTaskOptions(
+                ttl = Durations.SEVEN_DAYS,
+                maxAttemptsCount = 3
+            ),
+
+            fetchNextExecutionOptions = FetchNextExecutionOptions(
+                keepAliveFor = Durations.FIVE_MINUTES
+            ),
+
+            markAsFailedButCanRetryOptions = MarkAsFailedButCanRetryOptions(
+                retryDelay = Durations.ZERO_SECONDS
+            )
         )
     )
 
@@ -121,10 +129,12 @@ class FailureSupportingTaskDao(
     ) {
         val result = scheduler.markAsFailedButCanRetry(
             executionId = executionId,
+            options = scheduler.defaults.markAsFailedButCanRetryOptions!!.copy(
+                retryDelay = retryDelay
+            ),
             additionalExecutionData = doc(
                 "failureMessage" to e.message
-            ),
-            retryDelay = retryDelay
+            )
         )
         if (result != null) {
             printTimedString("marked Execution ${executionId} as FAILED with retry delay of ${retryDelay}")
@@ -133,7 +143,6 @@ class FailureSupportingTaskDao(
         }
     }
 }
-
 
 
 class BrokenWorker(
@@ -161,7 +170,6 @@ class BrokenWorker(
 }
 
 
-
 object WorkerFailing {
 
     @JvmStatic
@@ -186,7 +194,6 @@ object WorkerFailing {
         )
     }
 }
-
 
 
 object FailThenSucceed {
@@ -225,7 +232,6 @@ object FailThenSucceed {
 }
 
 
-
 object UnrecoverableFailure {
 
     @JvmStatic
@@ -238,7 +244,10 @@ object UnrecoverableFailure {
 
 
         val executionId1 = dao.fetchNextTaskExecution(workerId)!!.executionId
-        dao.markAsFailedAndCanNOTRetry(executionId1, IllegalStateException("OK. So the building burned down!!! I think I can go home now"))
+        dao.markAsFailedAndCanNOTRetry(
+            executionId1,
+            IllegalStateException("OK. So the building burned down!!! I think I can go home now")
+        )
 
 
         displayTinyTasksSummary(
@@ -250,7 +259,6 @@ object UnrecoverableFailure {
         dao.fetchNextTaskExecution(workerId)
     }
 }
-
 
 
 object DelayedRetryAfterFailure {

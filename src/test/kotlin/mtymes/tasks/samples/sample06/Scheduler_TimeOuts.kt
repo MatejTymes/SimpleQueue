@@ -2,11 +2,10 @@ package mtymes.tasks.samples.sample06
 
 import com.mongodb.client.MongoCollection
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
+import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericTaskScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
-import mtymes.tasks.scheduler.domain.ExecutionId
-import mtymes.tasks.scheduler.domain.TaskId
-import mtymes.tasks.scheduler.domain.WorkerId
+import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
 import mtymes.tasks.worker.HeartBeatingWorker
@@ -30,9 +29,15 @@ class TimeOutingTasksDao(
     val scheduler = GenericTaskScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(
-            ttlDuration = Duration.ofDays(7),
-            afterStartKeepAliveFor = Duration.ofMinutes(5),
-            maxAttemptCount = 3
+
+            submitTaskOptions = SubmitTaskOptions(
+                ttl = Durations.SEVEN_DAYS,
+                maxAttemptsCount = 3
+            ),
+
+            fetchNextExecutionOptions = FetchNextExecutionOptions(
+                keepAliveFor = Durations.FIVE_MINUTES
+            )
         )
     )
 
@@ -51,12 +56,14 @@ class TimeOutingTasksDao(
 
     fun fetchNextTaskExecution(
         workerId: WorkerId,
-        afterStartKeepAliveFor: Duration = scheduler.defaults.afterStartKeepAliveFor
+        afterStartKeepAliveFor: Duration = scheduler.defaults.fetchNextExecutionOptions!!.keepAliveFor
     ): TaskToProcess? {
         val result = scheduler
             .fetchNextAvailableExecution(
                 workerId = workerId,
-                keepAliveFor = afterStartKeepAliveFor
+                options = scheduler.defaults.fetchNextExecutionOptions!!.copy(
+                    keepAliveFor = afterStartKeepAliveFor
+                )
             )?.let { summary ->
                 TaskToProcess(
                     executionId = summary.execution.executionId,
@@ -91,8 +98,10 @@ class TimeOutingTasksDao(
     ) {
         printTimedString("searching and Marking TIMED OUT Executions")
 
-        scheduler.findAndMarkTimedOutTasks(
-            retryDelay = retryDelay,
+        scheduler.markDeadExecutionsAsTimedOut(
+            options = MarkDeadExecutionsAsTimedOutOptions(
+                retryDelay = retryDelay
+            ),
             additionalExecutionData = doc(
                 "timeoutMessage" to "It took you too long to finish"
             )
@@ -105,7 +114,9 @@ class TimeOutingTasksDao(
     ) {
         val result = scheduler.registerHeartBeat(
             executionId = executionId,
-            keepAliveFor = keepAliveFor
+            options = RegisterHeartBeatOptions(
+                keepAliveFor = keepAliveFor
+            )
         )
         if (result) {
             printTimedString("registered HeartBeat for Execution ${executionId} and increased it's time to be alive by ${keepAliveFor}")
@@ -114,7 +125,6 @@ class TimeOutingTasksDao(
         }
     }
 }
-
 
 
 object TaskDoesNOTTimeOutAutomatically {
@@ -229,7 +239,6 @@ object HeartBeatExtendsKeepAlivePeriod {
 }
 
 
-
 class LazyHeartBeatingWorker(
     val dao: TimeOutingTasksDao,
     val coll: MongoCollection<Document>
@@ -269,7 +278,6 @@ class LazyHeartBeatingWorker(
         return task.request
     }
 }
-
 
 
 object WorkerWithHeartBeatShowcase {

@@ -5,6 +5,7 @@ import com.mongodb.client.model.IndexOptions
 import javafixes.concurrency.Runner
 import mtymes.tasks.common.mongo.DocBuilder
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
+import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericTaskScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_AS_OF
@@ -13,13 +14,9 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTIONS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ID
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS
-import mtymes.tasks.scheduler.domain.StartedExecutionSummary
-import mtymes.tasks.scheduler.domain.TaskId
-import mtymes.tasks.scheduler.domain.TaskStatus
-import mtymes.tasks.scheduler.domain.WorkerId
+import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import org.bson.Document
-import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -31,8 +28,14 @@ class SimpleTaskDao(
     private val scheduler = GenericTaskScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(
-            ttlDuration = Duration.ofDays(7),
-            afterStartKeepAliveFor = Duration.ofMinutes(5)
+
+            submitTaskOptions = SubmitTaskOptions(
+                ttl = Durations.SEVEN_DAYS
+            ),
+
+            fetchNextExecutionOptions = FetchNextExecutionOptions(
+                keepAliveFor = Durations.FIVE_MINUTES
+            )
         )
     )
 

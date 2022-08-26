@@ -3,17 +3,16 @@ package mtymes.tasks.scheduler.dao
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.FindOneAndUpdateOptions
 import com.mongodb.client.model.ReturnDocument
+import mtymes.tasks.common.check.ValidityChecks.expectNonEmptyDocument
 import mtymes.tasks.common.mongo.DocBuilder
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.mongo.DocBuilder.Companion.docBuilder
 import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
-import mtymes.tasks.common.mongo.findOne
-import mtymes.tasks.common.mongo.insert
+import mtymes.tasks.common.mongo.MongoCollectionExt.findOne
+import mtymes.tasks.common.mongo.MongoCollectionExt.insert
 import mtymes.tasks.common.time.Clock
 import mtymes.tasks.common.time.UTCClock
 import mtymes.tasks.scheduler.domain.*
-import mtymes.tasks.scheduler.domain.TaskId.Companion.uniqueTaskId
-import mtymes.tasks.scheduler.domain.WorkerId.Companion.uniqueWorkerId
 import mtymes.tasks.scheduler.exceptions.*
 import org.bson.Document
 import java.time.Duration
@@ -21,7 +20,7 @@ import java.time.ZonedDateTime
 import java.util.*
 
 // todo: mtymes - replace emptyDoc/default values with nullable value
-// todo: mtymes - ability to fail if Execution is already in wanted state
+// todo: mtymes - ability to fail if Execution is already in wanted state (e.g. failed -> failed, cancelled -> cancelled, succeeded -> succeeded, suspended -> suspended)
 // todo: mtymes - add ttl index for this
 // todo: mtymes - add indexes - should be done by users of this class
 
@@ -102,12 +101,13 @@ class UniversalScheduler(
     // todo: mtymes - fail if task is not submitted
     fun submitTask(
         coll: MongoCollection<Document>,
-        config: TaskConfig,
         data: Document,
-        ttlDuration: Duration,
-        taskId: TaskId = uniqueTaskId(),
-        delayStartBy: Duration = Duration.ofSeconds(0)
+        options: SubmitTaskOptions
     ): TaskId {
+        expectNonEmptyDocument("data", data)
+
+        val taskId = options.taskIdGenerator.invoke()
+
         val now = clock.now()
 
         val success = coll.insert(
@@ -115,11 +115,11 @@ class UniversalScheduler(
                 TASK_ID to taskId,
                 CREATED_AT to now,
                 DATA to data,
-                DELETE_AFTER to now.plus(ttlDuration),
-                MAX_EXECUTION_ATTEMPTS_COUNT to config.maxAttemptCount,
+                DELETE_AFTER to now.plus(options.ttl),
+                MAX_EXECUTION_ATTEMPTS_COUNT to options.maxAttemptsCount,
 
-                EXECUTION_ATTEMPTS_LEFT to config.maxAttemptCount,
-                CAN_BE_EXECUTED_AS_OF to now.plus(delayStartBy),
+                EXECUTION_ATTEMPTS_LEFT to options.maxAttemptsCount,
+                CAN_BE_EXECUTED_AS_OF to now.plus(options.delayStartBy),
 
                 STATUS to TaskStatus.available,
                 STATUS_UPDATED_AT to now,
@@ -135,21 +135,22 @@ class UniversalScheduler(
         }
     }
 
-    // todo: split into: startNextAvailableExecution/resumeNextAvailableSuspendedExecution/startOrResumeNextAvailableExecution
     fun fetchNextAvailableExecution(
         coll: MongoCollection<Document>,
-        keepAliveFor: Duration,
-        fetchSuspendedTasksAsWell: Boolean,
-        additionalConstraint: Document = emptyDoc(),
-        workerId: WorkerId = uniqueWorkerId(),
-        sortOrder: Document = doc(CAN_BE_EXECUTED_AS_OF to 1)
+        workerId: WorkerId,
+        options: FetchNextExecutionOptions,
+        additionalConstraints: Document? = null,
+        sortOrder: Document? = null
     ): StartedExecutionSummary? {
-        if (fetchSuspendedTasksAsWell) {
+        val usedAdditionalConstraints = additionalConstraints ?: emptyDoc()
+        val usedSortOrder = sortOrder ?: doc(CAN_BE_EXECUTED_AS_OF to 1)
+
+        if (options.fetchSuspendedTasksAsWell) {
             val now = clock.now()
 
             val possibleTasksToFetch = coll.find(
                 docBuilder()
-                    .putAll(additionalConstraint)
+                    .putAll(usedAdditionalConstraints)
                     .putAll(
                         STATUS to doc("\$in", listOf(TaskStatus.available, TaskStatus.suspended)),
                         CAN_BE_EXECUTED_AS_OF to doc("\$lte", now),
@@ -157,7 +158,7 @@ class UniversalScheduler(
                     )
                     .build()
             ).sort(
-                sortOrder
+                usedSortOrder
             ).projection(
                 doc(
                     TASK_ID to 1,
@@ -173,11 +174,11 @@ class UniversalScheduler(
                 if (taskStatus == TaskStatus.available) {
                     val execution = startNewExecution(
                         coll = coll,
-                        keepAliveFor = keepAliveFor,
                         workerId = workerId,
                         taskId = Optional.of(taskId),
-                        additionalQuery = additionalConstraint,
-                        sortOrder = sortOrder
+                        keepAliveFor = options.keepAliveFor,
+                        additionalConstraints = usedAdditionalConstraints,
+                        sortOrder = usedSortOrder
                     )
 
                     if (execution != null) {
@@ -188,11 +189,11 @@ class UniversalScheduler(
 
                     val execution = resumeSuspendedExecution(
                         coll = coll,
+                        workerId = workerId,
                         taskId = taskId,
                         lastExpectedExecutionId = lastExecutionId,
-                        keepAliveFor = keepAliveFor,
-                        workerId = workerId,
-                        additionalQuery = additionalConstraint
+                        keepAliveFor = options.keepAliveFor,
+                        additionalConstraints = usedAdditionalConstraints
                     )
 
                     if (execution != null) {
@@ -207,126 +208,15 @@ class UniversalScheduler(
         } else {
             val execution = startNewExecution(
                 coll = coll,
-                keepAliveFor = keepAliveFor,
                 workerId = workerId,
                 taskId = Optional.empty(),
-                additionalQuery = additionalConstraint,
-                sortOrder = sortOrder
+                keepAliveFor = options.keepAliveFor,
+                additionalConstraints = usedAdditionalConstraints,
+                sortOrder = usedSortOrder
             )
 
             return execution
         }
-    }
-
-    fun getTaskSummary(
-        coll: MongoCollection<Document>,
-        taskId: TaskId
-    ): TaskSummary? {
-        return coll.findOne(
-            doc(
-                TASK_ID to taskId
-            )
-        )?.let { taskDoc ->
-            documentToTakSummary(taskDoc)
-        }
-    }
-
-    fun updateTaskData(
-        coll: MongoCollection<Document>,
-        taskId: TaskId,
-        additionalTaskData: Document
-    ): Document? {
-        val now = clock.now()
-
-        val result = coll.findOneAndUpdate(
-            doc(
-                TASK_ID to taskId
-            ),
-            doc(
-                "\$set" to docBuilder()
-                    .putAll(
-                        UPDATED_AT to now
-                    )
-                    .putAll(
-                        additionalTaskData.mapKeys { entry ->
-                            DATA + "." + entry.key
-                        }
-                    )
-                    .build()
-            ),
-            FindOneAndUpdateOptions()
-                .returnDocument(ReturnDocument.AFTER)
-        )
-
-        return result
-    }
-
-    fun updateExecutionData(
-        coll: MongoCollection<Document>,
-        executionId: ExecutionId,
-        additionalExecutionData: Document,
-        mustBeInProgress: Boolean
-    ): Document? {
-        val now = clock.now()
-
-        val result = coll.findOneAndUpdate(
-            if (mustBeInProgress) {
-                queryForExecution(
-                    executionId,
-                    TaskStatus.inProgress,
-                    ExecutionStatus.running
-                )
-            } else {
-                doc(
-                    LAST_EXECUTION_ID to executionId,
-                    EXECUTIONS to doc("\$elemMatch" to doc(EXECUTION_ID to executionId))
-                )
-            },
-            doc(
-                "\$set" to docBuilder()
-                    .putAll(
-                        EXECUTIONS + ".\$." + UPDATED_AT to now,
-                        UPDATED_AT to now
-                    )
-                    .putAll(
-                        additionalExecutionData.mapKeys { entry ->
-                            EXECUTIONS + ".\$." + DATA + "." + entry.key
-                        }
-                    )
-                    .build(),
-            ),
-            FindOneAndUpdateOptions()
-                .returnDocument(ReturnDocument.AFTER)
-        )
-
-        return result
-    }
-
-    // todo: mtymes - add field affectsLastUpdatesAt
-    fun registerHeartBeat(
-        coll: MongoCollection<Document>,
-        executionId: ExecutionId,
-        keepAliveFor: Duration
-    ): Boolean {
-        val now = clock.now()
-        val keepAliveUntil = now.plus(keepAliveFor)
-
-        val result = coll.updateOne(
-            queryForExecution(
-                executionId,
-                TaskStatus.inProgress,
-                ExecutionStatus.running
-            ),
-            doc(
-                "\$set" to doc(
-                    LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
-                    EXECUTIONS + ".\$." + LAST_HEARTBEAT_AT to now,
-                    EXECUTIONS + ".\$." + TIMES_OUT_AFTER to keepAliveUntil,
-                )
-            )
-        )
-
-        return result.modifiedCount > 0
     }
 
     fun markAsSucceeded(
@@ -357,7 +247,7 @@ class UniversalScheduler(
     fun markAsFailedButCanRetry(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        retryDelay: Duration,
+        options: MarkAsFailedButCanRetryOptions,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
     ): Document? {
@@ -378,7 +268,7 @@ class UniversalScheduler(
                 CAN_BE_EXECUTED_AS_OF to doc(
                     "\$cond" to listOf(
                         doc("\$gt" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 0)),
-                        now.plus(retryDelay),
+                        now.plus(options.retryDelay),
                         "\$" + CAN_BE_EXECUTED_AS_OF
                     )
                 )
@@ -502,7 +392,7 @@ class UniversalScheduler(
     fun markAsSuspended(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        suspendFor: Duration,
+        options: MarkAsSuspendedOptions,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
     ): Document? {
@@ -517,7 +407,7 @@ class UniversalScheduler(
             toExecutionStatus = ExecutionStatus.suspended,
             now = now,
             customTaskUpdates = doc(
-                CAN_BE_EXECUTED_AS_OF to now.plus(suspendFor),
+                CAN_BE_EXECUTED_AS_OF to now.plus(options.suspendFor),
 
                 // $inc - section
                 // todo: mtymes - handle differently
@@ -537,9 +427,9 @@ class UniversalScheduler(
 
     // todo: mtymes - allow to make this code a bit more dynamic - so the client could evaluate for example data to update based on task/execution data
     // todo: mtymes - maybe add custom query criteria
-    fun findAndMarkTimedOutTasks(
+    fun markDeadExecutionsAsTimedOut(
         coll: MongoCollection<Document>,
-        retryDelay: Duration?,
+        options: MarkDeadExecutionsAsTimedOutOptions,
         additionalTaskData: Document = emptyDoc(),
         additionalExecutionData: Document = emptyDoc()
     ) {
@@ -567,7 +457,7 @@ class UniversalScheduler(
                     toExecutionStatus = ExecutionStatus.timedOut,
                     now = now,
                     customTaskUpdates = if (executionAttemptsLeft > 0) {
-                        doc(CAN_BE_EXECUTED_AS_OF to now.plus(retryDelay))
+                        doc(CAN_BE_EXECUTED_AS_OF to now.plus(options.retryDelay))
                     } else {
                         emptyDoc()
                     },
@@ -583,12 +473,165 @@ class UniversalScheduler(
         }
     }
 
+    fun registerHeartBeat(
+        coll: MongoCollection<Document>,
+        executionId: ExecutionId,
+        options: RegisterHeartBeatOptions,
+        additionalTaskData: Document = emptyDoc(), // todo: mtymes - start using this
+        additionalExecutionData: Document = emptyDoc()
+    ): Boolean {
+        val now = clock.now()
+        val keepAliveUntil = now.plus(options.keepAliveFor)
+
+        val result = coll.updateOne(
+            queryForExecution(
+                executionId,
+                TaskStatus.inProgress,
+                ExecutionStatus.running
+            ),
+            doc(
+                "\$set" to docBuilder()
+                    .putAll(
+                        LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
+                        EXECUTIONS + ".\$." + LAST_HEARTBEAT_AT to now,
+                        EXECUTIONS + ".\$." + TIMES_OUT_AFTER to keepAliveUntil,
+                    ).let { setDoc ->
+                        var wasModified = false
+
+                        if (!additionalTaskData.isEmpty()) {
+                            setDoc.putAll(
+                                additionalTaskData.mapKeys { entry ->
+                                    DATA + "." + entry.key
+                                }
+                            )
+                            wasModified = true
+                        }
+
+                        if (!additionalExecutionData.isEmpty()) {
+                            setDoc.putAll(
+                                additionalExecutionData.mapKeys { entry ->
+                                    EXECUTIONS + ".\$." + DATA + "." + entry.key
+                                }
+                            )
+                            wasModified = true
+                        }
+
+                        if (wasModified) {
+                            setDoc.putAll(
+                                EXECUTIONS + ".\$." + UPDATED_AT to now,
+                                UPDATED_AT to now
+                            )
+                        }
+
+                        setDoc
+                    }
+                    .build()
+            )
+        )
+
+        return result.modifiedCount > 0
+    }
+
+    // todo: mtymes - maybe add custom query criteria
+    fun updateTaskData(
+        coll: MongoCollection<Document>,
+        taskId: TaskId,
+        additionalTaskData: Document
+    ): Document? {
+        expectNonEmptyDocument("additionalTaskData", additionalTaskData)
+
+        val now = clock.now()
+
+        val result = coll.findOneAndUpdate(
+            doc(
+                TASK_ID to taskId
+            ),
+            doc(
+                "\$set" to docBuilder()
+                    .putAll(
+                        UPDATED_AT to now
+                    )
+                    .putAll(
+                        additionalTaskData.mapKeys { entry ->
+                            DATA + "." + entry.key
+                        }
+                    )
+                    .build()
+            ),
+            FindOneAndUpdateOptions()
+                .returnDocument(ReturnDocument.AFTER)
+        )
+
+        return result
+    }
+
+    // todo: mtymes - maybe add custom query criteria
+    fun updateExecutionData(
+        coll: MongoCollection<Document>,
+        executionId: ExecutionId,
+        options: UpdateExecutionDataOptions,
+        additionalExecutionData: Document,
+        additionalTaskData: Document = emptyDoc()
+    ): Document? {
+        expectNonEmptyDocument("additionalExecutionData", additionalExecutionData)
+
+        val now = clock.now()
+
+        val result = coll.findOneAndUpdate(
+            if (options.mustBeLastExecution) {
+                doc(
+                    LAST_EXECUTION_ID to executionId,
+                    EXECUTIONS to doc("\$elemMatch" to doc(EXECUTION_ID to executionId))
+                )
+            } else {
+                doc(
+                    EXECUTIONS to doc("\$elemMatch" to doc(EXECUTION_ID to executionId))
+                )
+            },
+            doc(
+                "\$set" to docBuilder()
+                    .putAll(
+                        additionalTaskData.mapKeys { entry ->
+                            DATA + "." + entry.key
+                        }
+                    )
+                    .putAll(
+                        additionalExecutionData.mapKeys { entry ->
+                            EXECUTIONS + ".\$." + DATA + "." + entry.key
+                        }
+                    )
+                    .putAll(
+                        EXECUTIONS + ".\$." + UPDATED_AT to now,
+                        UPDATED_AT to now
+                    )
+                    .build(),
+            ),
+            FindOneAndUpdateOptions()
+                .returnDocument(ReturnDocument.AFTER)
+        )
+
+        return result
+    }
+
+    fun getTaskSummary(
+        coll: MongoCollection<Document>,
+        taskId: TaskId
+    ): TaskSummary? {
+        return coll.findOne(
+            doc(
+                TASK_ID to taskId
+            )
+        )?.let { taskDoc ->
+            documentToTakSummary(taskDoc)
+        }
+    }
+
     private fun startNewExecution(
         coll: MongoCollection<Document>,
-        keepAliveFor: Duration,
         workerId: WorkerId,
         taskId: Optional<TaskId>,
-        additionalQuery: Document = emptyDoc(),
+        keepAliveFor: Duration,
+        additionalConstraints: Document,
         sortOrder: Document
     ): StartedExecutionSummary? {
         val now = clock.now()
@@ -598,7 +641,7 @@ class UniversalScheduler(
 
         val modifiedTask = coll.findOneAndUpdate(
             docBuilder()
-                .putAll(additionalQuery)
+                .putAll(additionalConstraints)
                 .putAll(
                     TASK_ID to taskId,
                     STATUS to TaskStatus.available,
@@ -651,18 +694,18 @@ class UniversalScheduler(
 
     private fun resumeSuspendedExecution(
         coll: MongoCollection<Document>,
+        workerId: WorkerId,
         taskId: TaskId,
         lastExpectedExecutionId: ExecutionId,
         keepAliveFor: Duration,
-        workerId: WorkerId,
-        additionalQuery: Document = emptyDoc()
+        additionalConstraints: Document
     ): StartedExecutionSummary? {
         val now = clock.now()
         val keepAliveUntil = now.plus(keepAliveFor)
 
         val modifiedTask = coll.findOneAndUpdate(
             docBuilder()
-                .putAll(additionalQuery)
+                .putAll(additionalConstraints)
                 .putAll(
                     TASK_ID to taskId,
                     STATUS to TaskStatus.suspended,
@@ -737,6 +780,7 @@ class UniversalScheduler(
                     when (toTaskStatus) {
                         is ToSingleTaskStatus ->
                             STATUS to toTaskStatus.status
+
                         is ToAvailabilityBasedTaskStatus ->
                             STATUS to doc(
                                 "\$cond" to listOf(
@@ -931,17 +975,16 @@ class UniversalScheduler(
                 .getList(EXECUTIONS, Document::class.java)
                 .map { executionDoc ->
                     documentToExecution(executionDoc)
-                },
-            TaskConfig(
-                maxAttemptCount = taskDoc.getInteger(MAX_EXECUTION_ATTEMPTS_COUNT)
-            )
+                }
         )
     }
 
     private fun documentToTask(taskDoc: Document) = Task(
         taskId = TaskId(taskDoc.getString(TASK_ID)),
         data = taskDoc.get(DATA) as Document,
-        status = TaskStatus.valueOf(taskDoc.getString(STATUS))
+        status = TaskStatus.valueOf(taskDoc.getString(STATUS)),
+        maxAttemptsCount = taskDoc.getInteger(MAX_EXECUTION_ATTEMPTS_COUNT),
+        attemptsLeft = taskDoc.getInteger(EXECUTION_ATTEMPTS_LEFT)
     )
 
     private fun documentToExecution(executionDoc: Document) = Execution(
