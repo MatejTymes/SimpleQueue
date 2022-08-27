@@ -23,5 +23,4 @@ object MongoCollectionExt {
 
     // todo: mtymes - should we fail if has more that one ???
     fun <T> MongoCollection<T>.findOne(filter: Bson): T? = find(filter).first()
-
 }

@@ -7,45 +7,6 @@ import mtymes.tasks.common.time.Durations.ZERO_SECONDS
 import mtymes.tasks.scheduler.domain.TaskId.Companion.uniqueTaskId
 import java.time.Duration
 
-interface CanBePartiallyDefined {
-
-    @Throws(IllegalArgumentException::class)
-    fun checkIsValid(fieldPrefix: String)
-
-    @Throws(IllegalArgumentException::class)
-    fun checkIsValid() {
-        checkIsValid("")
-    }
-}
-
-// todo: mtymes - define the remaining Options
-
-data class PartialSubmitTaskOptions(
-    val taskIdGenerator: (() -> TaskId)? = null,
-    val maxAttemptsCount: Int = 1,
-    val ttl: Duration? = null,
-    val delayStartBy: Duration? = null,
-    // todo: mtymes - add startPaused: Boolean = false
-) : CanBePartiallyDefined {
-
-    override fun checkIsValid(fieldPrefix: String) {
-        val errors = mutableListOf<String>()
-
-        if (maxAttemptsCount < 1) {
-            errors.add("'${fieldPrefix}maxAttemptCounts' must be at least 1 but is ${maxAttemptsCount} instead")
-        }
-        if (ttl == null) {
-            errors.add("'${fieldPrefix}ttl' must be defined")
-        } else if (ttl.isNegative || ttl.isZero) {
-            errors.add("'${fieldPrefix}ttl' must be a positive value but was ${ttl} instead")
-        }
-
-        if (errors.isNotEmpty()) {
-            throw IllegalArgumentException(errors.joinToString("; "))
-        }
-    }
-}
-
 // todo: mtymes - can't create these (as they have not fields): MarkAsSucceededOptions, MarkAsFailedButCanNOTRetryOptions, MarkAsCancelledOptions
 
 data class SubmitTaskOptions(

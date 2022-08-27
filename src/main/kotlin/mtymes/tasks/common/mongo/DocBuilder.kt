@@ -62,6 +62,14 @@ class DocBuilder {
         return putIf(condition, keyValue.first, keyValue.second)
     }
 
+    fun putIf(condition: Boolean, keyValueGenerator: () -> Pair<String, Any?>): DocBuilder {
+        if (condition) {
+            val (key, value) = keyValueGenerator.invoke()
+            put(key, value)
+        }
+        return this
+    }
+
     fun putAll(vararg pairs: Pair<String, Any?>): DocBuilder {
         for ((key, value) in pairs) {
             put(key, value)
@@ -72,6 +80,13 @@ class DocBuilder {
     fun putAll(values: Map<String, Any?>): DocBuilder {
         for ((key, value) in values) {
             put(key, value)
+        }
+        return this
+    }
+
+    fun putAllIf(condition: Boolean, valuesGenerator: () -> Map<String, Any?>): DocBuilder {
+        if (condition) {
+            putAll(valuesGenerator.invoke())
         }
         return this
     }

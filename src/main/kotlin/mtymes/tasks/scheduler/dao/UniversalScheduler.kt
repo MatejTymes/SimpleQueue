@@ -4,10 +4,11 @@ import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.FindOneAndUpdateOptions
 import com.mongodb.client.model.ReturnDocument
 import mtymes.tasks.common.check.ValidityChecks.expectNonEmptyDocument
-import mtymes.tasks.common.mongo.DocBuilder
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.mongo.DocBuilder.Companion.docBuilder
 import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
+import mtymes.tasks.common.mongo.DocumentExt.areDefined
+import mtymes.tasks.common.mongo.DocumentExt.isDefined
 import mtymes.tasks.common.mongo.MongoCollectionExt.findOne
 import mtymes.tasks.common.mongo.MongoCollectionExt.insert
 import mtymes.tasks.common.time.Clock
@@ -19,14 +20,12 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
-// todo: mtymes - replace emptyDoc/default values with nullable value
-// todo: mtymes - ability to fail if Execution is already in wanted state (e.g. failed -> failed, cancelled -> cancelled, succeeded -> succeeded, suspended -> suspended)
-// todo: mtymes - add ttl index for this
-// todo: mtymes - add indexes - should be done by users of this class
-
 // todo: mtymes - add ability to provide custom ExecutionId
+// todo: mtymes - ability to fail if Execution is already in wanted state (e.g. failed -> failed, cancelled -> cancelled, succeeded -> succeeded, suspended -> suspended)
+
 // todo: mtymes - update ttl - to bigger to smaller value
 // todo: mtymes - update ttl on final state
+// todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
 class UniversalScheduler(
     val clock: Clock = UTCClock()
 ) {
@@ -142,7 +141,6 @@ class UniversalScheduler(
         additionalConstraints: Document? = null,
         sortOrder: Document? = null
     ): StartedExecutionSummary? {
-        val usedAdditionalConstraints = additionalConstraints ?: emptyDoc()
         val usedSortOrder = sortOrder ?: doc(CAN_BE_EXECUTED_AS_OF to 1)
 
         if (options.fetchSuspendedTasksAsWell) {
@@ -150,7 +148,9 @@ class UniversalScheduler(
 
             val possibleTasksToFetch = coll.find(
                 docBuilder()
-                    .putAll(usedAdditionalConstraints)
+                    .putAllIf(additionalConstraints.areDefined()) {
+                        additionalConstraints!!
+                    }
                     .putAll(
                         STATUS to doc("\$in", listOf(TaskStatus.available, TaskStatus.suspended)),
                         CAN_BE_EXECUTED_AS_OF to doc("\$lte", now),
@@ -177,7 +177,7 @@ class UniversalScheduler(
                         workerId = workerId,
                         taskId = Optional.of(taskId),
                         keepAliveFor = options.keepAliveFor,
-                        additionalConstraints = usedAdditionalConstraints,
+                        additionalConstraints = additionalConstraints,
                         sortOrder = usedSortOrder
                     )
 
@@ -193,7 +193,7 @@ class UniversalScheduler(
                         taskId = taskId,
                         lastExpectedExecutionId = lastExecutionId,
                         keepAliveFor = options.keepAliveFor,
-                        additionalConstraints = usedAdditionalConstraints
+                        additionalConstraints = additionalConstraints
                     )
 
                     if (execution != null) {
@@ -202,7 +202,7 @@ class UniversalScheduler(
                 }
             }
 
-            // todo: mtymes - if got some tasks, but all were actually fetched, then maybe try again
+            // todo: mtymes - if got some tasks, but all were already fetched (concurrently by other thread), then maybe try again
 
             return null
         } else {
@@ -211,7 +211,7 @@ class UniversalScheduler(
                 workerId = workerId,
                 taskId = Optional.empty(),
                 keepAliveFor = options.keepAliveFor,
-                additionalConstraints = usedAdditionalConstraints,
+                additionalConstraints = additionalConstraints,
                 sortOrder = usedSortOrder
             )
 
@@ -222,8 +222,8 @@ class UniversalScheduler(
     fun markAsSucceeded(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        additionalTaskData: Document = emptyDoc(),
-        additionalExecutionData: Document = emptyDoc()
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
     ): Document? {
         val now = clock.now()
 
@@ -235,7 +235,6 @@ class UniversalScheduler(
             toTaskStatus = TaskStatus.succeeded,
             toExecutionStatus = ExecutionStatus.succeeded,
             now = now,
-            customTaskUpdates = emptyDoc(),
             customExecutionUpdates = doc(
                 FINISHED_AT to now
             ),
@@ -248,8 +247,8 @@ class UniversalScheduler(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         options: MarkAsFailedButCanRetryOptions,
-        additionalTaskData: Document = emptyDoc(),
-        additionalExecutionData: Document = emptyDoc()
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
     ): Document? {
         val now = clock.now()
 
@@ -284,8 +283,8 @@ class UniversalScheduler(
     fun markAsFailedButCanNOTRetry(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        additionalTaskData: Document = emptyDoc(),
-        additionalExecutionData: Document = emptyDoc()
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
     ): Document? {
         val now = clock.now()
 
@@ -297,7 +296,6 @@ class UniversalScheduler(
             toTaskStatus = ToSingleTaskStatus(TaskStatus.failed),
             toExecutionStatus = ExecutionStatus.failed,
             now = now,
-            customTaskUpdates = emptyDoc(),
             customExecutionUpdates = doc(
                 FINISHED_AT to now
             ),
@@ -309,8 +307,8 @@ class UniversalScheduler(
     fun markAsCancelled(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        additionalTaskData: Document = emptyDoc(),
-        additionalExecutionData: Document = emptyDoc()
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
     ): Document? {
         val now = clock.now()
 
@@ -322,7 +320,6 @@ class UniversalScheduler(
             toTaskStatus = TaskStatus.cancelled,
             toExecutionStatus = ExecutionStatus.cancelled,
             now = now,
-            customTaskUpdates = emptyDoc(),
             customExecutionUpdates = doc(
                 FINISHED_AT to now
             ),
@@ -334,7 +331,7 @@ class UniversalScheduler(
     fun markTaskAsCancelled(
         coll: MongoCollection<Document>,
         taskId: TaskId,
-        additionalTaskData: Document = DocBuilder.emptyDoc()
+        additionalTaskData: Document? = null
     ): Document? {
         val now = clock.now()
 
@@ -353,11 +350,11 @@ class UniversalScheduler(
                         STATUS_UPDATED_AT to now,
                         UPDATED_AT to now
                     )
-                    .putAll(
-                        additionalTaskData.mapKeys { entry ->
+                    .putAllIf(additionalTaskData.isDefined()) {
+                        additionalTaskData!!.mapKeys { entry ->
                             DATA + "." + entry.key
                         }
-                    )
+                    }
                     .build()
             ),
             FindOneAndUpdateOptions()
@@ -388,13 +385,12 @@ class UniversalScheduler(
         return modifiedTask
     }
 
-    // todo: mtymes - fail if suspending non-suspendable task
     fun markAsSuspended(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         options: MarkAsSuspendedOptions,
-        additionalTaskData: Document = emptyDoc(),
-        additionalExecutionData: Document = emptyDoc()
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
     ): Document? {
         val now = clock.now()
 
@@ -430,8 +426,8 @@ class UniversalScheduler(
     fun markDeadExecutionsAsTimedOut(
         coll: MongoCollection<Document>,
         options: MarkDeadExecutionsAsTimedOutOptions,
-        additionalTaskData: Document = emptyDoc(),
-        additionalExecutionData: Document = emptyDoc()
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
     ) {
         val deadTasks: List<Document> = coll.find(
             doc(
@@ -459,7 +455,7 @@ class UniversalScheduler(
                     customTaskUpdates = if (executionAttemptsLeft > 0) {
                         doc(CAN_BE_EXECUTED_AS_OF to now.plus(options.retryDelay))
                     } else {
-                        emptyDoc()
+                        null
                     },
                     customExecutionUpdates = doc(
                         FINISHED_AT to now
@@ -477,8 +473,8 @@ class UniversalScheduler(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         options: RegisterHeartBeatOptions,
-        additionalTaskData: Document = emptyDoc(), // todo: mtymes - start using this
-        additionalExecutionData: Document = emptyDoc()
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
     ): Boolean {
         val now = clock.now()
         val keepAliveUntil = now.plus(options.keepAliveFor)
@@ -495,35 +491,22 @@ class UniversalScheduler(
                         LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
                         EXECUTIONS + ".\$." + LAST_HEARTBEAT_AT to now,
                         EXECUTIONS + ".\$." + TIMES_OUT_AFTER to keepAliveUntil,
-                    ).let { setDoc ->
-                        var wasModified = false
-
-                        if (!additionalTaskData.isEmpty()) {
-                            setDoc.putAll(
-                                additionalTaskData.mapKeys { entry ->
-                                    DATA + "." + entry.key
-                                }
-                            )
-                            wasModified = true
+                    )
+                    .putAllIf(additionalTaskData.isDefined()) {
+                        additionalTaskData!!.mapKeys { entry ->
+                            DATA + "." + entry.key
                         }
-
-                        if (!additionalExecutionData.isEmpty()) {
-                            setDoc.putAll(
-                                additionalExecutionData.mapKeys { entry ->
-                                    EXECUTIONS + ".\$." + DATA + "." + entry.key
-                                }
-                            )
-                            wasModified = true
+                    }
+                    .putAllIf(additionalExecutionData.isDefined()) {
+                        additionalExecutionData!!.mapKeys { entry ->
+                            EXECUTIONS + ".\$." + DATA + "." + entry.key
                         }
-
-                        if (wasModified) {
-                            setDoc.putAll(
-                                EXECUTIONS + ".\$." + UPDATED_AT to now,
-                                UPDATED_AT to now
-                            )
-                        }
-
-                        setDoc
+                    }
+                    .putAllIf(additionalTaskData.isDefined() || additionalExecutionData.isDefined()) {
+                        doc(
+                            EXECUTIONS + ".\$." + UPDATED_AT to now,
+                            UPDATED_AT to now
+                        )
                     }
                     .build()
             )
@@ -571,7 +554,7 @@ class UniversalScheduler(
         executionId: ExecutionId,
         options: UpdateExecutionDataOptions,
         additionalExecutionData: Document,
-        additionalTaskData: Document = emptyDoc()
+        additionalTaskData: Document? = null
     ): Document? {
         expectNonEmptyDocument("additionalExecutionData", additionalExecutionData)
 
@@ -590,11 +573,11 @@ class UniversalScheduler(
             },
             doc(
                 "\$set" to docBuilder()
-                    .putAll(
-                        additionalTaskData.mapKeys { entry ->
+                    .putAllIf(additionalTaskData.isDefined()) {
+                        additionalTaskData!!.mapKeys { entry ->
                             DATA + "." + entry.key
                         }
-                    )
+                    }
                     .putAll(
                         additionalExecutionData.mapKeys { entry ->
                             EXECUTIONS + ".\$." + DATA + "." + entry.key
@@ -631,7 +614,7 @@ class UniversalScheduler(
         workerId: WorkerId,
         taskId: Optional<TaskId>,
         keepAliveFor: Duration,
-        additionalConstraints: Document,
+        additionalConstraints: Document?,
         sortOrder: Document
     ): StartedExecutionSummary? {
         val now = clock.now()
@@ -641,7 +624,9 @@ class UniversalScheduler(
 
         val modifiedTask = coll.findOneAndUpdate(
             docBuilder()
-                .putAll(additionalConstraints)
+                .putAllIf(additionalConstraints.areDefined()) {
+                    additionalConstraints!!
+                }
                 .putAll(
                     TASK_ID to taskId,
                     STATUS to TaskStatus.available,
@@ -698,14 +683,16 @@ class UniversalScheduler(
         taskId: TaskId,
         lastExpectedExecutionId: ExecutionId,
         keepAliveFor: Duration,
-        additionalConstraints: Document
+        additionalConstraints: Document?
     ): StartedExecutionSummary? {
         val now = clock.now()
         val keepAliveUntil = now.plus(keepAliveFor)
 
         val modifiedTask = coll.findOneAndUpdate(
             docBuilder()
-                .putAll(additionalConstraints)
+                .putAllIf(additionalConstraints.areDefined()) {
+                    additionalConstraints!!
+                }
                 .putAll(
                     TASK_ID to taskId,
                     STATUS to TaskStatus.suspended,
@@ -764,10 +751,10 @@ class UniversalScheduler(
         toTaskStatus: ToTaskStatus,
         toExecutionStatus: ExecutionStatus,
         now: ZonedDateTime,
-        customTaskUpdates: Document,
-        customExecutionUpdates: Document,
-        additionalTaskData: Document,
-        additionalExecutionData: Document
+        customTaskUpdates: Document? = null,
+        customExecutionUpdates: Document? = null,
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
     ): Document? {
         val query = queryForExecution(
             executionId,
@@ -809,20 +796,16 @@ class UniversalScheduler(
                                                     STATUS_UPDATED_AT to now,
                                                     UPDATED_AT to now
                                                 )
-                                                .putAll(customExecutionUpdates)
-                                                .let {
-                                                    if (additionalExecutionData.isEmpty()) {
-                                                        it
-                                                    } else {
-                                                        it.put(
-                                                            DATA to doc(
-                                                                "\$mergeObjects" to listOf(
-                                                                    "\$\$ex.data",
-                                                                    additionalExecutionData
-                                                                )
-                                                            )
+                                                .putIf(additionalExecutionData.isDefined()) {
+                                                    DATA to doc(
+                                                        "\$mergeObjects" to listOf(
+                                                            "\$\$ex.data",
+                                                            additionalExecutionData
                                                         )
-                                                    }
+                                                    )
+                                                }
+                                                .putAllIf(customExecutionUpdates.areDefined()) {
+                                                    customExecutionUpdates!!
                                                 }
                                                 .build()
                                         )
@@ -834,12 +817,14 @@ class UniversalScheduler(
                     ),
                     UPDATED_AT to now
                 )
-                .putAll(
-                    additionalTaskData.mapKeys { entry ->
+                .putAllIf(additionalTaskData.isDefined()) {
+                    additionalTaskData!!.mapKeys { entry ->
                         DATA + "." + entry.key
                     }
-                )
-                .putAll(customTaskUpdates)
+                }
+                .putAllIf(customTaskUpdates.isDefined()) {
+                    customTaskUpdates!!
+                }
                 .build()
         )
         val modifiedTask = coll.findOneAndUpdate(
@@ -907,10 +892,10 @@ class UniversalScheduler(
         toTaskStatus: TaskStatus,
         toExecutionStatus: ExecutionStatus,
         now: ZonedDateTime,
-        customTaskUpdates: Document,
+        customTaskUpdates: Document? = null,
         customExecutionUpdates: Document,
-        additionalTaskData: Document,
-        additionalExecutionData: Document
+        additionalTaskData: Document?,
+        additionalExecutionData: Document?
     ): Document? {
         return updateExecution(
             coll = coll,
