@@ -21,8 +21,6 @@ import java.time.ZonedDateTime
 import java.util.*
 
 // todo: mtymes - add ability to provide custom ExecutionId
-// todo: mtymes - ability to fail if Execution is already in wanted state (e.g. failed -> failed, cancelled -> cancelled, succeeded -> succeeded, suspended -> suspended)
-
 // todo: mtymes - update ttl - to bigger to smaller value
 // todo: mtymes - update ttl on final state
 // todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
@@ -869,7 +867,9 @@ class UniversalScheduler(
             if (currentExecutionStatus != fromExecutionStatus || currentTaskStatus != fromTaskStatus) {
                 if (currentExecutionStatus == toExecutionStatus && currentTaskStatus == expectedToTaskStatus) {
                     // already applied
-                    return null
+                    throw TaskAndExecutionStateAlreadyAppliedException(
+                        "Task '${taskId}' and Execution '${executionId}' are already in Task status '${expectedToTaskStatus}' and Execution status '${toExecutionStatus}'"
+                    )
                 } else {
                     throw UnexpectedStatusException(
                         "Failed to mark Task '${taskId}' as '${expectedToTaskStatus}' and Execution '${executionId}' as '${toExecutionStatus}'" +

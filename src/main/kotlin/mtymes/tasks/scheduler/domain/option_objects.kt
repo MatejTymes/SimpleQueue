@@ -7,6 +7,7 @@ import mtymes.tasks.common.time.Durations.ZERO_SECONDS
 import mtymes.tasks.scheduler.domain.TaskId.Companion.uniqueTaskId
 import java.time.Duration
 
+// todo: mtymes - allow to update ttl with any update operation
 // todo: mtymes - can't create these (as they have not fields): MarkAsSucceededOptions, MarkAsFailedButCanNOTRetryOptions, MarkAsCancelledOptions
 
 data class SubmitTaskOptions(

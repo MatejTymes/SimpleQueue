@@ -6,3 +6,5 @@ class UnexpectedStatusException(message: String) : IllegalStateException(message
 class UnknownFailureReasonException(message: String) : IllegalStateException(message)
 
 class ExecutionSupersededByAnotherOneException(message: String) : IllegalStateException(message)
+
+class TaskAndExecutionStateAlreadyAppliedException(message: String) : java.lang.IllegalStateException(message)
