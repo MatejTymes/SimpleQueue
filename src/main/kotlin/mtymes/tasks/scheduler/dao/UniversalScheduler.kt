@@ -106,6 +106,7 @@ class UniversalScheduler(
         expectNonEmptyDocument("data", data)
 
         val taskId = options.taskIdGenerator.invoke()
+        val status = if (options.submitAsPaused) TaskStatus.paused else TaskStatus.available
 
         val now = clock.now()
 
@@ -120,7 +121,7 @@ class UniversalScheduler(
                 EXECUTION_ATTEMPTS_LEFT to options.maxAttemptsCount,
                 CAN_BE_EXECUTED_AS_OF to now.plus(options.delayStartBy),
 
-                STATUS to TaskStatus.available,
+                STATUS to status,
                 STATUS_UPDATED_AT to now,
 
                 UPDATED_AT to now,
@@ -337,6 +338,48 @@ class UniversalScheduler(
 
         val fromTaskStatus = TaskStatus.available
         val toTaskStatus = TaskStatus.cancelled
+
+        return updateTask(
+            coll = coll,
+            taskId = taskId,
+            fromTaskStatus = fromTaskStatus,
+            toTaskStatus = toTaskStatus,
+            now = now,
+            additionalTaskData = additionalTaskData
+        )
+    }
+
+    // todo: mtymes - add sample for this one
+    fun markTaskAsPaused(
+        coll: MongoCollection<Document>,
+        taskId: TaskId,
+        additionalTaskData: Document? = null
+    ): Document? {
+        val now = clock.now()
+
+        val fromTaskStatus = TaskStatus.available
+        val toTaskStatus = TaskStatus.paused
+
+        return updateTask(
+            coll = coll,
+            taskId = taskId,
+            fromTaskStatus = fromTaskStatus,
+            toTaskStatus = toTaskStatus,
+            now = now,
+            additionalTaskData = additionalTaskData
+        )
+    }
+
+    // todo: mtymes - add sample for this one
+    fun markTaskAsUnPaused(
+        coll: MongoCollection<Document>,
+        taskId: TaskId,
+        additionalTaskData: Document? = null
+    ): Document? {
+        val now = clock.now()
+
+        val fromTaskStatus = TaskStatus.paused
+        val toTaskStatus = TaskStatus.available
 
         return updateTask(
             coll = coll,

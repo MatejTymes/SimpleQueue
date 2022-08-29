@@ -14,8 +14,10 @@ data class SubmitTaskOptions(
     val taskIdGenerator: (() -> TaskId) = { uniqueTaskId() },
     val maxAttemptsCount: Int = 1,
     val ttl: Duration,
-    val delayStartBy: Duration = ZERO_SECONDS
-    // todo: mtymes - add submitAsPaused: Boolean = false
+    val delayStartBy: Duration = ZERO_SECONDS,
+    // todo: mtymes - add sample for this one
+    val submitAsPaused: Boolean = false
+
 ) {
     init {
         expectAtLeastOne("maxAttemptsCount", maxAttemptsCount)

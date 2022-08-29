@@ -42,7 +42,7 @@ class WorkerId(value: String) : Microtype<String>(value) {
 }
 
 enum class TaskStatus {
-    // todo: mtymes - add paused state
+    paused, // todo: mtymes - start using this
     available,
     inProgress,
     suspended,
