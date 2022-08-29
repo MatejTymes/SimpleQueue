@@ -21,8 +21,7 @@ import java.time.ZonedDateTime
 import java.util.*
 
 // todo: mtymes - add execution field: was unretriable fail
-// todo: mtymes - add ability to provide custom ExecutionId
-// todo: mtymes - update ttl - to bigger to smaller value
+// todo: mtymes - update ttl - to bigger, to smaller value
 // todo: mtymes - update ttl on final state
 // todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
 class UniversalScheduler(
@@ -339,57 +338,14 @@ class UniversalScheduler(
         val fromTaskStatus = TaskStatus.available
         val toTaskStatus = TaskStatus.cancelled
 
-        val modifiedTask = coll.findOneAndUpdate(
-            doc(
-                TASK_ID to taskId,
-                STATUS to fromTaskStatus
-            ),
-            doc(
-                "\$set" to docBuilder()
-                    .putAll(
-                        STATUS to toTaskStatus,
-                        STATUS_UPDATED_AT to now,
-                        UPDATED_AT to now
-                    )
-                    .putAllIf(additionalTaskData.isDefined()) {
-                        additionalTaskData!!.mapKeys { entry ->
-                            DATA + "." + entry.key
-                        }
-                    }
-                    .build()
-            ),
-            FindOneAndUpdateOptions()
-                .returnDocument(ReturnDocument.AFTER)
+        return updateTask(
+            coll = coll,
+            taskId = taskId,
+            fromTaskStatus = fromTaskStatus,
+            toTaskStatus = toTaskStatus,
+            now = now,
+            additionalTaskData = additionalTaskData
         )
-
-        if (modifiedTask == null) {
-            val task: Document? = coll.findOne(
-                doc(TASK_ID to taskId)
-            )
-
-            if (task == null) {
-                throw ExecutionNotFoundException("Task '${taskId}' NOT FOUND")
-            }
-
-            val currentTaskStatus = TaskStatus.valueOf(task.getString(STATUS))
-            if (currentTaskStatus != fromTaskStatus) {
-                if (currentTaskStatus == toTaskStatus) {
-                    throw TaskStatusAlreadyAppliedException(
-                        "Task '${taskId}' is already in status '${toTaskStatus}'"
-                    )
-                }
-
-                throw UnexpectedStatusException(
-                    "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected '${fromTaskStatus}' but got '${currentTaskStatus}' Task status instead"
-                )
-            }
-
-            throw UnknownFailureReasonException(
-                "Not sure why Task '${taskId}' was not marked as ${toTaskStatus}"
-            )
-        }
-
-        return modifiedTask
     }
 
     fun markAsSuspended(
@@ -750,6 +706,69 @@ class UniversalScheduler(
         }
     }
 
+    private fun updateTask(
+        coll: MongoCollection<Document>,
+        taskId: TaskId,
+        fromTaskStatus: TaskStatus,
+        toTaskStatus: TaskStatus,
+        now: ZonedDateTime,
+        additionalTaskData: Document?
+    ): Document? {
+        val modifiedTask = coll.findOneAndUpdate(
+            doc(
+                TASK_ID to taskId,
+                STATUS to fromTaskStatus
+            ),
+            doc(
+                "\$set" to docBuilder()
+                    .putAll(
+                        STATUS to toTaskStatus,
+                        STATUS_UPDATED_AT to now,
+                        UPDATED_AT to now
+                    )
+                    .putAllIf(additionalTaskData.isDefined()) {
+                        additionalTaskData!!.mapKeys { entry ->
+                            DATA + "." + entry.key
+                        }
+                    }
+                    .build()
+            ),
+            FindOneAndUpdateOptions()
+                .returnDocument(ReturnDocument.AFTER)
+        )
+
+        if (modifiedTask != null) {
+            return modifiedTask
+        } else {
+            val task: Document? = coll.findOne(
+                doc(TASK_ID to taskId)
+            )
+
+            if (task == null) {
+                throw ExecutionNotFoundException(
+                    "Task '${taskId}' NOT FOUND"
+                )
+            }
+
+            val currentTaskStatus = TaskStatus.valueOf(task.getString(STATUS))
+            if (currentTaskStatus != fromTaskStatus) {
+                if (currentTaskStatus == toTaskStatus) {
+                    throw TaskStatusAlreadyAppliedException(
+                        "Task '${taskId}' is already in status '${toTaskStatus}'"
+                    )
+                } else {
+                    throw UnexpectedStatusException(
+                        "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected '${fromTaskStatus}' but got '${currentTaskStatus}' Task status instead"
+                    )
+                }
+            }
+
+            throw UnknownFailureReasonException(
+                "Not sure why Task '${taskId}' was not marked as ${toTaskStatus}"
+            )
+        }
+    }
+
     private fun updateExecution(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
@@ -849,7 +868,9 @@ class UniversalScheduler(
             )
 
             if (task == null) {
-                throw ExecutionNotFoundException("Execution '${executionId}' NOT FOUND")
+                throw ExecutionNotFoundException(
+                    "Execution '${executionId}' NOT FOUND"
+                )
             }
 
             val taskId = TaskId(task.getString(TASK_ID))
@@ -944,7 +965,7 @@ class UniversalScheduler(
         val lastExecutionId = ExecutionId(taskDoc.getString(LAST_EXECUTION_ID))
 
         if (expectedLastExecutionId != lastExecutionId) {
-            throw ExecutionSupersededByAnotherOneException(
+            throw NotLastExecutionException(
                 "No idea how this happened but our started Execution '${expectedLastExecutionId}' was superseded by Execution '${lastExecutionId}'"
             )
         }
