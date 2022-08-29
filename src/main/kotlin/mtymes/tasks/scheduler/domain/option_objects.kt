@@ -15,7 +15,7 @@ data class SubmitTaskOptions(
     val maxAttemptsCount: Int = 1,
     val ttl: Duration,
     val delayStartBy: Duration = ZERO_SECONDS
-    // todo: mtymes - add startPaused: Boolean = false
+    // todo: mtymes - add submitAsPaused: Boolean = false
 ) {
     init {
         expectAtLeastOne("maxAttemptsCount", maxAttemptsCount)

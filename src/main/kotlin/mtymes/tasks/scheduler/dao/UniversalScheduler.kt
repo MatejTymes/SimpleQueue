@@ -20,6 +20,7 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
+// todo: mtymes - add execution field: was unretriable fail
 // todo: mtymes - add ability to provide custom ExecutionId
 // todo: mtymes - update ttl - to bigger to smaller value
 // todo: mtymes - update ttl on final state
@@ -31,6 +32,8 @@ class UniversalScheduler(
     companion object {
 
         val UNIVERSAL_SCHEDULER = UniversalScheduler()
+
+        // todo: mtymes - check the fields are defined on correct level (data/execution)
 
         // SHARED FIELDS
 
@@ -370,6 +373,12 @@ class UniversalScheduler(
 
             val currentTaskStatus = TaskStatus.valueOf(task.getString(STATUS))
             if (currentTaskStatus != fromTaskStatus) {
+                if (currentTaskStatus == toTaskStatus) {
+                    throw TaskStatusAlreadyAppliedException(
+                        "Task '${taskId}' is already in status '${toTaskStatus}'"
+                    )
+                }
+
                 throw UnexpectedStatusException(
                     "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected '${fromTaskStatus}' but got '${currentTaskStatus}' Task status instead"
                 )
@@ -867,7 +876,7 @@ class UniversalScheduler(
             if (currentExecutionStatus != fromExecutionStatus || currentTaskStatus != fromTaskStatus) {
                 if (currentExecutionStatus == toExecutionStatus && currentTaskStatus == expectedToTaskStatus) {
                     // already applied
-                    throw TaskAndExecutionStateAlreadyAppliedException(
+                    throw TaskAndExecutionStatusAlreadyAppliedException(
                         "Task '${taskId}' and Execution '${executionId}' are already in Task status '${expectedToTaskStatus}' and Execution status '${toExecutionStatus}'"
                     )
                 } else {

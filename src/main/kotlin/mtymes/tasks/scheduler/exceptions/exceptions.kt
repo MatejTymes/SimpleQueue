@@ -7,4 +7,5 @@ class UnknownFailureReasonException(message: String) : IllegalStateException(mes
 
 class ExecutionSupersededByAnotherOneException(message: String) : IllegalStateException(message)
 
-class TaskAndExecutionStateAlreadyAppliedException(message: String) : java.lang.IllegalStateException(message)
+class TaskStatusAlreadyAppliedException(message: String) : java.lang.IllegalStateException(message)
+class TaskAndExecutionStatusAlreadyAppliedException(message: String) : java.lang.IllegalStateException(message)
