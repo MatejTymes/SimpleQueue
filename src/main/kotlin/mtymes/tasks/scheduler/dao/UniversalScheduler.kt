@@ -3,6 +3,7 @@ package mtymes.tasks.scheduler.dao
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.FindOneAndUpdateOptions
 import com.mongodb.client.model.ReturnDocument
+import mtymes.tasks.common.check.ValidityChecks.expectAtLeastOneItem
 import mtymes.tasks.common.check.ValidityChecks.expectNonEmptyDocument
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.mongo.DocBuilder.Companion.docBuilder
@@ -313,13 +314,13 @@ class UniversalScheduler(
     ): Document? {
         val now = clock.now()
 
-        val fromTaskStatus = TaskStatus.available
+        val fromTaskStatuses = listOf(TaskStatus.available, TaskStatus.paused)
         val toTaskStatus = TaskStatus.cancelled
 
         return updateTask(
             coll = coll,
             taskId = taskId,
-            fromTaskStatus = fromTaskStatus,
+            fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
             additionalTaskData = additionalTaskData
@@ -335,13 +336,13 @@ class UniversalScheduler(
     ): Long {
         val now = clock.now()
 
-        val fromTaskStatus = TaskStatus.available
+        val fromTaskStatuses = listOf(TaskStatus.available, TaskStatus.paused)
         val toTaskStatus = TaskStatus.cancelled
 
         return updateTasks(
             coll = coll,
             additionalConstraints = additionalConstraints,
-            fromTaskStatus = fromTaskStatus,
+            fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
             additionalTaskData = additionalTaskData
@@ -380,13 +381,13 @@ class UniversalScheduler(
     ): Document? {
         val now = clock.now()
 
-        val fromTaskStatus = TaskStatus.available
+        val fromTaskStatuses = listOf(TaskStatus.available)
         val toTaskStatus = TaskStatus.paused
 
         return updateTask(
             coll = coll,
             taskId = taskId,
-            fromTaskStatus = fromTaskStatus,
+            fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
             additionalTaskData = additionalTaskData
@@ -402,13 +403,13 @@ class UniversalScheduler(
     ): Long {
         val now = clock.now()
 
-        val fromTaskStatus = TaskStatus.available
+        val fromTaskStatuses = listOf(TaskStatus.available)
         val toTaskStatus = TaskStatus.paused
 
         return updateTasks(
             coll = coll,
             additionalConstraints = additionalConstraints,
-            fromTaskStatus = fromTaskStatus,
+            fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
             additionalTaskData = additionalTaskData
@@ -423,13 +424,13 @@ class UniversalScheduler(
     ): Document? {
         val now = clock.now()
 
-        val fromTaskStatus = TaskStatus.paused
+        val fromTaskStatuses = listOf(TaskStatus.paused)
         val toTaskStatus = TaskStatus.available
 
         return updateTask(
             coll = coll,
             taskId = taskId,
-            fromTaskStatus = fromTaskStatus,
+            fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
             additionalTaskData = additionalTaskData
@@ -445,13 +446,13 @@ class UniversalScheduler(
     ): Long {
         val now = clock.now()
 
-        val fromTaskStatus = TaskStatus.paused
+        val fromTaskStatuses = listOf(TaskStatus.paused)
         val toTaskStatus = TaskStatus.available
 
         return updateTasks(
             coll = coll,
             additionalConstraints = additionalConstraints,
-            fromTaskStatus = fromTaskStatus,
+            fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
             additionalTaskData = additionalTaskData
@@ -819,15 +820,20 @@ class UniversalScheduler(
     private fun updateTask(
         coll: MongoCollection<Document>,
         taskId: TaskId,
-        fromTaskStatus: TaskStatus,
+        fromTaskStatuses: List<TaskStatus>,
         toTaskStatus: TaskStatus,
         now: ZonedDateTime,
         additionalTaskData: Document?
     ): Document? {
+        expectAtLeastOneItem("fromTaskStatuses", fromTaskStatuses)
+
         val modifiedTask = coll.findOneAndUpdate(
             doc(
                 TASK_ID to taskId,
-                STATUS to fromTaskStatus
+                STATUS to if (fromTaskStatuses.size == 1)
+                    fromTaskStatuses[0]
+                else
+                    doc("\$in" to fromTaskStatuses)
             ),
             doc(
                 "\$set" to docBuilder()
@@ -861,14 +867,18 @@ class UniversalScheduler(
             }
 
             val currentTaskStatus = TaskStatus.valueOf(task.getString(STATUS))
-            if (currentTaskStatus != fromTaskStatus) {
+            if (!fromTaskStatuses.contains(currentTaskStatus)) {
                 if (currentTaskStatus == toTaskStatus) {
                     throw TaskStatusAlreadyAppliedException(
                         "Task '${taskId}' is already in status '${toTaskStatus}'"
                     )
                 } else {
                     throw UnexpectedStatusException(
-                        "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected '${fromTaskStatus}' but got '${currentTaskStatus}' Task status instead"
+                        if (fromTaskStatuses.size == 1) {
+                            "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected '${fromTaskStatuses[0]}' but got '${currentTaskStatus}' Task status instead"
+                        } else {
+                            "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected one of these statuses ${fromTaskStatuses.joinToString(", ", "'", "'")} but got '${currentTaskStatus}' Task status instead"
+                        }
                     )
                 }
             }
@@ -882,18 +892,23 @@ class UniversalScheduler(
     private fun updateTasks(
         coll: MongoCollection<Document>,
         additionalConstraints: Document?,
-        fromTaskStatus: TaskStatus,
+        fromTaskStatuses: List<TaskStatus>,
         toTaskStatus: TaskStatus,
         now: ZonedDateTime,
         additionalTaskData: Document?
     ): Long {
+        expectAtLeastOneItem("fromTaskStatuses", fromTaskStatuses)
+
         val result = coll.updateMany(
             docBuilder()
                 .putAllIf(additionalConstraints.areDefined()) {
                     additionalConstraints!!
                 }
                 .putAll(
-                    STATUS to fromTaskStatus,
+                    STATUS to if (fromTaskStatuses.size == 1)
+                        fromTaskStatuses.get(0)
+                    else
+                        doc("\$in" to fromTaskStatuses)
                 )
                 .build(),
             doc("\$set" to docBuilder()
