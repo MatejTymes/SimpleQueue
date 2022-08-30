@@ -154,7 +154,6 @@ class GenericTaskScheduler(
 
     // todo: mtymes - add sample for this one
     fun markTasksAsCancelled(
-        coll: MongoCollection<Document>,
         additionalConstraints: Document? = null,
         additionalTaskData: Document? = null
 
@@ -193,7 +192,6 @@ class GenericTaskScheduler(
 
     // todo: mtymes - add sample for this one
     fun markTasksAsPaused(
-        coll: MongoCollection<Document>,
         additionalConstraints: Document? = null,
         additionalTaskData: Document? = null
 
@@ -219,7 +217,6 @@ class GenericTaskScheduler(
 
     // todo: mtymes - add sample for this one
     fun markTasksAsUnPaused(
-        coll: MongoCollection<Document>,
         additionalConstraints: Document? = null,
         additionalTaskData: Document? = null
 
