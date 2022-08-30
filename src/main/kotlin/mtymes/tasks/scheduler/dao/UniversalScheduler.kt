@@ -20,6 +20,7 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
+// todo: mtymes - add ability to cancel paused tasks as well
 // todo: mtymes - add execution field: was unretriable fail
 // todo: mtymes - update ttl - to bigger, to smaller value
 // todo: mtymes - update ttl on final state
@@ -305,6 +306,48 @@ class UniversalScheduler(
         )
     }
 
+    fun markTaskAsCancelled(
+        coll: MongoCollection<Document>,
+        taskId: TaskId,
+        additionalTaskData: Document? = null
+    ): Document? {
+        val now = clock.now()
+
+        val fromTaskStatus = TaskStatus.available
+        val toTaskStatus = TaskStatus.cancelled
+
+        return updateTask(
+            coll = coll,
+            taskId = taskId,
+            fromTaskStatus = fromTaskStatus,
+            toTaskStatus = toTaskStatus,
+            now = now,
+            additionalTaskData = additionalTaskData
+        )
+    }
+
+    // todo: mtymes - add sample for this one
+    fun markTasksAsCancelled(
+        coll: MongoCollection<Document>,
+        additionalConstraints: Document? = null,
+        additionalTaskData: Document? = null
+
+    ): Long {
+        val now = clock.now()
+
+        val fromTaskStatus = TaskStatus.available
+        val toTaskStatus = TaskStatus.cancelled
+
+        return updateTasks(
+            coll = coll,
+            additionalConstraints = additionalConstraints,
+            fromTaskStatus = fromTaskStatus,
+            toTaskStatus = toTaskStatus,
+            now = now,
+            additionalTaskData = additionalTaskData
+        )
+    }
+
     fun markAsCancelled(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
@@ -326,26 +369,6 @@ class UniversalScheduler(
             ),
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
-        )
-    }
-
-    fun markTaskAsCancelled(
-        coll: MongoCollection<Document>,
-        taskId: TaskId,
-        additionalTaskData: Document? = null
-    ): Document? {
-        val now = clock.now()
-
-        val fromTaskStatus = TaskStatus.available
-        val toTaskStatus = TaskStatus.cancelled
-
-        return updateTask(
-            coll = coll,
-            taskId = taskId,
-            fromTaskStatus = fromTaskStatus,
-            toTaskStatus = toTaskStatus,
-            now = now,
-            additionalTaskData = additionalTaskData
         )
     }
 
@@ -371,6 +394,28 @@ class UniversalScheduler(
     }
 
     // todo: mtymes - add sample for this one
+    fun markTasksAsPaused(
+        coll: MongoCollection<Document>,
+        additionalConstraints: Document? = null,
+        additionalTaskData: Document? = null
+
+    ): Long {
+        val now = clock.now()
+
+        val fromTaskStatus = TaskStatus.available
+        val toTaskStatus = TaskStatus.paused
+
+        return updateTasks(
+            coll = coll,
+            additionalConstraints = additionalConstraints,
+            fromTaskStatus = fromTaskStatus,
+            toTaskStatus = toTaskStatus,
+            now = now,
+            additionalTaskData = additionalTaskData
+        )
+    }
+
+    // todo: mtymes - add sample for this one
     fun markTaskAsUnPaused(
         coll: MongoCollection<Document>,
         taskId: TaskId,
@@ -384,6 +429,28 @@ class UniversalScheduler(
         return updateTask(
             coll = coll,
             taskId = taskId,
+            fromTaskStatus = fromTaskStatus,
+            toTaskStatus = toTaskStatus,
+            now = now,
+            additionalTaskData = additionalTaskData
+        )
+    }
+
+    // todo: mtymes - add sample for this one
+    fun markTasksAsUnPaused(
+        coll: MongoCollection<Document>,
+        additionalConstraints: Document? = null,
+        additionalTaskData: Document? = null
+
+    ): Long {
+        val now = clock.now()
+
+        val fromTaskStatus = TaskStatus.paused
+        val toTaskStatus = TaskStatus.available
+
+        return updateTasks(
+            coll = coll,
+            additionalConstraints = additionalConstraints,
             fromTaskStatus = fromTaskStatus,
             toTaskStatus = toTaskStatus,
             now = now,
@@ -810,6 +877,41 @@ class UniversalScheduler(
                 "Not sure why Task '${taskId}' was not marked as ${toTaskStatus}"
             )
         }
+    }
+
+    private fun updateTasks(
+        coll: MongoCollection<Document>,
+        additionalConstraints: Document?,
+        fromTaskStatus: TaskStatus,
+        toTaskStatus: TaskStatus,
+        now: ZonedDateTime,
+        additionalTaskData: Document?
+    ): Long {
+        val result = coll.updateMany(
+            docBuilder()
+                .putAllIf(additionalConstraints.areDefined()) {
+                    additionalConstraints!!
+                }
+                .putAll(
+                    STATUS to fromTaskStatus,
+                )
+                .build(),
+            doc("\$set" to docBuilder()
+                .putAll(
+                    STATUS to toTaskStatus,
+                    STATUS_UPDATED_AT to now,
+                    UPDATED_AT to now
+                )
+                .putAllIf(additionalTaskData.isDefined()) {
+                    additionalTaskData!!.mapKeys { entry ->
+                        DATA + "." + entry.key
+                    }
+                }
+                .build()
+            )
+        )
+
+        return result.modifiedCount
     }
 
     private fun updateExecution(

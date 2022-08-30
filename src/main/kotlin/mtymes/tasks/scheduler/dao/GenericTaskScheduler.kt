@@ -152,6 +152,33 @@ class GenericTaskScheduler(
         )
     }
 
+    // todo: mtymes - add sample for this one
+    fun markTasksAsCancelled(
+        coll: MongoCollection<Document>,
+        additionalConstraints: Document? = null,
+        additionalTaskData: Document? = null
+
+    ): Long {
+        return scheduler.markTasksAsCancelled(
+            coll = collection,
+            additionalConstraints = additionalConstraints,
+            additionalTaskData = additionalTaskData
+        )
+    }
+
+    fun markExecutionAsCancelled(
+        executionId: ExecutionId,
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
+    ): Document? {
+        return scheduler.markAsCancelled(
+            coll = collection,
+            executionId = executionId,
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData
+        )
+    }
+
     // todo: mtymes - write a sample for this
     fun markTaskAsPaused(
         taskId: TaskId,
@@ -160,6 +187,20 @@ class GenericTaskScheduler(
         return scheduler.markTaskAsPaused(
             coll = collection,
             taskId = taskId,
+            additionalTaskData = additionalTaskData
+        )
+    }
+
+    // todo: mtymes - add sample for this one
+    fun markTasksAsPaused(
+        coll: MongoCollection<Document>,
+        additionalConstraints: Document? = null,
+        additionalTaskData: Document? = null
+
+    ): Long {
+        return scheduler.markTasksAsPaused(
+            coll = collection,
+            additionalConstraints = additionalConstraints,
             additionalTaskData = additionalTaskData
         )
     }
@@ -176,16 +217,17 @@ class GenericTaskScheduler(
         )
     }
 
-    fun markExecutionAsCancelled(
-        executionId: ExecutionId,
-        additionalTaskData: Document? = null,
-        additionalExecutionData: Document? = null
-    ): Document? {
-        return scheduler.markAsCancelled(
+    // todo: mtymes - add sample for this one
+    fun markTasksAsUnPaused(
+        coll: MongoCollection<Document>,
+        additionalConstraints: Document? = null,
+        additionalTaskData: Document? = null
+
+    ): Long {
+        return scheduler.markTasksAsUnPaused(
             coll = collection,
-            executionId = executionId,
-            additionalTaskData = additionalTaskData,
-            additionalExecutionData = additionalExecutionData
+            additionalConstraints = additionalConstraints,
+            additionalTaskData = additionalTaskData
         )
     }
 
