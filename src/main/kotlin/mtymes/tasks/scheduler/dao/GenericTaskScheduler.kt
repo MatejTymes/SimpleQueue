@@ -152,6 +152,30 @@ class GenericTaskScheduler(
         )
     }
 
+    // todo: mtymes - write a sample for this
+    fun markTaskAsPaused(
+        taskId: TaskId,
+        additionalTaskData: Document? = null
+    ): Document? {
+        return scheduler.markTaskAsPaused(
+            coll = collection,
+            taskId = taskId,
+            additionalTaskData = additionalTaskData
+        )
+    }
+
+    // todo: mtymes - write a sample for this
+    fun markTaskAsUnPaused(
+        taskId: TaskId,
+        additionalTaskData: Document? = null
+    ): Document? {
+        return scheduler.markTaskAsUnPaused(
+            coll = collection,
+            taskId = taskId,
+            additionalTaskData = additionalTaskData
+        )
+    }
+
     fun markExecutionAsCancelled(
         executionId: ExecutionId,
         additionalTaskData: Document? = null,
