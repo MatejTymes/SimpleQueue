@@ -5,6 +5,7 @@ import com.mongodb.client.model.FindOneAndUpdateOptions
 import com.mongodb.client.model.ReturnDocument
 import mtymes.tasks.common.check.ValidityChecks.expectAtLeastOneItem
 import mtymes.tasks.common.check.ValidityChecks.expectNonEmptyDocument
+import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.mongo.DocBuilder.Companion.docBuilder
 import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc

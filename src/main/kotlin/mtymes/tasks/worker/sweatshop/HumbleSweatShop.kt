@@ -1,7 +1,8 @@
 package mtymes.tasks.worker.sweatshop
 
 import javafixes.concurrency.Runner
-import mtymes.tasks.scheduler.domain.WorkerId
+import mtymes.tasks.common.domain.WorkerId
+import mtymes.tasks.common.time.Durations.ONE_MINUTE
 import mtymes.tasks.worker.HeartBeatingWorker
 import mtymes.tasks.worker.Worker
 import org.apache.commons.lang3.StringUtils.isBlank
@@ -58,7 +59,7 @@ class HumbleSweatShop : SweatShop {
         }
     }
 
-    private val isShutDown: AtomicBoolean = AtomicBoolean(false)
+    private val isClosed: AtomicBoolean = AtomicBoolean(false)
     private val workers: MutableMap<WorkerId, WorkContext<*>> = mutableMapOf()
 
     override fun <T> addAndStartWorker(
@@ -66,7 +67,9 @@ class HumbleSweatShop : SweatShop {
         workerId: WorkerId
     ): WorkerId {
         synchronized(workers) {
-            assertIsNotClosed()
+            if (isClosed.get()) {
+                throw IllegalStateException("${javaClass.simpleName} is closed")
+            }
 
             if (workers.containsKey(workerId)) {
                 throw IllegalArgumentException("WorkerId '${workerId}' already used for a different registered worker")
@@ -143,9 +146,15 @@ class HumbleSweatShop : SweatShop {
         }
     }
 
+    override fun closeGracefully(
+        waitTillDone: Boolean
+    ) {
+        TODO("Not yet implemented")
+    }
+
     override fun close() {
         synchronized(workers) {
-            if (isShutDown.get()) {
+            if (isClosed.get()) {
                 return
             }
 
@@ -159,17 +168,11 @@ class HumbleSweatShop : SweatShop {
                 }
             }
 
-            isShutDown.set(true)
+            isClosed.set(true)
 
             runAndIgnoreExceptions {
                 logger.info("${this.javaClass.simpleName} has been closed")
             }
-        }
-    }
-
-    private fun assertIsNotClosed() {
-        if (isShutDown.get()) {
-            throw IllegalStateException("${this.javaClass.simpleName} is already closed")
         }
     }
 
@@ -255,9 +258,9 @@ class HumbleSweatShop : SweatShop {
                         runAndIgnoreExceptions {
                             val taskString: String? = taskToLoggableString(worker, task, workerId)
                             if (isBlank(taskString)) {
-                                logger.info("[${workerId}]: Failed to execute task", e)
+                                logger.warn("[${workerId}]: Failed to execute task", e)
                             } else {
-                                logger.info("[${workerId}]: Failed to execute task '${taskString}'", e)
+                                logger.warn("[${workerId}]: Failed to execute task '${taskString}'", e)
                             }
                         }
 
@@ -292,7 +295,7 @@ class HumbleSweatShop : SweatShop {
                 // SLEEP DELAY BEFORE FETCHING NEXT TASK
 
                 // default to 1 minute if fails to get the sleep duration
-                var sleepDuration: Duration = Duration.ofMinutes(1)
+                var sleepDuration: Duration = ONE_MINUTE
                 try {
                     if (task != null) {
                         sleepDuration = worker.sleepDurationIfTaskWasProcessed(

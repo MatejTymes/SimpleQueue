@@ -1,6 +1,7 @@
 package mtymes.tasks.scheduler.dao
 
 import com.mongodb.client.MongoCollection
+import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.UNIVERSAL_SCHEDULER
 import mtymes.tasks.scheduler.domain.*
 import org.bson.Document

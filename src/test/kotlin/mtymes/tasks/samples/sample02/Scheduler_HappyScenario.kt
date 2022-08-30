@@ -1,6 +1,7 @@
 package mtymes.tasks.samples.sample02
 
 import com.mongodb.client.MongoCollection
+import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.time.Durations.FIVE_MINUTES
 import mtymes.tasks.common.time.Durations.SEVEN_DAYS
@@ -9,7 +10,6 @@ import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.domain.ExecutionId
 import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
 import mtymes.tasks.scheduler.domain.SubmitTaskOptions
-import mtymes.tasks.scheduler.domain.WorkerId
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
 import mtymes.tasks.worker.Worker

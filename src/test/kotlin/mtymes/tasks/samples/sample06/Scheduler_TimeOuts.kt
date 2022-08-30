@@ -1,6 +1,7 @@
 package mtymes.tasks.samples.sample06
 
 import com.mongodb.client.MongoCollection
+import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericTaskScheduler

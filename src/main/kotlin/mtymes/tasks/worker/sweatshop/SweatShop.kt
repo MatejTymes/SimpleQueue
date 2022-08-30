@@ -1,6 +1,6 @@
 package mtymes.tasks.worker.sweatshop
 
-import mtymes.tasks.scheduler.domain.WorkerId
+import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.worker.Worker
 import java.io.Closeable
 
@@ -24,4 +24,9 @@ interface SweatShop : AutoCloseable, Closeable {
     ): Boolean
 
     fun workerSummaries(): List<WorkerSummary>
+
+    // todo: mtymes - provide implementation for this
+    fun closeGracefully(
+        waitTillDone: Boolean = false
+    )
 }

@@ -1,12 +1,12 @@
 package mtymes.tasks.worker
 
+import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.time.Durations.ONE_MILLISECOND
 import mtymes.tasks.common.time.Durations.ONE_MINUTE
 import mtymes.tasks.common.time.Durations.ONE_SECOND
 import mtymes.tasks.common.time.Durations.TEN_SECONDS
 import mtymes.tasks.common.time.Durations.THIRTY_SECONDS
 import mtymes.tasks.common.time.Durations.THREE_SECONDS
-import mtymes.tasks.scheduler.domain.WorkerId
 import java.time.Duration
 
 

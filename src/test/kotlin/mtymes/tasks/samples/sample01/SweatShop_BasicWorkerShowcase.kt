@@ -1,7 +1,7 @@
 package mtymes.tasks.samples.sample01
 
-import mtymes.tasks.scheduler.domain.WorkerId
-import mtymes.tasks.scheduler.domain.WorkerId.Companion.uniqueWorkerId
+import mtymes.tasks.common.domain.WorkerId
+import mtymes.tasks.common.domain.WorkerId.Companion.uniqueWorkerId
 import mtymes.tasks.worker.Worker
 import mtymes.tasks.worker.sweatshop.HumbleSweatShop
 import java.util.concurrent.CopyOnWriteArrayList
