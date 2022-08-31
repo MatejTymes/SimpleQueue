@@ -1,6 +1,8 @@
 package mtymes.tasks.distributedLock.dao
 
 import com.mongodb.client.MongoCollection
+import mtymes.tasks.common.check.ValidityChecks.expectNonNegativeDuration
+import mtymes.tasks.common.check.ValidityChecks.expectPositiveDuration
 import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.mongo.MongoCollectionExt.insert
@@ -12,7 +14,7 @@ import java.time.Duration
 
 class DistributedLockDao(
     val coll: MongoCollection<Document>,
-    val clock: Clock = UTCClock()
+    val clock: Clock = UTCClock
 ) {
 
     companion object {
@@ -21,7 +23,10 @@ class DistributedLockDao(
 
         const val LOCK_ID = "_id"
         const val WORKER_ID = "workerId"
+        const val ACQUIRED_AT = "acquiredAt"
+        const val PROLONGED_AT = "prolongedAt"
         const val LOCKED_UNTIL = "lockedUntil"
+        // todo: mtymes - add optional ttl
     }
 
     fun tryToAcquireALock(
@@ -29,12 +34,15 @@ class DistributedLockDao(
         workerId: WorkerId,
         holdOnItFor: Duration
     ): Boolean {
+        expectPositiveDuration("holdOnItFor", holdOnItFor)
+
         val now = clock.now()
 
         val ableToInsert = coll.insert(
             doc(
                 LOCK_ID to lockId,
                 WORKER_ID to workerId,
+                ACQUIRED_AT to now,
                 LOCKED_UNTIL to now.plus(holdOnItFor)
             )
         )
@@ -67,12 +75,15 @@ class DistributedLockDao(
         workerId: WorkerId,
         holdOnItFor: Duration
     ): Boolean {
+        expectPositiveDuration("holdOnItFor", holdOnItFor)
+
         val now = clock.now()
 
         val result = coll.updateOne(
             doc(
                 LOCK_ID to lockId,
                 WORKER_ID to workerId,
+                PROLONGED_AT to now,
                 LOCKED_UNTIL to doc("\$gte", now)
             ),
             doc(
@@ -90,6 +101,8 @@ class DistributedLockDao(
         workerId: WorkerId,
         makeAvailableAfter: Duration
     ): Boolean {
+        expectNonNegativeDuration("makeAvailableAfter", makeAvailableAfter)
+
         val now = clock.now()
 
         val result = coll.updateOne(
@@ -102,6 +115,10 @@ class DistributedLockDao(
                 "\$set" to doc(
                     WORKER_ID to LOCK_RELEASER,
                     LOCKED_UNTIL to now.plus(makeAvailableAfter)
+                ),
+                "\$unset" to doc(
+                    ACQUIRED_AT to 1,
+                    PROLONGED_AT to 1
                 )
             )
         )

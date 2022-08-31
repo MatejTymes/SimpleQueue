@@ -18,6 +18,8 @@ import mtymes.tasks.common.time.UTCClock
 import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.scheduler.exceptions.*
 import org.bson.Document
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
@@ -28,12 +30,14 @@ import java.util.*
 // todo: mtymes - update ttl on final state
 // todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
 class UniversalScheduler(
-    val clock: Clock = UTCClock()
+    val clock: Clock = UTCClock
 ) {
 
     companion object {
 
         val UNIVERSAL_SCHEDULER = UniversalScheduler()
+
+        val logger = LoggerFactory.getLogger(UniversalScheduler::class.java) as Logger
 
         // todo: mtymes - check the fields are defined on correct level (data/execution)
 
@@ -496,6 +500,7 @@ class UniversalScheduler(
         )
     }
 
+    // todo: mtymes - return number of TimedOut Executions
     // todo: mtymes - allow to make this code a bit more dynamic - so the client could evaluate for example data to update based on task/execution data
     // todo: mtymes - maybe add custom query criteria
     fun markDeadExecutionsAsTimedOut(

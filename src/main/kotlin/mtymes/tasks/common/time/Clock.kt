@@ -10,7 +10,7 @@ interface Clock {
 }
 
 
-class UTCClock : Clock {
+object UTCClock : Clock {
 
     override fun now(): ZonedDateTime {
         return ZonedDateTime.now(UTC_ZONE_ID)

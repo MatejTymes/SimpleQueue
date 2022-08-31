@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import static java.lang.Math.max;
 import static javafixes.concurrency.Runner.runner;
 
-// todo: test this
 public abstract class GenericSingleTaskWorker<Task> {
 
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());

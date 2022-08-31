@@ -27,6 +27,18 @@ object Durations {
     val THIRTY_MINUTES: Duration = Duration.ofMinutes(30)
 
     val ONE_HOUR: Duration = Duration.ofHours(1)
+    val TWO_HOURS: Duration = Duration.ofHours(2)
+    val THREE_HOURS: Duration = Duration.ofHours(3)
+    val FOUR_HOURS: Duration = Duration.ofHours(4)
+    val FIVE_HOURS: Duration = Duration.ofHours(5)
+    val SIX_HOURS: Duration = Duration.ofHours(6)
+    val SEVEN_HOURS: Duration = Duration.ofHours(7)
+    val EIGHT_HOURS: Duration = Duration.ofHours(8)
+    val NINE_HOURS: Duration = Duration.ofHours(9)
+    val TEN_HOURS: Duration = Duration.ofHours(10)
+    val ELEVEN_HOURS: Duration = Duration.ofHours(11)
+    val TWELVE_HOURS: Duration = Duration.ofHours(12)
+    val TWENTY_FOUR_HOURS: Duration = Duration.ofHours(24)
 
     val ONE_DAY: Duration = Duration.ofDays(1)
     val TWO_DAYS: Duration = Duration.ofDays(2)
@@ -36,4 +48,9 @@ object Durations {
     val SIX_DAYS: Duration = Duration.ofDays(6)
     val SEVEN_DAYS: Duration = Duration.ofDays(7)
     val TEN_DAYS: Duration = Duration.ofDays(10)
+
+    val ONE_WEEK = SEVEN_DAYS
+    val TWO_WEEKS = Duration.ofDays(14)
+    val THREE_WEEKS = Duration.ofDays(21)
+    val FOUR_WEEKS = Duration.ofDays(28)
 }
