@@ -25,7 +25,6 @@ interface SweatShop : AutoCloseable, Closeable {
 
     fun workerSummaries(): List<WorkerSummary>
 
-    // todo: mtymes - provide implementation for this
     fun closeGracefully(
         waitTillDone: Boolean = false
     )

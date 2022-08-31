@@ -149,22 +149,56 @@ class HumbleSweatShop : SweatShop {
     override fun closeGracefully(
         waitTillDone: Boolean
     ) {
-        TODO("Not yet implemented")
+        val allRunners = mutableListOf<Runner>()
+
+        synchronized(workers) {
+            if (!workers.isEmpty()) {
+                val workerIds = workers.keys.toList()
+                for (workerId in workerIds) {
+                    if (waitTillDone) {
+                        runAndIgnoreExceptions {
+                            workers.get(workerId)?.also {
+                                allRunners.add(it.runner)
+                            }
+                        }
+                    }
+
+                    runAndIgnoreExceptions {
+                        stopAndRemoveWorker(
+                            workerId = workerId,
+                            stopGracefully = true
+                        )
+                    }
+                }
+            }
+
+            isClosed.set(true)
+
+            runAndIgnoreExceptions {
+                logger.info("${this.javaClass.simpleName} has been closed gracefully")
+            }
+        }
+
+        if (waitTillDone) {
+            for (runner in allRunners) {
+                runAndIgnoreExceptions {
+                    runner.waitTillDone()
+                }
+            }
+        }
     }
 
     override fun close() {
         synchronized(workers) {
-            if (isClosed.get()) {
-                return
-            }
-
-            val workerIds = workers.keys.toList()
-            for (workerId in workerIds) {
-                runAndIgnoreExceptions {
-                    stopAndRemoveWorker(
-                        workerId = workerId,
-                        stopGracefully = false
-                    )
+            if (!workers.isEmpty()) {
+                val workerIds = workers.keys.toList()
+                for (workerId in workerIds) {
+                    runAndIgnoreExceptions {
+                        stopAndRemoveWorker(
+                            workerId = workerId,
+                            stopGracefully = false
+                        )
+                    }
                 }
             }
 
