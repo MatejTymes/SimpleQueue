@@ -21,10 +21,26 @@ object ValidityChecks {
         }
     }
 
+    fun expectNullOrPositiveDuration(fieldPath: String, value: Duration?) {
+        if (value != null && (value.isNegative || value.isZero)) {
+            throw IllegalArgumentException(
+                "'${fieldPath}' MUST BE NULL OR POSITIVE DURATION but was ${value} instead"
+            )
+        }
+    }
+
     fun expectNonNegativeDuration(fieldPath: String, value: Duration) {
         if (value.isNegative) {
             throw IllegalArgumentException(
                 "'${fieldPath}' MUST BE ZERO OR A POSITIVE DURATION but was ${value} instead"
+            )
+        }
+    }
+
+    fun expectNullOrNonNegativeDuration(fieldPath: String, value: Duration?) {
+        if (value != null && value.isNegative) {
+            throw IllegalArgumentException(
+                "'${fieldPath}' MUST BE NULL, ZERO OR A POSITIVE DURATION but was ${value} instead"
             )
         }
     }

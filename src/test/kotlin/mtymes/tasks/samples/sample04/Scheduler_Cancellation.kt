@@ -4,7 +4,7 @@ import com.mongodb.client.MongoCollection
 import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.time.Durations
-import mtymes.tasks.scheduler.dao.GenericTaskScheduler
+import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.domain.ExecutionId
 import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
@@ -26,7 +26,7 @@ data class TaskToProcess(
 class CancellationSupportingTaskDao(
     tasksCollection: MongoCollection<Document>
 ) {
-    val scheduler = GenericTaskScheduler(
+    val scheduler = GenericScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(
 
@@ -96,7 +96,7 @@ class CancellationSupportingTaskDao(
         cancellationReason: String,
         incNumber: String
     ) {
-        val result = scheduler.markExecutionAsCancelled(
+        val result = scheduler.markAsCancelled(
             executionId = executionId,
             additionalTaskData = doc(
                 "cancellationReason" to cancellationReason

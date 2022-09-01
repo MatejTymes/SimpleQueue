@@ -7,7 +7,7 @@ import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.mongo.DocBuilder
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.time.Durations
-import mtymes.tasks.scheduler.dao.GenericTaskScheduler
+import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_AS_OF
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DELETE_AFTER
@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicLong
 class SimpleTaskDao(
     tasksCollection: MongoCollection<Document>
 ) {
-    private val scheduler = GenericTaskScheduler(
+    private val scheduler = GenericScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(
 

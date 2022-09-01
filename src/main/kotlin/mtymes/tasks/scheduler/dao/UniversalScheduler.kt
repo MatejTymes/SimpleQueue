@@ -24,10 +24,8 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
-// todo: mtymes - add ability to cancel paused tasks as well
+// todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension
 // todo: mtymes - add execution field: was unretriable fail
-// todo: mtymes - update ttl - to bigger, to smaller value
-// todo: mtymes - update ttl on final state
 // todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
 class UniversalScheduler(
     val clock: Clock = UTCClock
@@ -186,7 +184,8 @@ class UniversalScheduler(
                         taskId = Optional.of(taskId),
                         keepAliveFor = options.keepAliveFor,
                         additionalConstraints = additionalConstraints,
-                        sortOrder = usedSortOrder
+                        sortOrder = usedSortOrder,
+                        newTTL = options.newTTL
                     )
 
                     if (execution != null) {
@@ -201,7 +200,8 @@ class UniversalScheduler(
                         taskId = taskId,
                         lastExpectedExecutionId = lastExecutionId,
                         keepAliveFor = options.keepAliveFor,
-                        additionalConstraints = additionalConstraints
+                        additionalConstraints = additionalConstraints,
+                        newTTL = options.newTTL
                     )
 
                     if (execution != null) {
@@ -220,7 +220,8 @@ class UniversalScheduler(
                 taskId = Optional.empty(),
                 keepAliveFor = options.keepAliveFor,
                 additionalConstraints = additionalConstraints,
-                sortOrder = usedSortOrder
+                sortOrder = usedSortOrder,
+                newTTL = options.newTTL
             )
 
             return execution
@@ -230,6 +231,7 @@ class UniversalScheduler(
     fun markAsSucceeded(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
+        options: MarkAsSucceededOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): Document? {
@@ -243,6 +245,9 @@ class UniversalScheduler(
             toTaskStatus = TaskStatus.succeeded,
             toExecutionStatus = ExecutionStatus.succeeded,
             now = now,
+            customTaskUpdates = options.newTTL?.let { newTTL ->
+                doc(DELETE_AFTER to now.plus(newTTL))
+            },
             customExecutionUpdates = doc(
                 FINISHED_AT to now
             ),
@@ -271,15 +276,20 @@ class UniversalScheduler(
             ),
             toExecutionStatus = ExecutionStatus.failed,
             now = now,
-            customTaskUpdates = doc(
-                CAN_BE_EXECUTED_AS_OF to doc(
-                    "\$cond" to listOf(
-                        doc("\$gt" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 0)),
-                        now.plus(options.retryDelay),
-                        "\$" + CAN_BE_EXECUTED_AS_OF
+            customTaskUpdates = docBuilder()
+                .putIf(options.retryDelay != null) {
+                    CAN_BE_EXECUTED_AS_OF to doc(
+                        "\$cond" to listOf(
+                            doc("\$gt" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 0)),
+                            now.plus(options.retryDelay!!),
+                            "\$" + CAN_BE_EXECUTED_AS_OF
+                        )
                     )
-                )
-            ),
+                }
+                .putIf(options.newTTL != null) {
+                    DELETE_AFTER to now.plus(options.newTTL!!)
+                }
+                .build(),
             customExecutionUpdates = doc(
                 FINISHED_AT to now
             ),
@@ -291,6 +301,7 @@ class UniversalScheduler(
     fun markAsFailedButCanNOTRetry(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
+        options: MarkAsFailedButCanNOTRetryOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): Document? {
@@ -304,6 +315,9 @@ class UniversalScheduler(
             toTaskStatus = ToSingleTaskStatus(TaskStatus.failed),
             toExecutionStatus = ExecutionStatus.failed,
             now = now,
+            customTaskUpdates = options.newTTL?.let { newTTL ->
+                doc(DELETE_AFTER to now.plus(newTTL))
+            },
             customExecutionUpdates = doc(
                 FINISHED_AT to now
             ),
@@ -315,6 +329,7 @@ class UniversalScheduler(
     fun markTaskAsCancelled(
         coll: MongoCollection<Document>,
         taskId: TaskId,
+        options: MarkTaskAsCancelledOptions,
         additionalTaskData: Document? = null
     ): Document? {
         val now = clock.now()
@@ -328,6 +343,9 @@ class UniversalScheduler(
             fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
+            customTaskUpdates = options.newTTL?.let { newTTL ->
+                doc(DELETE_AFTER to now.plus(newTTL))
+            },
             additionalTaskData = additionalTaskData
         )
     }
@@ -335,6 +353,7 @@ class UniversalScheduler(
     // todo: mtymes - add sample for this one
     fun markTasksAsCancelled(
         coll: MongoCollection<Document>,
+        options: MarkTasksAsCancelledOptions,
         additionalConstraints: Document? = null,
         additionalTaskData: Document? = null
 
@@ -350,6 +369,9 @@ class UniversalScheduler(
             fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
+            customTaskUpdates = options.newTTL?.let { newTTL ->
+                doc(DELETE_AFTER to now.plus(newTTL))
+            },
             additionalTaskData = additionalTaskData
         )
     }
@@ -357,6 +379,7 @@ class UniversalScheduler(
     fun markAsCancelled(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
+        options: MarkAsCancelledOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): Document? {
@@ -370,6 +393,9 @@ class UniversalScheduler(
             toTaskStatus = TaskStatus.cancelled,
             toExecutionStatus = ExecutionStatus.cancelled,
             now = now,
+            customTaskUpdates = options.newTTL?.let { newTTL ->
+                doc(DELETE_AFTER to now.plus(newTTL))
+            },
             customExecutionUpdates = doc(
                 FINISHED_AT to now
             ),
@@ -382,6 +408,7 @@ class UniversalScheduler(
     fun markTaskAsPaused(
         coll: MongoCollection<Document>,
         taskId: TaskId,
+        options: MarkTaskAsPausedOptions,
         additionalTaskData: Document? = null
     ): Document? {
         val now = clock.now()
@@ -395,6 +422,9 @@ class UniversalScheduler(
             fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
+            customTaskUpdates = options.newTTL?.let { newTTL ->
+                doc(DELETE_AFTER to now.plus(newTTL))
+            },
             additionalTaskData = additionalTaskData
         )
     }
@@ -402,6 +432,7 @@ class UniversalScheduler(
     // todo: mtymes - add sample for this one
     fun markTasksAsPaused(
         coll: MongoCollection<Document>,
+        options: MarkTasksAsPausedOptions,
         additionalConstraints: Document? = null,
         additionalTaskData: Document? = null
 
@@ -417,6 +448,9 @@ class UniversalScheduler(
             fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
+            customTaskUpdates = options.newTTL?.let { newTTL ->
+                doc(DELETE_AFTER to now.plus(newTTL))
+            },
             additionalTaskData = additionalTaskData
         )
     }
@@ -425,6 +459,7 @@ class UniversalScheduler(
     fun markTaskAsUnPaused(
         coll: MongoCollection<Document>,
         taskId: TaskId,
+        options: MarkTaskAsUnPausedOptions,
         additionalTaskData: Document? = null
     ): Document? {
         val now = clock.now()
@@ -438,6 +473,9 @@ class UniversalScheduler(
             fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
+            customTaskUpdates = options.newTTL?.let { newTTL ->
+                doc(DELETE_AFTER to now.plus(newTTL))
+            },
             additionalTaskData = additionalTaskData
         )
     }
@@ -445,6 +483,7 @@ class UniversalScheduler(
     // todo: mtymes - add sample for this one
     fun markTasksAsUnPaused(
         coll: MongoCollection<Document>,
+        options: MarkTasksAsUnPausedOptions,
         additionalConstraints: Document? = null,
         additionalTaskData: Document? = null
 
@@ -460,6 +499,9 @@ class UniversalScheduler(
             fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
+            customTaskUpdates = options.newTTL?.let { newTTL ->
+                doc(DELETE_AFTER to now.plus(newTTL))
+            },
             additionalTaskData = additionalTaskData
         )
     }
@@ -481,13 +523,18 @@ class UniversalScheduler(
             toTaskStatus = TaskStatus.suspended,
             toExecutionStatus = ExecutionStatus.suspended,
             now = now,
-            customTaskUpdates = doc(
-                CAN_BE_EXECUTED_AS_OF to now.plus(options.suspendFor),
+            customTaskUpdates = docBuilder()
+                .putAll(
+                    CAN_BE_EXECUTED_AS_OF to now.plus(options.suspendFor),
 
-                // $inc - section
-                // todo: mtymes - handle differently
-                EXECUTION_ATTEMPTS_LEFT to doc("\$sum" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 1))
-            ),
+                    // $inc - section
+                    // todo: mtymes - handle differently
+                    EXECUTION_ATTEMPTS_LEFT to doc("\$sum" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 1))
+                )
+                .putIf(options.newTTL != null) {
+                    DELETE_AFTER to now.plus(options.newTTL!!)
+                }
+                .build(),
             customExecutionUpdates = doc(
                 SUSPENDED_AT to now,
 
@@ -532,11 +579,14 @@ class UniversalScheduler(
                     toTaskStatus = if (executionAttemptsLeft > 0) TaskStatus.available else TaskStatus.timedOut,
                     toExecutionStatus = ExecutionStatus.timedOut,
                     now = now,
-                    customTaskUpdates = if (executionAttemptsLeft > 0) {
-                        doc(CAN_BE_EXECUTED_AS_OF to now.plus(options.retryDelay))
-                    } else {
-                        null
-                    },
+                    customTaskUpdates = docBuilder()
+                        .putIf(options.retryDelay != null) {
+                            CAN_BE_EXECUTED_AS_OF to now.plus(options.retryDelay!!)
+                        }
+                        .putIf(options.newTTL != null) {
+                            DELETE_AFTER to now.plus(options.newTTL!!)
+                        }
+                        .build(),
                     customExecutionUpdates = doc(
                         FINISHED_AT to now
                     ),
@@ -588,6 +638,9 @@ class UniversalScheduler(
                             UPDATED_AT to now
                         )
                     }
+                    .putIf(options.newTTL != null) {
+                        DELETE_AFTER to now.plus(options.newTTL!!)
+                    }
                     .build()
             )
         )
@@ -599,6 +652,7 @@ class UniversalScheduler(
     fun updateTaskData(
         coll: MongoCollection<Document>,
         taskId: TaskId,
+        options: UpdateTaskDataOptions,
         additionalTaskData: Document
     ): Document? {
         expectNonEmptyDocument("additionalTaskData", additionalTaskData)
@@ -619,6 +673,9 @@ class UniversalScheduler(
                             DATA + "." + entry.key
                         }
                     )
+                    .putIf(options.newTTL != null) {
+                        DELETE_AFTER to now.plus(options.newTTL!!)
+                    }
                     .build()
             ),
             FindOneAndUpdateOptions()
@@ -667,6 +724,9 @@ class UniversalScheduler(
                         EXECUTIONS + ".\$." + UPDATED_AT to now,
                         UPDATED_AT to now
                     )
+                    .putIf(options.newTTL != null) {
+                        DELETE_AFTER to now.plus(options.newTTL!!)
+                    }
                     .build(),
             ),
             FindOneAndUpdateOptions()
@@ -689,13 +749,15 @@ class UniversalScheduler(
         }
     }
 
+
     private fun startNewExecution(
         coll: MongoCollection<Document>,
         workerId: WorkerId,
         taskId: Optional<TaskId>,
         keepAliveFor: Duration,
         additionalConstraints: Document?,
-        sortOrder: Document
+        sortOrder: Document,
+        newTTL: Duration?
     ): StartedExecutionSummary? {
         val now = clock.now()
         val keepAliveUntil = now.plus(keepAliveFor)
@@ -727,15 +789,19 @@ class UniversalScheduler(
                         UPDATED_AT to now,
                     )
                 ),
-                "\$set" to doc(
-                    STATUS to TaskStatus.inProgress,
-                    STATUS_UPDATED_AT to now,
-                    LAST_EXECUTION_ID to executionId,
-                    LAST_EXECUTION_STATE to ExecutionStatus.running,
-//                    LAST_HEARTBEAT_AT to now,
-                    LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
-                    UPDATED_AT to now,
-                ),
+                "\$set" to docBuilder()
+                    .putAll(
+                        STATUS to TaskStatus.inProgress,
+                        STATUS_UPDATED_AT to now,
+                        LAST_EXECUTION_ID to executionId,
+                        LAST_EXECUTION_STATE to ExecutionStatus.running,
+                        LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
+                        UPDATED_AT to now,
+                    )
+                    .putIf(newTTL != null) {
+                        DELETE_AFTER to now.plus(newTTL!!)
+                    }
+                    .build(),
 //                "\$unset" to doc(
 //                    CAN_BE_EXECUTED_AS_OF to 1
 //                ),
@@ -763,7 +829,8 @@ class UniversalScheduler(
         taskId: TaskId,
         lastExpectedExecutionId: ExecutionId,
         keepAliveFor: Duration,
-        additionalConstraints: Document?
+        additionalConstraints: Document?,
+        newTTL: Duration?
     ): StartedExecutionSummary? {
         val now = clock.now()
         val keepAliveUntil = now.plus(keepAliveFor)
@@ -789,20 +856,25 @@ class UniversalScheduler(
                 )
                 .build(),
             doc(
-                "\$set" to doc(
-                    STATUS to TaskStatus.inProgress,
-                    STATUS_UPDATED_AT to now,
-                    LAST_EXECUTION_STATE to ExecutionStatus.running,
-//                    LAST_HEARTBEAT_AT to now,
-                    LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
-                    EXECUTIONS + ".\$." + STATUS to ExecutionStatus.running,
-                    EXECUTIONS + ".\$." + STATUS_UPDATED_AT to now,
-                    EXECUTIONS + ".\$." + LAST_UN_SUSPENDED_AT to now,
-                    EXECUTIONS + ".\$." + WORKER_ID to workerId,
-                    EXECUTIONS + ".\$." + TIMES_OUT_AFTER to keepAliveUntil,
-                    EXECUTIONS + ".\$." + UPDATED_AT to now,
-                    UPDATED_AT to now,
-                ),
+                "\$set" to docBuilder()
+                    .putAll(
+                        STATUS to TaskStatus.inProgress,
+                        STATUS_UPDATED_AT to now,
+                        LAST_EXECUTION_STATE to ExecutionStatus.running,
+                        LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
+                        EXECUTIONS + ".\$." + STATUS to ExecutionStatus.running,
+                        EXECUTIONS + ".\$." + STATUS_UPDATED_AT to now,
+                        EXECUTIONS + ".\$." + LAST_UN_SUSPENDED_AT to now,
+                        EXECUTIONS + ".\$." + WORKER_ID to workerId,
+                        EXECUTIONS + ".\$." + TIMES_OUT_AFTER to keepAliveUntil,
+                        EXECUTIONS + ".\$." + UPDATED_AT to now,
+                        UPDATED_AT to now
+
+                    )
+                    .putIf(newTTL != null) {
+                        DELETE_AFTER to now.plus(newTTL!!)
+                    }
+                    .build(),
 //                "\$unset" to doc(
 //                    CAN_BE_EXECUTED_AS_OF to 1
 //                ),
@@ -829,6 +901,7 @@ class UniversalScheduler(
         fromTaskStatuses: List<TaskStatus>,
         toTaskStatus: TaskStatus,
         now: ZonedDateTime,
+        customTaskUpdates: Document? = null,
         additionalTaskData: Document?
     ): Document? {
         expectAtLeastOneItem("fromTaskStatuses", fromTaskStatuses)
@@ -852,6 +925,9 @@ class UniversalScheduler(
                         additionalTaskData!!.mapKeys { entry ->
                             DATA + "." + entry.key
                         }
+                    }
+                    .putAllIf(customTaskUpdates.isDefined()) {
+                        customTaskUpdates!!
                     }
                     .build()
             ),
@@ -883,7 +959,13 @@ class UniversalScheduler(
                         if (fromTaskStatuses.size == 1) {
                             "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected '${fromTaskStatuses[0]}' but got '${currentTaskStatus}' Task status instead"
                         } else {
-                            "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected one of these statuses ${fromTaskStatuses.joinToString(", ", "'", "'")} but got '${currentTaskStatus}' Task status instead"
+                            "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected one of these statuses ${
+                                fromTaskStatuses.joinToString(
+                                    ", ",
+                                    "'",
+                                    "'"
+                                )
+                            } but got '${currentTaskStatus}' Task status instead"
                         }
                     )
                 }
@@ -901,6 +983,7 @@ class UniversalScheduler(
         fromTaskStatuses: List<TaskStatus>,
         toTaskStatus: TaskStatus,
         now: ZonedDateTime,
+        customTaskUpdates: Document? = null,
         additionalTaskData: Document?
     ): Long {
         expectAtLeastOneItem("fromTaskStatuses", fromTaskStatuses)
@@ -927,6 +1010,9 @@ class UniversalScheduler(
                     additionalTaskData!!.mapKeys { entry ->
                         DATA + "." + entry.key
                     }
+                }
+                .putAllIf(customTaskUpdates.isDefined()) {
+                    customTaskUpdates!!
                 }
                 .build()
             )
