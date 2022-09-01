@@ -1,4 +1,4 @@
-package mtymes.tasks.scheduler.exceptions
+package mtymes.tasks.scheduler.exception
 
 class ExecutionNotFoundException(message: String) : IllegalStateException(message)
 class NotLastExecutionException(message: String) : IllegalStateException(message)

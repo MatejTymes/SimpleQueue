@@ -6,6 +6,7 @@ import com.mongodb.client.model.ReturnDocument
 import mtymes.tasks.common.check.ValidityChecks.expectAtLeastOneItem
 import mtymes.tasks.common.check.ValidityChecks.expectNonEmptyDocument
 import mtymes.tasks.common.domain.WorkerId
+import mtymes.tasks.common.exception.ExceptionUtil.runAndIgnoreExceptions
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.mongo.DocBuilder.Companion.docBuilder
 import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
@@ -16,7 +17,7 @@ import mtymes.tasks.common.mongo.MongoCollectionExt.insert
 import mtymes.tasks.common.time.Clock
 import mtymes.tasks.common.time.UTCClock
 import mtymes.tasks.scheduler.domain.*
-import mtymes.tasks.scheduler.exceptions.*
+import mtymes.tasks.scheduler.exception.*
 import org.bson.Document
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -25,7 +26,7 @@ import java.time.ZonedDateTime
 import java.util.*
 
 // todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension
-// todo: mtymes - add execution field: was unretriable fail
+// todo: mtymes - add execution field: was unRetriableFail
 // todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
 class UniversalScheduler(
     val clock: Clock = UTCClock
@@ -55,8 +56,6 @@ class UniversalScheduler(
         const val MAX_EXECUTION_ATTEMPTS_COUNT = "maxAttemptsCount"
         const val EXECUTION_ATTEMPTS_LEFT = "attemptsLeft"
 
-        // todo: mtymes - add field TaskConfig.isSuspendable to prevent suspension of un-suspendable tasks (and also do a runtime check if proper flag is set on fetching tasks)
-
         const val CAN_BE_EXECUTED_AS_OF = "canBeExecutedAsOf"
 
         const val LAST_EXECUTION_ID = "lastExecutionId"
@@ -69,9 +68,9 @@ class UniversalScheduler(
         const val EXECUTIONS = "executions"
 
         // when recording only last execution
-        // todo: mtymes - add this field for retainOnlyLasExecution
+        // todo: mtymes - add this field for retainOnlyLastExecution
 //        const val EXECUTION_COUNT = "executionCount"
-        // todo: mtymes - add this field for retainOnlyLasExecution
+        // todo: mtymes - add this field for retainOnlyLastExecution
 //        const val LAST_EXECUTION = "lastExecution"
 
         // EXECUTION FIELDS
@@ -605,7 +604,10 @@ class UniversalScheduler(
                     additionalExecutionData = additionalExecutionData
                 )
             } catch (e: Exception) {
-                TODO("todo: mtymes - log")
+                runAndIgnoreExceptions {
+                    val executionId = ExecutionId(deadTask.getString(LAST_EXECUTION_ID))
+                    logger.error("Failed to mark Execution '${executionId}' as '${ExecutionStatus.suspended}'", e)
+                }
             }
         }
     }

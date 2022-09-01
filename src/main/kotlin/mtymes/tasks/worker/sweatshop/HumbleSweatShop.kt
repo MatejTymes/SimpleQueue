@@ -2,6 +2,7 @@ package mtymes.tasks.worker.sweatshop
 
 import javafixes.concurrency.Runner
 import mtymes.tasks.common.domain.WorkerId
+import mtymes.tasks.common.exception.ExceptionUtil.runAndIgnoreExceptions
 import mtymes.tasks.common.time.Durations.ONE_MINUTE
 import mtymes.tasks.worker.HeartBeatingWorker
 import mtymes.tasks.worker.Worker
@@ -461,13 +462,5 @@ class HumbleSweatShop : SweatShop {
             // ignore
         }
         return taskString
-    }
-
-    private fun runAndIgnoreExceptions(code: () -> Unit) {
-        try {
-            code.invoke()
-        } catch (e: Exception) {
-            // ignore
-        }
     }
 }
