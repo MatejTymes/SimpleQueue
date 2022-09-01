@@ -60,7 +60,7 @@ class UniversalScheduler(
         const val CAN_BE_EXECUTED_AS_OF = "canBeExecutedAsOf"
 
         const val LAST_EXECUTION_ID = "lastExecutionId"
-        const val LAST_EXECUTION_STATE = "lastExecutionState"
+        const val LAST_EXECUTION_STATUS = "lastExecutionStatus"
         const val LAST_EXECUTION_TIMES_OUT_AFTER = "lastExecutionTimesOutAfter"
 
         // todo: mtymes - add flag - retainOnlyLastExecution
@@ -558,25 +558,33 @@ class UniversalScheduler(
     ) {
         val deadTasks: List<Document> = coll.find(
             doc(
-                STATUS to TaskStatus.inProgress,
-                LAST_EXECUTION_STATE to ExecutionStatus.running,
+                STATUS to doc("\$in", listOf(TaskStatus.inProgress, TaskStatus.suspended)),
+                LAST_EXECUTION_STATUS to doc("\$in", listOf(ExecutionStatus.running, ExecutionStatus.suspended)),
                 LAST_EXECUTION_TIMES_OUT_AFTER to (doc("\$lt" to clock.now())),
             )
         ).toList()
 
         for (deadTask: Document in deadTasks) {
             try {
+                val currentTaskStatus = TaskStatus.valueOf(deadTask.getString(STATUS))
+                val currentExecutionStatus = ExecutionStatus.valueOf(deadTask.getString(LAST_EXECUTION_STATUS))
                 val lastExecutionId = ExecutionId(deadTask.getString(LAST_EXECUTION_ID))
                 val executionAttemptsLeft = deadTask.getInteger(EXECUTION_ATTEMPTS_LEFT)
+
+                val toTaskStatus = if(currentTaskStatus == TaskStatus.suspended) {
+                    if (executionAttemptsLeft > 1) TaskStatus.available else TaskStatus.timedOut
+                } else {
+                    if (executionAttemptsLeft > 0) TaskStatus.available else TaskStatus.timedOut
+                }
 
                 val now = clock.now()
 
                 updateExecution(
                     coll = coll,
                     executionId = lastExecutionId,
-                    fromTaskStatus = TaskStatus.inProgress,
-                    fromExecutionStatus = ExecutionStatus.running,
-                    toTaskStatus = if (executionAttemptsLeft > 0) TaskStatus.available else TaskStatus.timedOut,
+                    fromTaskStatus = currentTaskStatus,
+                    fromExecutionStatus = currentExecutionStatus,
+                    toTaskStatus = toTaskStatus,
                     toExecutionStatus = ExecutionStatus.timedOut,
                     now = now,
                     customTaskUpdates = docBuilder()
@@ -585,6 +593,9 @@ class UniversalScheduler(
                         }
                         .putIf(options.newTTL != null) {
                             DELETE_AFTER to now.plus(options.newTTL!!)
+                        }
+                        .putIf(currentTaskStatus == TaskStatus.suspended) {
+                            EXECUTION_ATTEMPTS_LEFT to executionAttemptsLeft - 1
                         }
                         .build(),
                     customExecutionUpdates = doc(
@@ -794,7 +805,7 @@ class UniversalScheduler(
                         STATUS to TaskStatus.inProgress,
                         STATUS_UPDATED_AT to now,
                         LAST_EXECUTION_ID to executionId,
-                        LAST_EXECUTION_STATE to ExecutionStatus.running,
+                        LAST_EXECUTION_STATUS to ExecutionStatus.running,
                         LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
                         UPDATED_AT to now,
                     )
@@ -844,7 +855,7 @@ class UniversalScheduler(
                     TASK_ID to taskId,
                     STATUS to TaskStatus.suspended,
                     LAST_EXECUTION_ID to lastExpectedExecutionId,
-                    LAST_EXECUTION_STATE to ExecutionStatus.suspended,
+                    LAST_EXECUTION_STATUS to ExecutionStatus.suspended,
                     EXECUTIONS to doc(
                         "\$elemMatch" to doc(
                             EXECUTION_ID to lastExpectedExecutionId,
@@ -860,7 +871,7 @@ class UniversalScheduler(
                     .putAll(
                         STATUS to TaskStatus.inProgress,
                         STATUS_UPDATED_AT to now,
-                        LAST_EXECUTION_STATE to ExecutionStatus.running,
+                        LAST_EXECUTION_STATUS to ExecutionStatus.running,
                         LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
                         EXECUTIONS + ".\$." + STATUS to ExecutionStatus.running,
                         EXECUTIONS + ".\$." + STATUS_UPDATED_AT to now,
@@ -1057,7 +1068,7 @@ class UniversalScheduler(
 
                     },
                     STATUS_UPDATED_AT to now,
-                    LAST_EXECUTION_STATE to toExecutionStatus,
+                    LAST_EXECUTION_STATUS to toExecutionStatus,
                     EXECUTIONS to doc(
                         // todo: mtymes - check the performance of this
                         "\$map" to doc(
