@@ -37,6 +37,8 @@ Sample07
 Sample08
 [ ] - custom fetch criteria
 Sample09
+[ ] - pause
+Sample10
 [ ] - invalid state transitions
 
 What is still missing
