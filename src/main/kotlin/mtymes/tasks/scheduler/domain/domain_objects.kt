@@ -29,8 +29,8 @@ enum class TaskStatus {
     inProgress,
     suspended,
     succeeded,
-    // todo: mtymes - maybe add failedAndReachedRetryLimit
     failed,
+    // todo: mtymes - maybe add failedAndReachedRetryLimit
     cancelled,
     timedOut
 }
@@ -40,18 +40,10 @@ enum class ExecutionStatus {
     suspended,
     succeeded,
     failed,
+    // todo: mtymes - maybe add failedUnRetriably
     cancelled,
     timedOut
 }
-
-/*
- todo: mtymes
-   RuntimeConfig
-   - isSuspendable: Boolean
-   - recordAllExecutions: Boolean
-   - afterStartKeepAliveFor: Duration
-   - afterHeartBeatKeepAliveFor: Duration
- */
 
 data class FetchedExecutionSummary(
     val fetchedExecution: Execution,

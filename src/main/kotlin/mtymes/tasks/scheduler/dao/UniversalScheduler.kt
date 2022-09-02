@@ -38,7 +38,7 @@ class UniversalScheduler(
 
         val logger = LoggerFactory.getLogger(UniversalScheduler::class.java) as Logger
 
-        // todo: mtymes - check the fields are defined on correct level (data/execution)
+        // todo: mtymes - check the fields are defined on correct level (task/execution)
 
         // SHARED FIELDS
 
