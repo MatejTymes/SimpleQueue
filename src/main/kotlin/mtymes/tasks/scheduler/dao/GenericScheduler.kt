@@ -527,6 +527,24 @@ class GenericScheduler(
         )
     }
 
+    fun getTasks(
+        customConstraints: Document
+    ): Iterable<Task> {
+        return scheduler.getTasks(
+            coll = collection,
+            customConstraints = customConstraints
+        )
+    }
+
+    fun getExecution(
+        executionId: ExecutionId
+    ): ExecutionSummary? {
+        return scheduler.getExecution(
+            coll = collection,
+            executionId = executionId
+        )
+    }
+
     private fun <T> defaultOptions(fieldPath: String, value: T?): T {
         return (value ?: throw IllegalStateException("'${fieldPath}' is NOT DEFINED"))
     }

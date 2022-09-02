@@ -747,14 +747,9 @@ class UniversalScheduler(
                 .returnDocument(ReturnDocument.AFTER)
         )
 
-        return result?.let{
-            val task = it.toTask()
-            val execution = task.execution(executionId)!!
-            return ExecutionSummary(
-                execution = execution,
-                underlyingTask = task
-            )
-        }
+        return result?.toExecutionSummary(
+            executionId = executionId
+        )
     }
 
     fun getTask(
@@ -768,9 +763,30 @@ class UniversalScheduler(
         )?.toTask()
     }
 
-    // todo: mtymes - add getTasks(customConstraints)
+    fun getTasks(
+        coll: MongoCollection<Document>,
+        customConstraints: Document
+    ): Iterable<Task> {
+        return coll.find(
+            customConstraints
+        ).map {
+            it.toTask()
+        }
+    }
 
-    // todo: mtymes - add getExecution(executionId)
+    fun getExecution(
+        coll: MongoCollection<Document>,
+        executionId: ExecutionId
+    ): ExecutionSummary? {
+        return coll.findOne(
+            doc(
+                EXECUTIONS + "." + EXECUTION_ID to executionId
+            )
+        )?.toExecutionSummary(
+            executionId = executionId
+        )
+    }
+
 
     private fun startNewExecution(
         coll: MongoCollection<Document>,
@@ -1129,14 +1145,12 @@ class UniversalScheduler(
         )
 
         if (modifiedTask != null) {
-            val task = modifiedTask.toTask()
-            return ExecutionSummary(
-                execution = task.execution(executionId)!!,
-                underlyingTask = task
+            return modifiedTask.toExecutionSummary(
+                executionId = executionId
             )
         } else {
             val task: Document? = coll.findOne(
-                doc(EXECUTIONS + "." + EXECUTION_ID, executionId)
+                doc(EXECUTIONS + "." + EXECUTION_ID to executionId)
             )
 
             if (task == null) {
@@ -1249,6 +1263,17 @@ class UniversalScheduler(
             fetchedExecution = executionDoc.toExecution(),
             wasAwokenFromSuspension = wasSuspended,
             underlyingTask = this.toTask()
+        )
+    }
+
+    private fun Document.toExecutionSummary(
+        executionId: ExecutionId
+    ): ExecutionSummary {
+        val task = this.toTask()
+        val execution = task.execution(executionId)!!
+        return ExecutionSummary(
+            execution = execution,
+            underlyingTask = task
         )
     }
 
