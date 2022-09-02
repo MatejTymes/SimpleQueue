@@ -9,8 +9,6 @@ import mtymes.tasks.common.time.Durations.ZERO_SECONDS
 import mtymes.tasks.scheduler.domain.TaskId.Companion.uniqueTaskId
 import java.time.Duration
 
-// todo: mtymes - allow to update ttl with any update operation
-
 data class SubmitTaskOptions(
     val taskIdGenerator: (() -> TaskId) = { uniqueTaskId() },
     val maxAttemptsCount: Int = 1,

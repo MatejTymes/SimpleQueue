@@ -1,15 +1,28 @@
 package mtymes.tasks.scheduler.domain
 
 import javafixes.`object`.Microtype
+import mtymes.tasks.common.mongo.DocumentExt.toNullableUTCDateTime
+import mtymes.tasks.common.mongo.DocumentExt.toUTCDateTime
 import mtymes.tasks.scheduler.dao.UniversalScheduler
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CREATED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DATA
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DELETABLE_AFTER
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTIONS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ID
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.FINISHED_AT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.HEARTBEAT_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION_ID
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTION_ATTEMPTS_COUNT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STARTED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS_UPDATED_AT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.SUSPENDED_AT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.SUSPENSION_COUNT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.UN_SUSPENDED_AT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.UPDATED_AT
 import org.bson.Document
+import java.time.ZonedDateTime
 import java.util.*
 
 
@@ -30,6 +43,7 @@ enum class TaskStatus {
     suspended,
     succeeded,
     failed,
+
     // todo: mtymes - maybe add failedAndReachedRetryLimit
     cancelled,
     timedOut
@@ -40,6 +54,7 @@ enum class ExecutionStatus {
     suspended,
     succeeded,
     failed,
+
     // todo: mtymes - maybe add failedUnRetriably
     cancelled,
     timedOut
@@ -80,9 +95,25 @@ data class Task(
     }
 
     fun execution(executionId: ExecutionId): Execution? {
-        return executions.find {
-            execution -> execution.executionId == executionId
+        return executions.find { execution ->
+            execution.executionId == executionId
         }
+    }
+
+    fun createdAt(): ZonedDateTime {
+        return taskDocument.toUTCDateTime(CREATED_AT)
+    }
+
+    fun updatedAt(): ZonedDateTime {
+        return taskDocument.toUTCDateTime(UPDATED_AT)
+    }
+
+    fun statusUpdatedAt(): ZonedDateTime {
+        return taskDocument.toUTCDateTime(STATUS_UPDATED_AT)
+    }
+
+    fun deletableAfter(): ZonedDateTime {
+        return taskDocument.toUTCDateTime(DELETABLE_AFTER)
     }
 
     fun maxAttemptsCount(): Int {
@@ -106,5 +137,37 @@ data class Execution(
 
     fun data(): Document {
         return executionDoc.get(DATA) as Document
+    }
+
+    fun startedAt(): ZonedDateTime {
+        return executionDoc.toUTCDateTime(STARTED_AT)
+    }
+
+    fun updatedAt(): ZonedDateTime {
+        return executionDoc.toUTCDateTime(UPDATED_AT)
+    }
+
+    fun statusUpdatedAt(): ZonedDateTime {
+        return executionDoc.toUTCDateTime(STATUS_UPDATED_AT)
+    }
+
+    fun heartBeatAt(): ZonedDateTime? {
+        return executionDoc.toNullableUTCDateTime(HEARTBEAT_AT)
+    }
+
+    fun suspendedAt(): ZonedDateTime? {
+        return executionDoc.toNullableUTCDateTime(SUSPENDED_AT)
+    }
+
+    fun unSuspendedAt(): ZonedDateTime? {
+        return executionDoc.toNullableUTCDateTime(UN_SUSPENDED_AT)
+    }
+
+    fun suspensionCount(): Int {
+        return executionDoc.getInteger(SUSPENSION_COUNT) ?: 0
+    }
+
+    fun finishedAt(): ZonedDateTime? {
+        return executionDoc.toNullableUTCDateTime(FINISHED_AT)
     }
 }

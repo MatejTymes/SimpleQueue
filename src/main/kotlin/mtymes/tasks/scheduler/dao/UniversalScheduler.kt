@@ -51,15 +51,19 @@ class UniversalScheduler(
 
         const val TASK_ID = "_id"
         const val CREATED_AT = "createdAt"
-        const val DELETE_AFTER = "deleteAfter"
+        const val DELETABLE_AFTER = "deletableAfter"
 
         const val MAX_EXECUTION_ATTEMPTS_COUNT = "maxAttemptsCount"
         const val EXECUTION_ATTEMPTS_LEFT = "attemptsLeft"
 
+        // todo: mtymes - create a Task field for this
+        // todo: mtymes - remove when execution started and move onto the execution
         const val CAN_BE_EXECUTED_AS_OF = "canBeExecutedAsOf"
 
         const val LAST_EXECUTION_ID = "lastExecutionId"
         const val LAST_EXECUTION_STATUS = "lastExecutionStatus"
+        // todo: mtymes - create a Task field for this
+        // todo: mtymes - remove once execution moves into final state
         const val LAST_EXECUTION_TIMES_OUT_AFTER = "lastExecutionTimesOutAfter"
 
         // todo: mtymes - add flag - retainOnlyLastExecution
@@ -77,14 +81,20 @@ class UniversalScheduler(
 
         const val EXECUTION_ID = "id"
 
+        // todo: mtymes - create a Execution field for this
         // todo: mtymes - differentiate between startedBy: Worker, suspendedBy: Worker, resumedBy: Worker, cancelledBy/finalizedBy: Worker
         const val WORKER_ID = "workerId"
         const val STARTED_AT = "startedAt"
-        const val SUSPENDED_AT = "suspendedAt"
-        const val LAST_UN_SUSPENDED_AT = "lastUnSuspendedAt"
-        const val SUSPENSION_COUNT = "suspensionCount"
-        const val LAST_HEARTBEAT_AT = "lastHeartBeatAt"
+
+        const val HEARTBEAT_AT = "heartBeatAt"
+        // todo: mtymes - create a Execution field for this
+        // todo: mtymes - remove once execution moves into final state
         const val TIMES_OUT_AFTER = "timesOutAfter"
+
+        const val SUSPENDED_AT = "suspendedAt"
+        const val UN_SUSPENDED_AT = "unSuspendedAt"
+        const val SUSPENSION_COUNT = "suspensionCount"
+
         const val FINISHED_AT = "finishedAt"
 
     }
@@ -101,7 +111,7 @@ class UniversalScheduler(
     ) : ToTaskStatus
 
 
-    // todo: mtymes - fail if task is not submitted
+    @Throws(IllegalStateException::class)
     fun submitTask(
         coll: MongoCollection<Document>,
         data: Document,
@@ -119,7 +129,7 @@ class UniversalScheduler(
                 TASK_ID to taskId,
                 CREATED_AT to now,
                 DATA to data,
-                DELETE_AFTER to now.plus(options.ttl),
+                DELETABLE_AFTER to now.plus(options.ttl),
                 MAX_EXECUTION_ATTEMPTS_COUNT to options.maxAttemptsCount,
 
                 EXECUTION_ATTEMPTS_LEFT to options.maxAttemptsCount,
@@ -245,7 +255,7 @@ class UniversalScheduler(
             toExecutionStatus = ExecutionStatus.succeeded,
             now = now,
             customTaskUpdates = options.newTTL?.let { newTTL ->
-                doc(DELETE_AFTER to now.plus(newTTL))
+                doc(DELETABLE_AFTER to now.plus(newTTL))
             },
             customExecutionUpdates = doc(
                 FINISHED_AT to now
@@ -286,7 +296,7 @@ class UniversalScheduler(
                     )
                 }
                 .putIf(options.newTTL != null) {
-                    DELETE_AFTER to now.plus(options.newTTL!!)
+                    DELETABLE_AFTER to now.plus(options.newTTL!!)
                 }
                 .build(),
             customExecutionUpdates = doc(
@@ -315,7 +325,7 @@ class UniversalScheduler(
             toExecutionStatus = ExecutionStatus.failed,
             now = now,
             customTaskUpdates = options.newTTL?.let { newTTL ->
-                doc(DELETE_AFTER to now.plus(newTTL))
+                doc(DELETABLE_AFTER to now.plus(newTTL))
             },
             customExecutionUpdates = doc(
                 FINISHED_AT to now
@@ -343,7 +353,7 @@ class UniversalScheduler(
             toTaskStatus = toTaskStatus,
             now = now,
             customTaskUpdates = options.newTTL?.let { newTTL ->
-                doc(DELETE_AFTER to now.plus(newTTL))
+                doc(DELETABLE_AFTER to now.plus(newTTL))
             },
             additionalTaskData = additionalTaskData
         )
@@ -368,7 +378,7 @@ class UniversalScheduler(
             toTaskStatus = toTaskStatus,
             now = now,
             customTaskUpdates = options.newTTL?.let { newTTL ->
-                doc(DELETE_AFTER to now.plus(newTTL))
+                doc(DELETABLE_AFTER to now.plus(newTTL))
             },
             additionalTaskData = additionalTaskData
         )
@@ -392,7 +402,7 @@ class UniversalScheduler(
             toExecutionStatus = ExecutionStatus.cancelled,
             now = now,
             customTaskUpdates = options.newTTL?.let { newTTL ->
-                doc(DELETE_AFTER to now.plus(newTTL))
+                doc(DELETABLE_AFTER to now.plus(newTTL))
             },
             customExecutionUpdates = doc(
                 FINISHED_AT to now
@@ -421,7 +431,7 @@ class UniversalScheduler(
             toTaskStatus = toTaskStatus,
             now = now,
             customTaskUpdates = options.newTTL?.let { newTTL ->
-                doc(DELETE_AFTER to now.plus(newTTL))
+                doc(DELETABLE_AFTER to now.plus(newTTL))
             },
             additionalTaskData = additionalTaskData
         )
@@ -447,7 +457,7 @@ class UniversalScheduler(
             toTaskStatus = toTaskStatus,
             now = now,
             customTaskUpdates = options.newTTL?.let { newTTL ->
-                doc(DELETE_AFTER to now.plus(newTTL))
+                doc(DELETABLE_AFTER to now.plus(newTTL))
             },
             additionalTaskData = additionalTaskData
         )
@@ -472,7 +482,7 @@ class UniversalScheduler(
             toTaskStatus = toTaskStatus,
             now = now,
             customTaskUpdates = options.newTTL?.let { newTTL ->
-                doc(DELETE_AFTER to now.plus(newTTL))
+                doc(DELETABLE_AFTER to now.plus(newTTL))
             },
             additionalTaskData = additionalTaskData
         )
@@ -498,7 +508,7 @@ class UniversalScheduler(
             toTaskStatus = toTaskStatus,
             now = now,
             customTaskUpdates = options.newTTL?.let { newTTL ->
-                doc(DELETE_AFTER to now.plus(newTTL))
+                doc(DELETABLE_AFTER to now.plus(newTTL))
             },
             additionalTaskData = additionalTaskData
         )
@@ -530,7 +540,7 @@ class UniversalScheduler(
                     EXECUTION_ATTEMPTS_LEFT to doc("\$sum" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 1))
                 )
                 .putIf(options.newTTL != null) {
-                    DELETE_AFTER to now.plus(options.newTTL!!)
+                    DELETABLE_AFTER to now.plus(options.newTTL!!)
                 }
                 .build(),
             customExecutionUpdates = doc(
@@ -590,7 +600,7 @@ class UniversalScheduler(
                             CAN_BE_EXECUTED_AS_OF to now.plus(options.retryDelay!!)
                         }
                         .putIf(options.newTTL != null) {
-                            DELETE_AFTER to now.plus(options.newTTL!!)
+                            DELETABLE_AFTER to now.plus(options.newTTL!!)
                         }
                         .putIf(currentTaskStatus == TaskStatus.suspended) {
                             EXECUTION_ATTEMPTS_LEFT to executionAttemptsLeft - 1
@@ -631,7 +641,7 @@ class UniversalScheduler(
                 "\$set" to docBuilder()
                     .putAll(
                         LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
-                        EXECUTIONS + ".\$." + LAST_HEARTBEAT_AT to now,
+                        EXECUTIONS + ".\$." + HEARTBEAT_AT to now,
                         EXECUTIONS + ".\$." + TIMES_OUT_AFTER to keepAliveUntil,
                     )
                     .putAllIf(additionalTaskData.isDefined()) {
@@ -651,7 +661,7 @@ class UniversalScheduler(
                         UPDATED_AT to now
                     }
                     .putIf(options.newTTL != null) {
-                        DELETE_AFTER to now.plus(options.newTTL!!)
+                        DELETABLE_AFTER to now.plus(options.newTTL!!)
                     }
                     .build()
             )
@@ -660,7 +670,6 @@ class UniversalScheduler(
         return result.modifiedCount > 0
     }
 
-    // todo: mtymes - change return type from Task? -> Task and declare thrown Exceptions on the method
     // todo: mtymes - maybe add custom query criteria
     fun updateTaskData(
         coll: MongoCollection<Document>,
@@ -687,7 +696,7 @@ class UniversalScheduler(
                         }
                     )
                     .putIf(options.newTTL != null) {
-                        DELETE_AFTER to now.plus(options.newTTL!!)
+                        DELETABLE_AFTER to now.plus(options.newTTL!!)
                     }
                     .build()
             ),
@@ -698,7 +707,6 @@ class UniversalScheduler(
         return result?.toTask()
     }
 
-    // todo: mtymes - change return type from Task? -> Task and declare thrown Exceptions on the method
     // todo: mtymes - maybe add custom query criteria
     fun updateExecutionData(
         coll: MongoCollection<Document>,
@@ -739,7 +747,7 @@ class UniversalScheduler(
                         UPDATED_AT to now
                     )
                     .putIf(options.newTTL != null) {
-                        DELETE_AFTER to now.plus(options.newTTL!!)
+                        DELETABLE_AFTER to now.plus(options.newTTL!!)
                     }
                     .build(),
             ),
@@ -837,7 +845,7 @@ class UniversalScheduler(
                         UPDATED_AT to now,
                     )
                     .putIf(newTTL != null) {
-                        DELETE_AFTER to now.plus(newTTL!!)
+                        DELETABLE_AFTER to now.plus(newTTL!!)
                     }
                     .build(),
 //                "\$unset" to doc(
@@ -899,7 +907,7 @@ class UniversalScheduler(
                         LAST_EXECUTION_TIMES_OUT_AFTER to keepAliveUntil,
                         EXECUTIONS + ".\$." + STATUS to ExecutionStatus.running,
                         EXECUTIONS + ".\$." + STATUS_UPDATED_AT to now,
-                        EXECUTIONS + ".\$." + LAST_UN_SUSPENDED_AT to now,
+                        EXECUTIONS + ".\$." + UN_SUSPENDED_AT to now,
                         EXECUTIONS + ".\$." + WORKER_ID to workerId,
                         EXECUTIONS + ".\$." + TIMES_OUT_AFTER to keepAliveUntil,
                         EXECUTIONS + ".\$." + UPDATED_AT to now,
@@ -907,7 +915,7 @@ class UniversalScheduler(
 
                     )
                     .putIf(newTTL != null) {
-                        DELETE_AFTER to now.plus(newTTL!!)
+                        DELETABLE_AFTER to now.plus(newTTL!!)
                     }
                     .build(),
 //                "\$unset" to doc(

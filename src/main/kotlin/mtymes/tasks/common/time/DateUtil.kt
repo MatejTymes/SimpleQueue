@@ -26,4 +26,10 @@ object DateUtil {
         )
     }
 
+    fun toUTCDateTime(date: Date): ZonedDateTime {
+        return toZonedDateTime(
+            date,
+            UTC_ZONE_ID
+        )
+    }
 }
