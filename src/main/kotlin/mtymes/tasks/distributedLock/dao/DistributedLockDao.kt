@@ -5,6 +5,7 @@ import mtymes.tasks.common.check.ValidityChecks.expectNonNegativeDuration
 import mtymes.tasks.common.check.ValidityChecks.expectPositiveDuration
 import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
+import mtymes.tasks.common.mongo.DocBuilder.Companion.docBuilder
 import mtymes.tasks.common.mongo.MongoCollectionExt.insert
 import mtymes.tasks.common.time.Clock
 import mtymes.tasks.common.time.UTCClock
@@ -26,25 +27,31 @@ class DistributedLockDao(
         const val ACQUIRED_AT = "acquiredAt"
         const val PROLONGED_AT = "prolongedAt"
         const val LOCKED_UNTIL = "lockedUntil"
-        // todo: mtymes - add optional ttl
+        const val DELETE_AFTER = "deleteAfter"
     }
 
     fun tryToAcquireALock(
         lockId: LockId,
         workerId: WorkerId,
-        holdOnItFor: Duration
+        holdOnItFor: Duration,
+        ttl: Duration? = null
     ): Boolean {
         expectPositiveDuration("holdOnItFor", holdOnItFor)
 
         val now = clock.now()
 
         val ableToInsert = coll.insert(
-            doc(
-                LOCK_ID to lockId,
-                WORKER_ID to workerId,
-                ACQUIRED_AT to now,
-                LOCKED_UNTIL to now.plus(holdOnItFor)
-            )
+            docBuilder()
+                .putAll(
+                    LOCK_ID to lockId,
+                    WORKER_ID to workerId,
+                    ACQUIRED_AT to now,
+                    LOCKED_UNTIL to now.plus(holdOnItFor)
+                )
+                .putIf(ttl != null) {
+                    DELETE_AFTER to now.plus(ttl!!)
+                }
+                .build()
         )
 
         if (ableToInsert) {
@@ -59,10 +66,15 @@ class DistributedLockDao(
                     )
                 ),
                 doc(
-                    "\$set" to doc(
-                        WORKER_ID to workerId,
-                        LOCKED_UNTIL to now.plus(holdOnItFor)
-                    )
+                    "\$set" to docBuilder()
+                        .putAll(
+                            WORKER_ID to workerId,
+                            LOCKED_UNTIL to now.plus(holdOnItFor)
+                        )
+                        .putIf(ttl != null) {
+                            DELETE_AFTER to now.plus(ttl!!)
+                        }
+                        .build()
                 )
             )
 
@@ -73,7 +85,8 @@ class DistributedLockDao(
     fun prolongLockDuration(
         lockId: LockId,
         workerId: WorkerId,
-        holdOnItFor: Duration
+        holdOnItFor: Duration,
+        ttl: Duration? = null
     ): Boolean {
         expectPositiveDuration("holdOnItFor", holdOnItFor)
 
@@ -87,9 +100,14 @@ class DistributedLockDao(
                 LOCKED_UNTIL to doc("\$gte", now)
             ),
             doc(
-                "\$set" to doc(
-                    LOCKED_UNTIL to now.plus(holdOnItFor)
-                )
+                "\$set" to docBuilder()
+                    .putAll(
+                        LOCKED_UNTIL to now.plus(holdOnItFor)
+                    )
+                    .putIf(ttl != null) {
+                        DELETE_AFTER to now.plus(ttl!!)
+                    }
+                    .build()
             )
         )
 
@@ -99,7 +117,8 @@ class DistributedLockDao(
     fun releaseLock(
         lockId: LockId,
         workerId: WorkerId,
-        makeAvailableAfter: Duration
+        makeAvailableAfter: Duration,
+        ttl: Duration? = null
     ): Boolean {
         expectNonNegativeDuration("makeAvailableAfter", makeAvailableAfter)
 
@@ -112,10 +131,15 @@ class DistributedLockDao(
                 LOCKED_UNTIL to doc("\$gte", now)
             ),
             doc(
-                "\$set" to doc(
-                    WORKER_ID to LOCK_RELEASER,
-                    LOCKED_UNTIL to now.plus(makeAvailableAfter)
-                ),
+                "\$set" to docBuilder()
+                    .putAll(
+                        WORKER_ID to LOCK_RELEASER,
+                        LOCKED_UNTIL to now.plus(makeAvailableAfter)
+                    )
+                    .putIf(ttl != null) {
+                        DELETE_AFTER to now.plus(ttl!!)
+                    }
+                    .build(),
                 "\$unset" to doc(
                     ACQUIRED_AT to 1,
                     PROLONGED_AT to 1
