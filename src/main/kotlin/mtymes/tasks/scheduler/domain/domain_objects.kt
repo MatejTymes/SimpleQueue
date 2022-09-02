@@ -51,7 +51,6 @@ data class Task(
     val status: TaskStatus,
     val maxAttemptsCount: Int,
     val attemptsLeft: Int,
-    // todo: mtymes - recordAllExecutions
 )
 
 data class Execution(

@@ -217,27 +217,27 @@ class GenericScheduler(
     // todo: mtymes - add sample for this one
     fun markTasksAsCancelled(
         options: MarkTasksAsCancelledOptions,
-        additionalConstraints: Document? = null,
+        customConstraints: Document,
         additionalTaskData: Document? = null
 
     ): Long {
         return scheduler.markTasksAsCancelled(
             coll = collection,
             options = options,
-            additionalConstraints = additionalConstraints,
+            customConstraints = customConstraints,
             additionalTaskData = additionalTaskData
         )
     }
 
     // todo: mtymes - add sample for this one
     fun markTasksAsCancelled(
-        additionalConstraints: Document? = null,
+        customConstraints: Document,
         additionalTaskData: Document? = null
 
     ): Long {
         return markTasksAsCancelled(
             options = defaults.markTasksAsCancelledOptions ?: MarkTasksAsCancelledOptions.DEFAULT,
-            additionalConstraints = additionalConstraints,
+            customConstraints = customConstraints,
             additionalTaskData = additionalTaskData
         )
     }
@@ -300,28 +300,28 @@ class GenericScheduler(
     // todo: mtymes - add sample for this one
     fun markTasksAsPaused(
         options: MarkTasksAsPausedOptions,
-        additionalConstraints: Document? = null,
+        customConstraints: Document,
         additionalTaskData: Document? = null
 
     ): Long {
         return scheduler.markTasksAsPaused(
             coll = collection,
             options = options,
-            additionalConstraints = additionalConstraints,
+            customConstraints = customConstraints,
             additionalTaskData = additionalTaskData
         )
     }
 
     // todo: mtymes - add sample for this one
     fun markTasksAsPaused(
-        additionalConstraints: Document? = null,
+        customConstraints: Document,
         additionalTaskData: Document? = null
 
     ): Long {
         return scheduler.markTasksAsPaused(
             coll = collection,
             options = defaults.markTasksAsPausedOptions ?: MarkTasksAsPausedOptions.DEFAULT,
-            additionalConstraints = additionalConstraints,
+            customConstraints = customConstraints,
             additionalTaskData = additionalTaskData
         )
     }
@@ -355,27 +355,27 @@ class GenericScheduler(
     // todo: mtymes - add sample for this one
     fun markTasksAsUnPaused(
         options: MarkTasksAsUnPausedOptions,
-        additionalConstraints: Document? = null,
+        customConstraints: Document,
         additionalTaskData: Document? = null
 
     ): Long {
         return scheduler.markTasksAsUnPaused(
             coll = collection,
             options = options,
-            additionalConstraints = additionalConstraints,
+            customConstraints = customConstraints,
             additionalTaskData = additionalTaskData
         )
     }
 
     // todo: mtymes - add sample for this one
     fun markTasksAsUnPaused(
-        additionalConstraints: Document? = null,
+        customConstraints: Document,
         additionalTaskData: Document? = null
 
     ): Long {
         return markTasksAsUnPaused(
             options = defaults.markTasksAsUnPausedOptions ?: MarkTasksAsUnPausedOptions.DEFAULT,
-            additionalConstraints = additionalConstraints,
+            customConstraints = customConstraints,
             additionalTaskData = additionalTaskData
         )
     }
@@ -518,6 +518,15 @@ class GenericScheduler(
             ),
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
+        )
+    }
+
+    fun getTaskSummary(
+        taskId: TaskId
+    ): TaskSummary? {
+        return scheduler.getTaskSummary(
+            coll = collection,
+            taskId = taskId
         )
     }
 

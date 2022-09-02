@@ -353,7 +353,7 @@ class UniversalScheduler(
     fun markTasksAsCancelled(
         coll: MongoCollection<Document>,
         options: MarkTasksAsCancelledOptions,
-        additionalConstraints: Document? = null,
+        customConstraints: Document,
         additionalTaskData: Document? = null
 
     ): Long {
@@ -364,7 +364,7 @@ class UniversalScheduler(
 
         return updateTasks(
             coll = coll,
-            additionalConstraints = additionalConstraints,
+            customConstraints = customConstraints,
             fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
@@ -432,7 +432,7 @@ class UniversalScheduler(
     fun markTasksAsPaused(
         coll: MongoCollection<Document>,
         options: MarkTasksAsPausedOptions,
-        additionalConstraints: Document? = null,
+        customConstraints: Document,
         additionalTaskData: Document? = null
 
     ): Long {
@@ -443,7 +443,7 @@ class UniversalScheduler(
 
         return updateTasks(
             coll = coll,
-            additionalConstraints = additionalConstraints,
+            customConstraints = customConstraints,
             fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
@@ -483,7 +483,7 @@ class UniversalScheduler(
     fun markTasksAsUnPaused(
         coll: MongoCollection<Document>,
         options: MarkTasksAsUnPausedOptions,
-        additionalConstraints: Document? = null,
+        customConstraints: Document,
         additionalTaskData: Document? = null
 
     ): Long {
@@ -494,7 +494,7 @@ class UniversalScheduler(
 
         return updateTasks(
             coll = coll,
-            additionalConstraints = additionalConstraints,
+            customConstraints = customConstraints,
             fromTaskStatuses = fromTaskStatuses,
             toTaskStatus = toTaskStatus,
             now = now,
@@ -570,7 +570,7 @@ class UniversalScheduler(
                 val lastExecutionId = ExecutionId(deadTask.getString(LAST_EXECUTION_ID))
                 val executionAttemptsLeft = deadTask.getInteger(EXECUTION_ATTEMPTS_LEFT)
 
-                val toTaskStatus = if(currentTaskStatus == TaskStatus.suspended) {
+                val toTaskStatus = if (currentTaskStatus == TaskStatus.suspended) {
                     if (executionAttemptsLeft > 1) TaskStatus.available else TaskStatus.timedOut
                 } else {
                     if (executionAttemptsLeft > 0) TaskStatus.available else TaskStatus.timedOut
@@ -757,9 +757,7 @@ class UniversalScheduler(
             doc(
                 TASK_ID to taskId
             )
-        )?.let { taskDoc ->
-            documentToTakSummary(taskDoc)
-        }
+        )?.toTaskSummary()
     }
 
 
@@ -827,13 +825,10 @@ class UniversalScheduler(
                 .sort(sortOrder)
         )
 
-        return modifiedTask?.let { taskDoc ->
-            return documentToStartedExecutionSummary(
-                executionId,
-                taskDoc,
-                false
-            )
-        }
+        return modifiedTask?.toStartedExecutionSummary(
+            expectedLastExecutionId = executionId,
+            wasSuspended = false
+        )
     }
 
     private fun resumeSuspendedExecution(
@@ -899,15 +894,13 @@ class UniversalScheduler(
                 .returnDocument(ReturnDocument.AFTER)
         )
 
-        return modifiedTask?.let { taskDoc ->
-            return documentToStartedExecutionSummary(
-                lastExpectedExecutionId,
-                taskDoc,
-                true
+        return modifiedTask?.toStartedExecutionSummary(
+                expectedLastExecutionId = lastExpectedExecutionId,
+                wasSuspended = true
             )
-        }
     }
 
+    // todo: mtymes - change return type Document? -> Document and define thrown exceptions on the method
     private fun updateTask(
         coll: MongoCollection<Document>,
         taskId: TaskId,
@@ -992,7 +985,7 @@ class UniversalScheduler(
 
     private fun updateTasks(
         coll: MongoCollection<Document>,
-        additionalConstraints: Document?,
+        customConstraints: Document,
         fromTaskStatuses: List<TaskStatus>,
         toTaskStatus: TaskStatus,
         now: ZonedDateTime,
@@ -1003,9 +996,7 @@ class UniversalScheduler(
 
         val result = coll.updateMany(
             docBuilder()
-                .putAllIf(additionalConstraints.areDefined()) {
-                    additionalConstraints!!
-                }
+                .putAll(customConstraints)
                 .putAll(
                     STATUS to if (fromTaskStatuses.size == 1)
                         fromTaskStatuses.get(0)
@@ -1222,12 +1213,11 @@ class UniversalScheduler(
         )
     )
 
-    private fun documentToStartedExecutionSummary(
+    private fun Document.toStartedExecutionSummary(
         expectedLastExecutionId: ExecutionId,
-        taskDoc: Document,
         wasSuspended: Boolean
     ): StartedExecutionSummary {
-        val lastExecutionId = ExecutionId(taskDoc.getString(LAST_EXECUTION_ID))
+        val lastExecutionId = ExecutionId(this.getString(LAST_EXECUTION_ID))
 
         if (expectedLastExecutionId != lastExecutionId) {
             throw NotLastExecutionException(
@@ -1235,41 +1225,43 @@ class UniversalScheduler(
             )
         }
 
-        val executionDoc = taskDoc
+        val executionDoc = this
             .getList(EXECUTIONS, Document::class.java)
             .first { ExecutionId(it.getString(EXECUTION_ID)) == lastExecutionId }
 
         return StartedExecutionSummary(
-            documentToTask(taskDoc),
-            documentToExecution(executionDoc),
+            this.toTask(),
+            executionDoc.toExecution(),
             wasSuspended
         )
     }
 
-    private fun documentToTakSummary(
-        taskDoc: Document
-    ): TaskSummary {
+    private fun Document.toTaskSummary(): TaskSummary {
         return TaskSummary(
-            documentToTask(taskDoc),
-            taskDoc
+            this.toTask(),
+            this
                 .getList(EXECUTIONS, Document::class.java)
                 .map { executionDoc ->
-                    documentToExecution(executionDoc)
+                    executionDoc.toExecution()
                 }
         )
     }
 
-    private fun documentToTask(taskDoc: Document) = Task(
-        taskId = TaskId(taskDoc.getString(TASK_ID)),
-        data = taskDoc.get(DATA) as Document,
-        status = TaskStatus.valueOf(taskDoc.getString(STATUS)),
-        maxAttemptsCount = taskDoc.getInteger(MAX_EXECUTION_ATTEMPTS_COUNT),
-        attemptsLeft = taskDoc.getInteger(EXECUTION_ATTEMPTS_LEFT)
-    )
+    private fun Document.toTask(): Task {
+        return Task(
+            taskId = TaskId(this.getString(TASK_ID)),
+            data = this.get(DATA) as Document,
+            status = TaskStatus.valueOf(this.getString(STATUS)),
+            maxAttemptsCount = this.getInteger(MAX_EXECUTION_ATTEMPTS_COUNT),
+            attemptsLeft = this.getInteger(EXECUTION_ATTEMPTS_LEFT)
+        )
+    }
 
-    private fun documentToExecution(executionDoc: Document) = Execution(
-        executionId = ExecutionId(executionDoc.getString(EXECUTION_ID)),
-        data = executionDoc.get(DATA) as Document,
-        status = ExecutionStatus.valueOf(executionDoc.getString(STATUS))
-    )
+    private fun Document.toExecution(): Execution {
+        return Execution(
+            executionId = ExecutionId(this.getString(EXECUTION_ID)),
+            data = this.get(DATA) as Document,
+            status = ExecutionStatus.valueOf(this.getString(STATUS))
+        )
+    }
 }

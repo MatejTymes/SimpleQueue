@@ -11,6 +11,7 @@ data class WorkerSummary(
     val isGracefullyDying: Boolean
 )
 
+// todo: mtymes - implement other alternatives (shared threads or coroutines) and compare performance/stability
 interface SweatShop : AutoCloseable, Closeable {
 
     fun <T> addAndStartWorker(
