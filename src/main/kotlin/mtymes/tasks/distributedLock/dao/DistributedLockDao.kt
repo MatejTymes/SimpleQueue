@@ -27,7 +27,7 @@ class DistributedLockDao(
         const val ACQUIRED_AT = "acquiredAt"
         const val PROLONGED_AT = "prolongedAt"
         const val LOCKED_UNTIL = "lockedUntil"
-        const val DELETE_AFTER = "deleteAfter"
+        const val DELETABLE_AFTER = "deletableAfter"
     }
 
     fun tryToAcquireALock(
@@ -49,7 +49,7 @@ class DistributedLockDao(
                     LOCKED_UNTIL to now.plus(holdOnItFor)
                 )
                 .putIf(ttl != null) {
-                    DELETE_AFTER to now.plus(ttl!!)
+                    DELETABLE_AFTER to now.plus(ttl!!)
                 }
                 .build()
         )
@@ -72,7 +72,7 @@ class DistributedLockDao(
                             LOCKED_UNTIL to now.plus(holdOnItFor)
                         )
                         .putIf(ttl != null) {
-                            DELETE_AFTER to now.plus(ttl!!)
+                            DELETABLE_AFTER to now.plus(ttl!!)
                         }
                         .build()
                 )
@@ -105,7 +105,7 @@ class DistributedLockDao(
                         LOCKED_UNTIL to now.plus(holdOnItFor)
                     )
                     .putIf(ttl != null) {
-                        DELETE_AFTER to now.plus(ttl!!)
+                        DELETABLE_AFTER to now.plus(ttl!!)
                     }
                     .build()
             )
@@ -137,7 +137,7 @@ class DistributedLockDao(
                         LOCKED_UNTIL to now.plus(makeAvailableAfter)
                     )
                     .putIf(ttl != null) {
-                        DELETE_AFTER to now.plus(ttl!!)
+                        DELETABLE_AFTER to now.plus(ttl!!)
                     }
                     .build(),
                 "\$unset" to doc(
