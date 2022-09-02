@@ -59,9 +59,9 @@ class CancellationSupportingTaskDao(
         val result = scheduler.fetchNextAvailableExecution(workerId)
             ?.let { summary ->
                 TaskToProcess(
-                    taskId = summary.task.taskId,
-                    executionId = summary.execution.executionId,
-                    request = summary.task.data.getString("request")
+                    taskId = summary.underlyingTask.taskId,
+                    executionId = summary.fetchedExecution.executionId,
+                    request = summary.underlyingTask.data().getString("request")
                 )
             }
 

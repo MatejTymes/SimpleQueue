@@ -44,8 +44,7 @@ data class SchedulerDefaults(
     val updateExecutionDataOptions: UpdateExecutionDataOptions? = null
 )
 
-// todo: mtymes - merge no options methods
-// todo: mtymes - replace Document? return type with domain object
+// todo: mtymes - merge no options functions with options functions - currently separated because of java
 class GenericScheduler(
     val collection: MongoCollection<Document>,
     val defaults: SchedulerDefaults,
@@ -80,7 +79,7 @@ class GenericScheduler(
         options: FetchNextExecutionOptions,
         additionalConstraints: Document? = null,
         customSortOrder: Document? = null
-    ): StartedExecutionSummary? {
+    ): FetchedExecutionSummary? {
         return scheduler.fetchNextAvailableExecution(
             coll = collection,
             workerId = workerId,
@@ -94,7 +93,7 @@ class GenericScheduler(
         workerId: WorkerId,
         additionalConstraints: Document? = null,
         customSortOrder: Document? = null
-    ): StartedExecutionSummary? {
+    ): FetchedExecutionSummary? {
         return fetchNextAvailableExecution(
             workerId = workerId,
             options = defaultOptions(
@@ -111,7 +110,7 @@ class GenericScheduler(
         options: MarkAsSucceededOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): Document? {
+    ): ExecutionSummary? {
         return scheduler.markAsSucceeded(
             coll = collection,
             executionId = executionId,
@@ -125,7 +124,7 @@ class GenericScheduler(
         executionId: ExecutionId,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): Document? {
+    ): ExecutionSummary? {
         return markAsSucceeded(
             executionId = executionId,
             options = defaults.markAsSucceededOptions ?: MarkAsSucceededOptions.DEFAULT,
@@ -139,7 +138,7 @@ class GenericScheduler(
         options: MarkAsFailedButCanRetryOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): Document? {
+    ): ExecutionSummary? {
         return scheduler.markAsFailedButCanRetry(
             coll = collection,
             executionId = executionId,
@@ -153,7 +152,7 @@ class GenericScheduler(
         executionId: ExecutionId,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): Document? {
+    ): ExecutionSummary? {
         return markAsFailedButCanRetry(
             executionId = executionId,
             options = defaults.markAsFailedButCanRetryOptions ?: MarkAsFailedButCanRetryOptions.DEFAULT,
@@ -167,7 +166,7 @@ class GenericScheduler(
         options: MarkAsFailedButCanNOTRetryOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): Document? {
+    ): ExecutionSummary? {
         return scheduler.markAsFailedButCanNOTRetry(
             coll = collection,
             executionId = executionId,
@@ -181,7 +180,7 @@ class GenericScheduler(
         executionId: ExecutionId,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): Document? {
+    ): ExecutionSummary? {
         return markAsFailedButCanNOTRetry(
             executionId = executionId,
             options = defaults.markAsFailedButCanNOTRetryOptions ?: MarkAsFailedButCanNOTRetryOptions.DEFAULT,
@@ -194,7 +193,7 @@ class GenericScheduler(
         taskId: TaskId,
         options: MarkTaskAsCancelledOptions,
         additionalTaskData: Document? = null
-    ): Document? {
+    ): Task? {
         return scheduler.markTaskAsCancelled(
             coll = collection,
             taskId = taskId,
@@ -206,7 +205,7 @@ class GenericScheduler(
     fun markTaskAsCancelled(
         taskId: TaskId,
         additionalTaskData: Document? = null
-    ): Document? {
+    ): Task? {
         return markTaskAsCancelled(
             taskId = taskId,
             options = defaults.markTaskAsCancelledOptions ?: MarkTaskAsCancelledOptions.DEFAULT,
@@ -233,7 +232,6 @@ class GenericScheduler(
     fun markTasksAsCancelled(
         customConstraints: Document,
         additionalTaskData: Document? = null
-
     ): Long {
         return markTasksAsCancelled(
             options = defaults.markTasksAsCancelledOptions ?: MarkTasksAsCancelledOptions.DEFAULT,
@@ -247,7 +245,7 @@ class GenericScheduler(
         options: MarkAsCancelledOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): Document? {
+    ): ExecutionSummary? {
         return scheduler.markAsCancelled(
             coll = collection,
             options = options,
@@ -261,7 +259,7 @@ class GenericScheduler(
         executionId: ExecutionId,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): Document? {
+    ): ExecutionSummary? {
         return markAsCancelled(
             options = defaults.markAsCancelledOptions ?: MarkAsCancelledOptions.DEFAULT,
             executionId = executionId,
@@ -275,7 +273,7 @@ class GenericScheduler(
         taskId: TaskId,
         options: MarkTaskAsPausedOptions,
         additionalTaskData: Document? = null
-    ): Document? {
+    ): Task? {
         return scheduler.markTaskAsPaused(
             coll = collection,
             taskId = taskId,
@@ -288,7 +286,7 @@ class GenericScheduler(
     fun markTaskAsPaused(
         taskId: TaskId,
         additionalTaskData: Document? = null
-    ): Document? {
+    ): Task? {
         return scheduler.markTaskAsPaused(
             coll = collection,
             taskId = taskId,
@@ -331,7 +329,7 @@ class GenericScheduler(
         taskId: TaskId,
         options: MarkTaskAsUnPausedOptions,
         additionalTaskData: Document? = null
-    ): Document? {
+    ): Task? {
         return scheduler.markTaskAsUnPaused(
             coll = collection,
             taskId = taskId,
@@ -344,7 +342,7 @@ class GenericScheduler(
     fun markTaskAsUnPaused(
         taskId: TaskId,
         additionalTaskData: Document? = null
-    ): Document? {
+    ): Task? {
         return markTaskAsUnPaused(
             taskId = taskId,
             options = defaults.markTaskAsUnPausedOptions ?: MarkTaskAsUnPausedOptions.DEFAULT,
@@ -357,7 +355,6 @@ class GenericScheduler(
         options: MarkTasksAsUnPausedOptions,
         customConstraints: Document,
         additionalTaskData: Document? = null
-
     ): Long {
         return scheduler.markTasksAsUnPaused(
             coll = collection,
@@ -385,7 +382,7 @@ class GenericScheduler(
         options: MarkAsSuspendedOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): Document? {
+    ): ExecutionSummary? {
         return scheduler.markAsSuspended(
             coll = collection,
             executionId = executionId,
@@ -399,7 +396,7 @@ class GenericScheduler(
         executionId: ExecutionId,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): Document? {
+    ): ExecutionSummary? {
         return markAsSuspended(
             executionId = executionId,
             options = defaultOptions(
@@ -470,7 +467,7 @@ class GenericScheduler(
         taskId: TaskId,
         options: UpdateTaskDataOptions,
         additionalTaskData: Document
-    ): Document? {
+    ): Task? {
         return scheduler.updateTaskData(
             coll = collection,
             taskId = taskId,
@@ -482,7 +479,7 @@ class GenericScheduler(
     fun updateTaskData(
         taskId: TaskId,
         additionalTaskData: Document
-    ): Document? {
+    ): Task? {
         return updateTaskData(
             taskId = taskId,
             options = defaults.updateTaskDataOptions ?: UpdateTaskDataOptions.DEFAULT,
@@ -495,7 +492,7 @@ class GenericScheduler(
         options: UpdateExecutionDataOptions,
         additionalExecutionData: Document,
         additionalTaskData: Document? = null
-    ): Document? {
+    ): ExecutionSummary? {
         return scheduler.updateExecutionData(
             coll = collection,
             executionId = executionId,
@@ -509,7 +506,7 @@ class GenericScheduler(
         executionId: ExecutionId,
         additionalExecutionData: Document,
         additionalTaskData: Document? = null
-    ): Document? {
+    ): ExecutionSummary? {
         return updateExecutionData(
             executionId = executionId,
             options = defaultOptions(
@@ -521,10 +518,10 @@ class GenericScheduler(
         )
     }
 
-    fun getTaskSummary(
+    fun getTask(
         taskId: TaskId
-    ): TaskSummary? {
-        return scheduler.getTaskSummary(
+    ): Task? {
+        return scheduler.getTask(
             coll = collection,
             taskId = taskId
         )

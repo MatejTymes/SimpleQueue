@@ -69,10 +69,10 @@ class PriorityOrderedTasksDao(
                 )
             )?.let { summary ->
                 TaskToProcess(
-                    taskId = summary.task.taskId,
-                    executionId = summary.execution.executionId,
-                    request = summary.task.data.getString("request"),
-                    priority = summary.task.data.getInteger("priority")
+                    taskId = summary.underlyingTask.taskId,
+                    executionId = summary.fetchedExecution.executionId,
+                    request = summary.underlyingTask.data().getString("request"),
+                    priority = summary.underlyingTask.data().getInteger("priority")
                 )
             }
 

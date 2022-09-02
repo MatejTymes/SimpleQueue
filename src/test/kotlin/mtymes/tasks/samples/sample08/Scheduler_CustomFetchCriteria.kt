@@ -65,9 +65,9 @@ class CustomQueryTasksDao(
                 )
             )?.let { summary ->
                 TaskToProcess(
-                    executionId = summary.execution.executionId,
-                    request = summary.task.data.getString("request"),
-                    group = summary.task.data.getString("group")
+                    executionId = summary.fetchedExecution.executionId,
+                    request = summary.underlyingTask.data().getString("request"),
+                    group = summary.underlyingTask.data().getString("group")
                 )
             }
 

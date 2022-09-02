@@ -53,7 +53,7 @@ class SimpleTaskDao(
 
     fun fetchNextTaskExecution(
         workerId: WorkerId
-    ): StartedExecutionSummary? {
+    ): FetchedExecutionSummary? {
         return scheduler.fetchNextAvailableExecution(workerId)
     }
 

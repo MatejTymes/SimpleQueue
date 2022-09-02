@@ -71,8 +71,8 @@ class SuspendingTaskDao(
             )
         )?.let { summary ->
             TaskToProcess(
-                executionId = summary.execution.executionId,
-                request = summary.task.data.getString("request")
+                executionId = summary.fetchedExecution.executionId,
+                request = summary.underlyingTask.data().getString("request")
             )
         }
 
