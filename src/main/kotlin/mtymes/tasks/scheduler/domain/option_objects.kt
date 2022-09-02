@@ -187,6 +187,7 @@ data class MarkDeadExecutionsAsTimedOutOptions(
 
 data class RegisterHeartBeatOptions(
     val keepAliveFor: Duration,
+    val affectsUpdatedAtField: Boolean = false,
     val newTTL: Duration? = null
 ) {
     init {

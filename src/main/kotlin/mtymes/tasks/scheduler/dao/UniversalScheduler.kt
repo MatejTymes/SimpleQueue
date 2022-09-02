@@ -644,11 +644,11 @@ class UniversalScheduler(
                             EXECUTIONS + ".\$." + DATA + "." + entry.key
                         }
                     }
-                    .putAllIf(additionalTaskData.isDefined() || additionalExecutionData.isDefined()) {
-                        doc(
-                            EXECUTIONS + ".\$." + UPDATED_AT to now,
-                            UPDATED_AT to now
-                        )
+                    .putIf(options.affectsUpdatedAtField || additionalExecutionData.isDefined()) {
+                        EXECUTIONS + ".\$." + UPDATED_AT to now
+                    }
+                    .putIf(options.affectsUpdatedAtField || additionalTaskData.isDefined() || additionalExecutionData.isDefined()) {
+                        UPDATED_AT to now
                     }
                     .putIf(options.newTTL != null) {
                         DELETE_AFTER to now.plus(options.newTTL!!)
