@@ -14,7 +14,6 @@ data class SubmitTaskOptions(
     val maxAttemptsCount: Int = 1,
     val ttl: Duration,
     val delayStartBy: Duration = ZERO_SECONDS,
-    // todo: mtymes - add sample for this one
     val submitAsPaused: Boolean = false
 
 ) {

@@ -68,6 +68,10 @@ class UniversalScheduler(
 
         // todo: mtymes - add flag - retainOnlyLastExecution
 
+        //todo: mtymes - add cancelledAt
+        //todo: mtymes - add pausedAt
+        //todo: mtymes - add unPausedAt
+
         // when recording all executions
         const val EXECUTIONS = "executions"
 

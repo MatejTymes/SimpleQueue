@@ -36,9 +36,29 @@ class ExecutionId(value: UUID) : Microtype<UUID>(value) {
     constructor(value: String) : this(UUID.fromString(value))
 }
 
+/*
+* TODO: mtymes - define new status hierarchy
+*
+* TaskStatus | ExecutionStatus | FinalEStatus | WasSuccess | CanBeRetried |
+* -----------+-----------------+--------------+------------+--------------+
+*  available |                 |              |            |              |
+*     paused |                 |              |            |              |
+*  cancelled |                 |              |            |              |
+* inProgress |     running     |              |            |              |
+*  suspended |    suspended    |              |            |              |
+*   finished |     finished    |  Succeeded   |    yes     |              |
+*   finished |       -||-      |    Failed    |     no     |      no      |
+*   finished |       -||-      |   TimedOut   |     no     |      no      |
+*   finished |       -||-      |  Cancelled   |     no     |      no      |
+*  available |       -||-      |    Failed    |     no     |     yes      |
+*  available |       -||-      |   TimedOut   |     no     |     yes      |
+* -----------+-----------------+--------------+------------+--------------+
+* */
+
+
 enum class TaskStatus {
-    paused,
     available,
+    paused,
     inProgress,
     suspended,
     succeeded,
