@@ -39,20 +39,20 @@ class ExecutionId(value: UUID) : Microtype<UUID>(value) {
 /*
 * TODO: mtymes - define new status hierarchy
 *
-* TaskStatus | ExecutionStatus | FinalEStatus | WasSuccess | CanBeRetried |
-* -----------+-----------------+--------------+------------+--------------+
-*  available |                 |              |            |              |
-*     paused |                 |              |            |              |
-*  cancelled |                 |              |            |              |
-* inProgress |     running     |              |            |              |
-*  suspended |    suspended    |              |            |              |
-*   finished |     finished    |  Succeeded   |    yes     |              |
-*   finished |       -||-      |    Failed    |     no     |      no      |
-*   finished |       -||-      |   TimedOut   |     no     |      no      |
-*   finished |       -||-      |  Cancelled   |     no     |      no      |
-*  available |       -||-      |    Failed    |     no     |     yes      |
-*  available |       -||-      |   TimedOut   |     no     |     yes      |
-* -----------+-----------------+--------------+------------+--------------+
+* TaskStatus | ExecutionStatus | ExecFinalStatus |   ExpectedStatus  |WasSuccess | CanBeRetried |
+* -----------+-----------------+-----------------+-------------------+-----------+--------------+
+*  available |                 |                 |                   |           |              |
+*     paused |                 |                 |                   |           |              |
+*  cancelled |                 |                 |                   |           |              |
+* inProgress |     running     |                 |                   |           |              |
+*  suspended |    suspended    |                 |                   |           |              |
+*   finished |     finished    |    Succeeded    |       running     |   yes     |              |
+*   finished |       -||-      |      Failed     |       running     |    no     |      no      |
+*   finished |       -||-      |     TimedOut    | running/suspended |    no     |      no      |
+*   finished |       -||-      |    Cancelled    |       running     |    no     |      no      |
+*  available |       -||-      |      Failed     |       running     |    no     |     yes      |
+*  available |       -||-      |     TimedOut    | running/suspended |    no     |     yes      |
+* -----------+-----------------+-----------------+-------------------+-----------+--------------+
 * */
 
 
