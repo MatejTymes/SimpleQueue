@@ -15,6 +15,10 @@ class DocBuilder {
 
         fun docBuilder() = DocBuilder()
 
+        fun docBuilder(vararg pairs: Pair<String, Any?>) = DocBuilder().putAll(*pairs)
+
+        fun docBuilder(map: Map<String, Any?>) = DocBuilder().putAll(map)
+
         fun emptyDoc() = DocBuilder().build()
 
         fun doc(key: String, value: Any?): Document {
