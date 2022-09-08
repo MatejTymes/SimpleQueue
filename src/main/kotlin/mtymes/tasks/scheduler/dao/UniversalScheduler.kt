@@ -25,6 +25,7 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
+// todo: mtymes - return current execution status if it fails to registerHeartBeat
 // todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension
 // todo: mtymes - add execution field: was unRetriableFail
 // todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
@@ -60,11 +61,13 @@ class UniversalScheduler(
         // todo: mtymes - remove when execution started and move onto the execution
         const val CAN_BE_EXECUTED_AS_OF = "canBeExecutedAsOf"
 
+        // todo: mtymes - maybe create LAST_EXECUTION object within the task
         const val LAST_EXECUTION_ID = "lastExecutionId"
         const val LAST_EXECUTION_STATUS = "lastExecutionStatus"
         // todo: mtymes - create a Task field for this
         // todo: mtymes - remove once execution moves into final state
         const val LAST_EXECUTION_TIMES_OUT_AFTER = "lastExecutionTimesOutAfter"
+        // todo: mtymes - add LAST_EXECUTION_WAS_RETRYABLE_FAILURE WAS_RETRYABLE_FAILURE
 
         // todo: mtymes - add flag - retainOnlyLastExecution
 
@@ -401,6 +404,7 @@ class UniversalScheduler(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
+            // todo: mtymes - we should be able to cancell suspended execution as well
             fromExecutionStatus = ExecutionStatus.running,
             toTaskStatus = TaskStatus.cancelled,
             toExecutionStatus = ExecutionStatus.cancelled,

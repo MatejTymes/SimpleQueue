@@ -509,10 +509,7 @@ class GenericScheduler(
     ): ExecutionSummary? {
         return updateExecutionData(
             executionId = executionId,
-            options = defaultOptions(
-                "this.defaults.updateExecutionDataOptions",
-                defaults.updateExecutionDataOptions
-            ),
+            options = defaults.updateExecutionDataOptions ?: UpdateExecutionDataOptions.DEFAULT,
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )

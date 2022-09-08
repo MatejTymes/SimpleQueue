@@ -36,47 +36,23 @@ class ExecutionId(value: UUID) : Microtype<UUID>(value) {
     constructor(value: String) : this(UUID.fromString(value))
 }
 
-/*
-* TODO: mtymes - define new status hierarchy
-*
-* TaskStatus | ExecutionStatus | ExecFinalStatus |   ExpectedStatus  |WasSuccess | CanBeRetried |
-* -----------+-----------------+-----------------+-------------------+-----------+--------------+
-*  available |                 |                 |                   |           |              |
-*     paused |                 |                 |                   |           |              |
-*  cancelled |                 |                 |                   |           |              |
-* inProgress |     running     |                 |                   |           |              |
-*  suspended |    suspended    |                 |                   |           |              |
-*   finished |     finished    |    Succeeded    |       running     |   yes     |              |
-*   finished |       -||-      |      Failed     |       running     |    no     |      no      |
-*   finished |       -||-      |     TimedOut    | running/suspended |    no     |      no      |
-*   finished |       -||-      |    Cancelled    |       running     |    no     |      no      |
-*  available |       -||-      |      Failed     |       running     |    no     |     yes      |
-*  available |       -||-      |     TimedOut    | running/suspended |    no     |     yes      |
-* -----------+-----------------+-----------------+-------------------+-----------+--------------+
-* */
-
-
 enum class TaskStatus {
     available,
     paused,
+    cancelled,
     inProgress,
     suspended,
     succeeded,
     failed,
-
-    // todo: mtymes - maybe add failedAndReachedRetryLimit
-    cancelled,
     timedOut
 }
 
 enum class ExecutionStatus {
     running,
+    cancelled,
     suspended,
     succeeded,
     failed,
-
-    // todo: mtymes - maybe add failedUnRetriably
-    cancelled,
     timedOut
 }
 

@@ -212,4 +212,8 @@ data class UpdateExecutionDataOptions(
     init {
         expectNullOrNonNegativeDuration("newTTL", newTTL)
     }
+
+    companion object {
+        val DEFAULT = UpdateExecutionDataOptions()
+    }
 }
