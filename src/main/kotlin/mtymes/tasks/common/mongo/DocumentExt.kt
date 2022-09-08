@@ -14,11 +14,23 @@ object DocumentExt {
         return !this.isNullOrEmpty()
     }
 
-    fun Document.toUTCDateTime(key: String): ZonedDateTime {
+    fun Document.getUTCDateTime(key: String): ZonedDateTime {
         return this.getDate(key).toUTCDateTime()
     }
 
-    fun Document.toNullableUTCDateTime(key: String): ZonedDateTime? {
+    fun Document.getNullableUTCDateTime(key: String): ZonedDateTime? {
         return this.getDate(key)?.toUTCDateTime()
+    }
+
+    fun Document.getDocument(key: String): Document {
+        return this.get(key) as Document
+    }
+
+    fun Document.getNullableDocument(key: String): Document? {
+        return this.get(key) as Document?
+    }
+
+    fun Document.getListOfDocuments(key: String): List<Document> {
+        return this.getList(key, Document::class.java)
     }
 }

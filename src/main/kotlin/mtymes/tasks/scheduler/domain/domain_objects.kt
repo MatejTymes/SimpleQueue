@@ -1,9 +1,13 @@
 package mtymes.tasks.scheduler.domain
 
 import javafixes.`object`.Microtype
-import mtymes.tasks.common.mongo.DocumentExt.toNullableUTCDateTime
-import mtymes.tasks.common.mongo.DocumentExt.toUTCDateTime
+import mtymes.tasks.common.mongo.DocumentExt.getDocument
+import mtymes.tasks.common.mongo.DocumentExt.getListOfDocuments
+import mtymes.tasks.common.mongo.DocumentExt.getNullableDocument
+import mtymes.tasks.common.mongo.DocumentExt.getNullableUTCDateTime
+import mtymes.tasks.common.mongo.DocumentExt.getUTCDateTime
 import mtymes.tasks.scheduler.dao.UniversalScheduler
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_AS_OF
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CREATED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DATA
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DELETABLE_AFTER
@@ -12,15 +16,17 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ID
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.FINISHED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.HEARTBEAT_AT
-import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION_ID
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTION_ATTEMPTS_COUNT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STARTED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS_UPDATED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.SUSPENDED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.SUSPENSION_COUNT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.TIMES_OUT_AFTER
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.UN_SUSPENDED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.UPDATED_AT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.WAS_RETRYABLE_FAIL
 import org.bson.Document
 import java.time.ZonedDateTime
 import java.util.*
@@ -75,11 +81,11 @@ data class Task(
     val taskId: TaskId = TaskId(taskDocument.getString(UniversalScheduler.TASK_ID))
     val status: TaskStatus = TaskStatus.valueOf(taskDocument.getString(STATUS))
     val executions: List<Execution> = taskDocument
-        .getList(EXECUTIONS, Document::class.java)
+        .getListOfDocuments(EXECUTIONS)
         .map { executionDoc -> Execution(executionDoc) }
 
     fun data(): Document {
-        return taskDocument.get(DATA) as Document
+        return taskDocument.getDocument(DATA)
     }
 
     fun executionIds(): List<ExecutionId> {
@@ -87,7 +93,15 @@ data class Task(
     }
 
     fun lastExecutionId(): ExecutionId? {
-        return taskDocument.getString(LAST_EXECUTION_ID)?.let { ExecutionId(it) }
+        return taskDocument.getNullableDocument(LAST_EXECUTION)?.getString(EXECUTION_ID)?.let { ExecutionId(it) }
+    }
+
+    fun lastExecutionStatus(): ExecutionStatus? {
+        return taskDocument.getNullableDocument(LAST_EXECUTION)?.getString(STATUS)?.let { ExecutionStatus.valueOf(it) }
+    }
+
+    fun lastExecutionTimesOutAfter(): ZonedDateTime? {
+        return taskDocument.getNullableDocument(LAST_EXECUTION)?.getUTCDateTime(TIMES_OUT_AFTER)
     }
 
     fun execution(executionId: ExecutionId): Execution? {
@@ -97,19 +111,23 @@ data class Task(
     }
 
     fun createdAt(): ZonedDateTime {
-        return taskDocument.toUTCDateTime(CREATED_AT)
+        return taskDocument.getUTCDateTime(CREATED_AT)
+    }
+
+    fun canBeExecutedAsOf(): ZonedDateTime {
+        return taskDocument.getUTCDateTime(CAN_BE_EXECUTED_AS_OF)
     }
 
     fun updatedAt(): ZonedDateTime {
-        return taskDocument.toUTCDateTime(UPDATED_AT)
+        return taskDocument.getUTCDateTime(UPDATED_AT)
     }
 
     fun statusUpdatedAt(): ZonedDateTime {
-        return taskDocument.toUTCDateTime(STATUS_UPDATED_AT)
+        return taskDocument.getUTCDateTime(STATUS_UPDATED_AT)
     }
 
     fun deletableAfter(): ZonedDateTime {
-        return taskDocument.toUTCDateTime(DELETABLE_AFTER)
+        return taskDocument.getUTCDateTime(DELETABLE_AFTER)
     }
 
     fun maxAttemptsCount(): Int {
@@ -132,31 +150,35 @@ data class Execution(
     val status: ExecutionStatus = ExecutionStatus.valueOf(executionDoc.getString(STATUS))
 
     fun data(): Document {
-        return executionDoc.get(DATA) as Document
+        return executionDoc.getDocument(DATA)
     }
 
     fun startedAt(): ZonedDateTime {
-        return executionDoc.toUTCDateTime(STARTED_AT)
+        return executionDoc.getUTCDateTime(STARTED_AT)
     }
 
     fun updatedAt(): ZonedDateTime {
-        return executionDoc.toUTCDateTime(UPDATED_AT)
+        return executionDoc.getUTCDateTime(UPDATED_AT)
     }
 
     fun statusUpdatedAt(): ZonedDateTime {
-        return executionDoc.toUTCDateTime(STATUS_UPDATED_AT)
+        return executionDoc.getUTCDateTime(STATUS_UPDATED_AT)
+    }
+
+    fun timesOutAfter(): ZonedDateTime {
+        return executionDoc.getUTCDateTime(TIMES_OUT_AFTER)
     }
 
     fun heartBeatAt(): ZonedDateTime? {
-        return executionDoc.toNullableUTCDateTime(HEARTBEAT_AT)
+        return executionDoc.getNullableUTCDateTime(HEARTBEAT_AT)
     }
 
     fun suspendedAt(): ZonedDateTime? {
-        return executionDoc.toNullableUTCDateTime(SUSPENDED_AT)
+        return executionDoc.getNullableUTCDateTime(SUSPENDED_AT)
     }
 
     fun unSuspendedAt(): ZonedDateTime? {
-        return executionDoc.toNullableUTCDateTime(UN_SUSPENDED_AT)
+        return executionDoc.getNullableUTCDateTime(UN_SUSPENDED_AT)
     }
 
     fun suspensionCount(): Int {
@@ -164,6 +186,10 @@ data class Execution(
     }
 
     fun finishedAt(): ZonedDateTime? {
-        return executionDoc.toNullableUTCDateTime(FINISHED_AT)
+        return executionDoc.getNullableUTCDateTime(FINISHED_AT)
+    }
+
+    fun wasRetryableFail(): Boolean? {
+        return executionDoc.getBoolean(WAS_RETRYABLE_FAIL)
     }
 }
