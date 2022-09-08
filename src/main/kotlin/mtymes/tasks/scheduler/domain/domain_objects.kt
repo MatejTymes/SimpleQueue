@@ -42,24 +42,30 @@ class ExecutionId(value: UUID) : Microtype<UUID>(value) {
     constructor(value: String) : this(UUID.fromString(value))
 }
 
-enum class TaskStatus {
+// todo: mtymes - add isFinalState()
+enum class TaskStatus(
+    val isFinalStatus: Boolean = false
+) {
     available,
     paused,
-    cancelled,
+    cancelled(true),
     inProgress,
     suspended,
-    succeeded,
-    failed,
-    timedOut
+    succeeded(true),
+    failed(true),
+    timedOut(true)
 }
 
-enum class ExecutionStatus {
+// todo: mtymes - add isFinalState()
+enum class ExecutionStatus(
+    isFinalStatus: Boolean = false
+) {
     running,
-    cancelled,
     suspended,
-    succeeded,
-    failed,
-    timedOut
+    cancelled(true),
+    succeeded(true),
+    failed(true),
+    timedOut(true)
 }
 
 data class FetchedExecutionSummary(
