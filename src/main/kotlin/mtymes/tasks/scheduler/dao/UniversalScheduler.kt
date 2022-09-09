@@ -256,7 +256,7 @@ class UniversalScheduler(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
-            fromExecutionStatus = ExecutionStatus.running,
+            fromExecutionStatuses = listOf(ExecutionStatus.running),
             toTaskStatus = TaskStatus.succeeded,
             toExecutionStatus = ExecutionStatus.succeeded,
             now = now,
@@ -284,7 +284,7 @@ class UniversalScheduler(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
-            fromExecutionStatus = ExecutionStatus.running,
+            fromExecutionStatuses = listOf(ExecutionStatus.running),
             toTaskStatus = ToAvailabilityBasedTaskStatus(
                 statusIfAttemptsAvailable = TaskStatus.available,
                 statusIfNOAttemptsAvailable = TaskStatus.failed
@@ -327,7 +327,7 @@ class UniversalScheduler(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
-            fromExecutionStatus = ExecutionStatus.running,
+            fromExecutionStatuses = listOf(ExecutionStatus.running),
             toTaskStatus = ToSingleTaskStatus(TaskStatus.failed),
             toExecutionStatus = ExecutionStatus.failed,
             now = now,
@@ -405,8 +405,7 @@ class UniversalScheduler(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
-            // todo: mtymes - we should be able to cancell suspended execution as well
-            fromExecutionStatus = ExecutionStatus.running,
+            fromExecutionStatuses = ExecutionStatus.NON_FINAL_STATUSES,
             toTaskStatus = TaskStatus.cancelled,
             toExecutionStatus = ExecutionStatus.cancelled,
             now = now,
@@ -536,7 +535,7 @@ class UniversalScheduler(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
-            fromExecutionStatus = ExecutionStatus.running,
+            fromExecutionStatuses = listOf(ExecutionStatus.running),
             toTaskStatus = TaskStatus.suspended,
             toExecutionStatus = ExecutionStatus.suspended,
             now = now,
@@ -573,10 +572,11 @@ class UniversalScheduler(
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ) {
+
         val deadTasks: List<Document> = coll.find(
             doc(
                 STATUS to doc("\$in", listOf(TaskStatus.inProgress, TaskStatus.suspended)),
-                LAST_EXECUTION + "." + STATUS to doc("\$in", listOf(ExecutionStatus.running, ExecutionStatus.suspended)),
+                LAST_EXECUTION + "." + STATUS to doc("\$in", ExecutionStatus.NON_FINAL_STATUSES),
                 LAST_EXECUTION + "." + TIMES_OUT_AFTER to (doc("\$lt" to clock.now())),
             )
         ).toList()
@@ -585,7 +585,7 @@ class UniversalScheduler(
             try {
                 val currentTaskStatus = TaskStatus.valueOf(deadTask.getString(STATUS))
                 val lastExecutionDoc = deadTask.getDocument(LAST_EXECUTION)
-                val currentExecutionStatus = ExecutionStatus.valueOf(lastExecutionDoc.getString(STATUS))
+//                val currentExecutionStatus = ExecutionStatus.valueOf(lastExecutionDoc.getString(STATUS))
                 val lastExecutionId = ExecutionId(lastExecutionDoc.getString(EXECUTION_ID))
                 val executionAttemptsLeft = deadTask.getInteger(EXECUTION_ATTEMPTS_LEFT)
 
@@ -601,7 +601,7 @@ class UniversalScheduler(
                     coll = coll,
                     executionId = lastExecutionId,
                     fromTaskStatus = currentTaskStatus,
-                    fromExecutionStatus = currentExecutionStatus,
+                    fromExecutionStatuses = ExecutionStatus.NON_FINAL_STATUSES,
                     toTaskStatus = toTaskStatus,
                     toExecutionStatus = ExecutionStatus.timedOut,
                     now = now,
@@ -644,9 +644,9 @@ class UniversalScheduler(
 
         val result = coll.updateOne(
             queryForExecution(
-                executionId,
-                TaskStatus.inProgress,
-                ExecutionStatus.running
+                executionId = executionId,
+                taskStatus = TaskStatus.inProgress,
+                executionStatuses = listOf(ExecutionStatus.running)
             ),
             doc(
                 "\$set" to docBuilder()
@@ -1078,7 +1078,7 @@ class UniversalScheduler(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         fromTaskStatus: TaskStatus,
-        fromExecutionStatus: ExecutionStatus,
+        fromExecutionStatuses: List<ExecutionStatus>,
         toTaskStatus: ToTaskStatus,
         toExecutionStatus: ExecutionStatus,
         now: ZonedDateTime,
@@ -1087,10 +1087,12 @@ class UniversalScheduler(
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): ExecutionSummary? {
+        expectAtLeastOneItem("fromExecutionStatuses", fromExecutionStatuses)
+
         val query = queryForExecution(
-            executionId,
-            fromTaskStatus,
-            fromExecutionStatus
+            executionId = executionId,
+            taskStatus = fromTaskStatus,
+            executionStatuses = fromExecutionStatuses
         )
         val update = doc(
             "\$set" to docBuilder()
@@ -1201,16 +1203,23 @@ class UniversalScheduler(
                     else toTaskStatus.statusIfNOAttemptsAvailable
             }
 
-            if (currentExecutionStatus != fromExecutionStatus || currentTaskStatus != fromTaskStatus) {
+            if (!fromExecutionStatuses.contains(currentExecutionStatus) || currentTaskStatus != fromTaskStatus) {
                 if (currentExecutionStatus == toExecutionStatus && currentTaskStatus == expectedToTaskStatus) {
                     // already applied
                     throw TaskAndExecutionStatusAlreadyAppliedException(
                         "Task '${taskId}' and Execution '${executionId}' are already in Task status '${expectedToTaskStatus}' and Execution status '${toExecutionStatus}'"
                     )
                 } else {
+                    val expectedExecutionStatusString: String
+                    if (fromExecutionStatuses.size == 1) {
+                        expectedExecutionStatusString = fromExecutionStatuses[0].toString()
+                    } else {
+                        expectedExecutionStatusString = fromExecutionStatuses.map { it.toString() }.joinToString { "' or '" }
+                    }
+
                     throw UnexpectedStatusException(
                         "Failed to mark Task '${taskId}' as '${expectedToTaskStatus}' and Execution '${executionId}' as '${toExecutionStatus}'" +
-                                " as expected '${fromTaskStatus}' Task and '${fromExecutionStatus}' Execution but got '${currentTaskStatus}' Task and '${currentExecutionStatus}' Execution instead"
+                                " as expected '${fromTaskStatus}' Task and '${expectedExecutionStatusString}' Execution but got '${currentTaskStatus}' Task and '${currentExecutionStatus}' Execution instead"
                     )
                 }
             }
@@ -1225,7 +1234,7 @@ class UniversalScheduler(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         fromTaskStatus: TaskStatus,
-        fromExecutionStatus: ExecutionStatus,
+        fromExecutionStatuses: List<ExecutionStatus>,
         toTaskStatus: TaskStatus,
         toExecutionStatus: ExecutionStatus,
         now: ZonedDateTime,
@@ -1238,7 +1247,7 @@ class UniversalScheduler(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = fromTaskStatus,
-            fromExecutionStatus = fromExecutionStatus,
+            fromExecutionStatuses = fromExecutionStatuses,
             toTaskStatus = ToSingleTaskStatus(toTaskStatus),
             toExecutionStatus = toExecutionStatus,
             now = now,
@@ -1252,17 +1261,24 @@ class UniversalScheduler(
     private fun queryForExecution(
         executionId: ExecutionId,
         taskStatus: TaskStatus,
-        executionStatus: ExecutionStatus
-    ) = doc(
-        STATUS to taskStatus,
-        LAST_EXECUTION + "." + EXECUTION_ID to executionId,
-        EXECUTIONS to doc(
-            "\$elemMatch" to doc(
-                EXECUTION_ID to executionId,
-                STATUS to executionStatus,
+        executionStatuses: List<ExecutionStatus>
+    ): Document {
+        expectAtLeastOneItem("executionStatuses", executionStatuses)
+
+        return doc(
+            STATUS to taskStatus,
+            LAST_EXECUTION + "." + EXECUTION_ID to executionId,
+            EXECUTIONS to doc(
+                "\$elemMatch" to doc(
+                    EXECUTION_ID to executionId,
+                    STATUS to if (executionStatuses.size == 1)
+                        executionStatuses[0]
+                    else
+                        doc("\$in" to executionStatuses)
+                )
             )
         )
-    )
+    }
 
     private fun Document.toFetchedExecutionSummary(
         expectedLastExecutionId: ExecutionId,

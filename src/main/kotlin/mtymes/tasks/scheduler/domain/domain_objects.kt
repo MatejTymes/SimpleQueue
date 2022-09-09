@@ -52,18 +52,28 @@ enum class TaskStatus(
     suspended,
     succeeded(true),
     failed(true),
-    timedOut(true)
+    timedOut(true);
+
+    companion object {
+        val NON_FINAL_STATUSES = TaskStatus.values().filter { !it.isFinalStatus }.toList()
+        val FINAL_STATUSES = TaskStatus.values().filter { !it.isFinalStatus }.toList()
+    }
 }
 
 enum class ExecutionStatus(
-    isFinalStatus: Boolean = false
+    val isFinalStatus: Boolean = false
 ) {
     running,
     suspended,
     cancelled(true),
     succeeded(true),
     failed(true),
-    timedOut(true)
+    timedOut(true);
+
+    companion object {
+        val NON_FINAL_STATUSES = ExecutionStatus.values().filter { !it.isFinalStatus }.toList()
+        val FINAL_STATUSES = ExecutionStatus.values().filter { !it.isFinalStatus }.toList()
+    }
 }
 
 data class FetchedExecutionSummary(
