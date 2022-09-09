@@ -7,29 +7,45 @@ object DateUtil {
 
     val UTC_ZONE_ID = ZoneId.of("UTC")
 
-    fun toDate(dateTime: ZonedDateTime): Date {
-        return Date.from(dateTime.withZoneSameInstant(UTC_ZONE_ID).toInstant())
+    fun toDate(
+        dateTime: ZonedDateTime,
+        zoneId: ZoneId = UTC_ZONE_ID
+    ): Date {
+        return Date.from(dateTime.withZoneSameInstant(zoneId).toInstant())
     }
 
-    fun toDate(dateTime: LocalDateTime): Date {
-        return toDate(dateTime.atZone(UTC_ZONE_ID))
+    fun toDate(
+        dateTime: LocalDateTime,
+        zoneId: ZoneId = UTC_ZONE_ID
+    ): Date {
+        return toDate(dateTime.atZone(zoneId))
     }
 
-    fun toDate(localDate: LocalDate): Date {
-        return toDate(localDate.atTime(LocalTime.MIDNIGHT));
+    fun toDate(
+        localDate: LocalDate,
+        zoneId: ZoneId = UTC_ZONE_ID
+    ): Date {
+        return toDate(localDate.atTime(LocalTime.MIDNIGHT), zoneId)
     }
 
-    fun toZonedDateTime(date: Date, zoneId: ZoneId): ZonedDateTime {
-        return ZonedDateTime.ofInstant(
-                date.toInstant(),
-                zoneId
-        )
+    fun toZonedDateTime(
+        date: Date,
+        zoneId: ZoneId = UTC_ZONE_ID
+    ): ZonedDateTime {
+        return ZonedDateTime.ofInstant(date.toInstant(), zoneId)
     }
 
-    fun toUTCDateTime(date: Date): ZonedDateTime {
-        return toZonedDateTime(
-            date,
-            UTC_ZONE_ID
-        )
+    fun toLocalDateTime(
+        date: Date,
+        zoneId: ZoneId = UTC_ZONE_ID
+    ): LocalDateTime {
+        return LocalDateTime.ofInstant(date.toInstant(), zoneId)
+    }
+
+    fun toLocalDate(
+        date: Date,
+        zoneId: ZoneId = UTC_ZONE_ID
+    ): LocalDate {
+        return toLocalDateTime(date, zoneId).toLocalDate()
     }
 }

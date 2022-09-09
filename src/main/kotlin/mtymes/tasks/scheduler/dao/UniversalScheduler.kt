@@ -1277,7 +1277,7 @@ class UniversalScheduler(
         }
 
         val executionDoc = this
-            .getList(EXECUTIONS, Document::class.java)
+            .getListOfDocuments(EXECUTIONS)
             .first { ExecutionId(it.getString(EXECUTION_ID)) == lastExecutionId }
 
         return FetchedExecutionSummary(

@@ -1,7 +1,13 @@
 package mtymes.tasks.common.mongo
 
-import mtymes.tasks.common.time.DateExt.toUTCDateTime
+import mtymes.tasks.common.time.DateExt.toLocalDate
+import mtymes.tasks.common.time.DateExt.toLocalDateTime
+import mtymes.tasks.common.time.DateExt.toZonedDateTime
+import mtymes.tasks.common.time.DateUtil.UTC_ZONE_ID
 import org.bson.Document
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.ZonedDateTime
 
 object DocumentExt {
@@ -14,12 +20,20 @@ object DocumentExt {
         return !this.isNullOrEmpty()
     }
 
-    fun Document.getUTCDateTime(key: String): ZonedDateTime {
-        return this.getDate(key).toUTCDateTime()
+    fun Document.getZonedDateTime(key: String, zoneId: ZoneId = UTC_ZONE_ID): ZonedDateTime {
+        return this.getDate(key).toZonedDateTime(zoneId)
     }
 
-    fun Document.getNullableUTCDateTime(key: String): ZonedDateTime? {
-        return this.getDate(key)?.toUTCDateTime()
+    fun Document.getNullableZonedDateTime(key: String, zoneId: ZoneId = UTC_ZONE_ID): ZonedDateTime? {
+        return this.getDate(key)?.toZonedDateTime(zoneId)
+    }
+
+    fun Document.getLocalDateTime(key: String, zoneId: ZoneId = UTC_ZONE_ID): LocalDateTime {
+        return this.getDate(key).toLocalDateTime(zoneId)
+    }
+
+    fun Document.getLocalDate(key: String, zoneId: ZoneId = UTC_ZONE_ID): LocalDate {
+        return this.getDate(key).toLocalDate(zoneId)
     }
 
     fun Document.getDocument(key: String): Document {

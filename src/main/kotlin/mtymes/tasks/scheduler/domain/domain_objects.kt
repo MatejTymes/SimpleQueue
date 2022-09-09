@@ -4,8 +4,8 @@ import javafixes.`object`.Microtype
 import mtymes.tasks.common.mongo.DocumentExt.getDocument
 import mtymes.tasks.common.mongo.DocumentExt.getListOfDocuments
 import mtymes.tasks.common.mongo.DocumentExt.getNullableDocument
-import mtymes.tasks.common.mongo.DocumentExt.getNullableUTCDateTime
-import mtymes.tasks.common.mongo.DocumentExt.getUTCDateTime
+import mtymes.tasks.common.mongo.DocumentExt.getNullableZonedDateTime
+import mtymes.tasks.common.mongo.DocumentExt.getZonedDateTime
 import mtymes.tasks.scheduler.dao.UniversalScheduler
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_AS_OF
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CREATED_AT
@@ -42,7 +42,6 @@ class ExecutionId(value: UUID) : Microtype<UUID>(value) {
     constructor(value: String) : this(UUID.fromString(value))
 }
 
-// todo: mtymes - add isFinalState()
 enum class TaskStatus(
     val isFinalStatus: Boolean = false
 ) {
@@ -56,7 +55,6 @@ enum class TaskStatus(
     timedOut(true)
 }
 
-// todo: mtymes - add isFinalState()
 enum class ExecutionStatus(
     isFinalStatus: Boolean = false
 ) {
@@ -107,7 +105,7 @@ data class Task(
     }
 
     fun lastExecutionTimesOutAfter(): ZonedDateTime? {
-        return taskDocument.getNullableDocument(LAST_EXECUTION)?.getUTCDateTime(TIMES_OUT_AFTER)
+        return taskDocument.getNullableDocument(LAST_EXECUTION)?.getZonedDateTime(TIMES_OUT_AFTER)
     }
 
     fun execution(executionId: ExecutionId): Execution? {
@@ -117,23 +115,23 @@ data class Task(
     }
 
     fun createdAt(): ZonedDateTime {
-        return taskDocument.getUTCDateTime(CREATED_AT)
+        return taskDocument.getZonedDateTime(CREATED_AT)
     }
 
     fun canBeExecutedAsOf(): ZonedDateTime {
-        return taskDocument.getUTCDateTime(CAN_BE_EXECUTED_AS_OF)
+        return taskDocument.getZonedDateTime(CAN_BE_EXECUTED_AS_OF)
     }
 
     fun updatedAt(): ZonedDateTime {
-        return taskDocument.getUTCDateTime(UPDATED_AT)
+        return taskDocument.getZonedDateTime(UPDATED_AT)
     }
 
     fun statusUpdatedAt(): ZonedDateTime {
-        return taskDocument.getUTCDateTime(STATUS_UPDATED_AT)
+        return taskDocument.getZonedDateTime(STATUS_UPDATED_AT)
     }
 
     fun deletableAfter(): ZonedDateTime {
-        return taskDocument.getUTCDateTime(DELETABLE_AFTER)
+        return taskDocument.getZonedDateTime(DELETABLE_AFTER)
     }
 
     fun maxAttemptsCount(): Int {
@@ -160,31 +158,31 @@ data class Execution(
     }
 
     fun startedAt(): ZonedDateTime {
-        return executionDoc.getUTCDateTime(STARTED_AT)
+        return executionDoc.getZonedDateTime(STARTED_AT)
     }
 
     fun updatedAt(): ZonedDateTime {
-        return executionDoc.getUTCDateTime(UPDATED_AT)
+        return executionDoc.getZonedDateTime(UPDATED_AT)
     }
 
     fun statusUpdatedAt(): ZonedDateTime {
-        return executionDoc.getUTCDateTime(STATUS_UPDATED_AT)
+        return executionDoc.getZonedDateTime(STATUS_UPDATED_AT)
     }
 
     fun timesOutAfter(): ZonedDateTime {
-        return executionDoc.getUTCDateTime(TIMES_OUT_AFTER)
+        return executionDoc.getZonedDateTime(TIMES_OUT_AFTER)
     }
 
     fun heartBeatAt(): ZonedDateTime? {
-        return executionDoc.getNullableUTCDateTime(HEARTBEAT_AT)
+        return executionDoc.getNullableZonedDateTime(HEARTBEAT_AT)
     }
 
     fun suspendedAt(): ZonedDateTime? {
-        return executionDoc.getNullableUTCDateTime(SUSPENDED_AT)
+        return executionDoc.getNullableZonedDateTime(SUSPENDED_AT)
     }
 
     fun unSuspendedAt(): ZonedDateTime? {
-        return executionDoc.getNullableUTCDateTime(UN_SUSPENDED_AT)
+        return executionDoc.getNullableZonedDateTime(UN_SUSPENDED_AT)
     }
 
     fun suspensionCount(): Int {
@@ -192,7 +190,7 @@ data class Execution(
     }
 
     fun finishedAt(): ZonedDateTime? {
-        return executionDoc.getNullableUTCDateTime(FINISHED_AT)
+        return executionDoc.getNullableZonedDateTime(FINISHED_AT)
     }
 
     fun wasRetryableFail(): Boolean? {
