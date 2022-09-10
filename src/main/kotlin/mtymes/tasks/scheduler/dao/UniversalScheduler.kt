@@ -27,6 +27,8 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
+// todo: mtymes - split the data model to have lastExecution & prevExecutions
+// todo: mtymes - provide proper throws annotations
 // todo: mtymes - add flag - retainOnlyLastExecution
 // todo: mtymes - return current execution status if it fails to registerHeartBeat so we could interrupt the worker if it is cancelled
 // todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension
