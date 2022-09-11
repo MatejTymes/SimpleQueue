@@ -99,7 +99,7 @@ class TimeOutingTasksDao(
     ) {
         printTimedString("searching and Marking TIMED OUT Executions")
 
-        scheduler.markDeadExecutionsAsTimedOut(
+        val timedOutCount = scheduler.markDeadExecutionsAsTimedOut(
             options = MarkDeadExecutionsAsTimedOutOptions(
                 retryDelay = retryDelay
             ),
@@ -107,6 +107,8 @@ class TimeOutingTasksDao(
                 "timeoutMessage" to "It took you too long to finish"
             )
         )
+
+        printTimedString("Timed out ${ timedOutCount } Execution/s")
     }
 
     fun registerHeartBeat(

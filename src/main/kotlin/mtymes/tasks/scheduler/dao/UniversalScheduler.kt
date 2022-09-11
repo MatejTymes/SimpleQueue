@@ -565,7 +565,6 @@ class UniversalScheduler(
         )
     }
 
-    // todo: mtymes - return number of TimedOut Executions
     // todo: mtymes - allow to make this code a bit more dynamic - so the client could evaluate for example data to update based on task/execution data
     // todo: mtymes - maybe add custom query criteria
     fun markDeadExecutionsAsTimedOut(
@@ -573,7 +572,7 @@ class UniversalScheduler(
         options: MarkDeadExecutionsAsTimedOutOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ) {
+    ): Int {
 
         val deadTasks: List<Document> = coll.find(
             doc(
@@ -583,6 +582,7 @@ class UniversalScheduler(
             )
         ).toList()
 
+        var countOfTimedOutExecutions = 0
         for (deadTask: Document in deadTasks) {
             try {
                 val currentTaskStatus = TaskStatus.valueOf(deadTask.getString(STATUS))
@@ -599,7 +599,7 @@ class UniversalScheduler(
 
                 val now = clock.now()
 
-                updateExecution(
+                val summary = updateExecution(
                     coll = coll,
                     executionId = lastExecutionId,
                     fromTaskStatus = currentTaskStatus,
@@ -625,6 +625,9 @@ class UniversalScheduler(
                     additionalTaskData = additionalTaskData,
                     additionalExecutionData = additionalExecutionData
                 )
+                if (summary != null) {
+                    countOfTimedOutExecutions++
+                }
             } catch (e: Exception) {
                 runAndIgnoreExceptions {
                     val executionId = ExecutionId(deadTask.getDocument(LAST_EXECUTION).getString(EXECUTION_ID))
@@ -632,6 +635,8 @@ class UniversalScheduler(
                 }
             }
         }
+
+        return countOfTimedOutExecutions
     }
 
     fun registerHeartBeat(

@@ -412,8 +412,8 @@ class GenericScheduler(
         options: MarkDeadExecutionsAsTimedOutOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ) {
-        scheduler.markDeadExecutionsAsTimedOut(
+    ): Int {
+        return scheduler.markDeadExecutionsAsTimedOut(
             coll = collection,
             options = options,
             additionalTaskData = additionalTaskData,
@@ -424,7 +424,7 @@ class GenericScheduler(
     fun markDeadExecutionsAsTimedOut(
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ) {
+    ): Int {
         return markDeadExecutionsAsTimedOut(
             options = defaults.markDeadExecutionsAsTimedOutOptions ?: MarkDeadExecutionsAsTimedOutOptions.DEFAULT,
             additionalTaskData = additionalTaskData,
