@@ -216,9 +216,10 @@ class HumbleSweatShop : SweatShop {
     ): Future<Void>? = workContext.runner.run { shutdownInfo ->
 
         val workerId = workContext.workerId
+        val logId: String = worker.workerLogId(workerId)
 
         runAndIgnoreExceptions {
-            logger.info("[${workerId}]: Worker just started")
+            logger.info("[${logId}]: Worker just started")
         }
 
         var taskNotFoundNTimesInARow = 0L
@@ -235,7 +236,7 @@ class HumbleSweatShop : SweatShop {
                     throw e
                 } catch (e: Exception) {
                     runAndIgnoreExceptions {
-                        logger.error("[${workerId}]: Failed to fetch next task", e)
+                        logger.error("[${logId}]: Failed to fetch next task", e)
                     }
                 }
 
@@ -248,7 +249,7 @@ class HumbleSweatShop : SweatShop {
                     taskNotFoundNTimesInARow += 1
 
                     runAndIgnoreExceptions {
-                        logger.debug("[${workerId}]: No available task found")
+                        logger.debug("[${logId}]: No available task found")
                     }
 
                 } else {
@@ -257,9 +258,9 @@ class HumbleSweatShop : SweatShop {
                     runAndIgnoreExceptions {
                         val taskString: String? = taskToLoggableString(worker, task, workerId)
                         if (isBlank(taskString)) {
-                            logger.info("[${workerId}]: Going to process next available task")
+                            logger.info("[${logId}]: Going to process next available task")
                         } else {
-                            logger.info("[${workerId}]: Going to process next available task '${taskString}'")
+                            logger.info("[${logId}]: Going to process next available task '${taskString}'")
                         }
                     }
 
@@ -268,7 +269,8 @@ class HumbleSweatShop : SweatShop {
                             startHeartBeater(
                                 workContext = workContext,
                                 worker = worker,
-                                task = task
+                                task = task,
+                                logId = logId
                             )
                         }
 
@@ -280,9 +282,9 @@ class HumbleSweatShop : SweatShop {
                         runAndIgnoreExceptions {
                             val taskString: String? = taskToLoggableString(worker, task, workerId)
                             if (isBlank(taskString)) {
-                                logger.info("[${workerId}]: Finished processing task")
+                                logger.info("[${logId}]: Finished processing task")
                             } else {
-                                logger.info("[${workerId}]: Finished processing task '${taskString}'")
+                                logger.info("[${logId}]: Finished processing task '${taskString}'")
                             }
                         }
                     } catch (e: InterruptedException) {
@@ -291,17 +293,17 @@ class HumbleSweatShop : SweatShop {
                         runAndIgnoreExceptions {
                             val taskString: String? = taskToLoggableString(worker, task, workerId)
                             if (isBlank(taskString)) {
-                                logger.warn("[${workerId}]: Failed to execute task", e)
+                                logger.warn("[${logId}]: Failed to execute task", e)
                             } else {
-                                logger.warn("[${workerId}]: Failed to execute task '${taskString}'", e)
+                                logger.warn("[${logId}]: Failed to execute task '${taskString}'", e)
                             }
                         }
 
                         try {
                             worker.handleExecutionFailure(
-                                task,
-                                workerId,
-                                e
+                                task = task,
+                                workerId = workerId,
+                                exception = e
                             )
                         } catch (e: InterruptedException) {
                             throw e
@@ -309,9 +311,9 @@ class HumbleSweatShop : SweatShop {
                             runAndIgnoreExceptions {
                                 val taskString: String? = taskToLoggableString(worker, task, workerId)
                                 if (isBlank(taskString)) {
-                                    logger.error("[${workerId}]: Failed to handle failure of task", e)
+                                    logger.error("[${logId}]: Failed to handle failure of task", e)
                                 } else {
-                                    logger.error("[${workerId}]: Failed to handle failure of task '${taskString}'", e)
+                                    logger.error("[${logId}]: Failed to handle failure of task '${taskString}'", e)
                                 }
                             }
                         }
@@ -342,7 +344,7 @@ class HumbleSweatShop : SweatShop {
                     }
                 } catch (e: Exception) {
                     runAndIgnoreExceptions {
-                        logger.error("${workerId}]: Failed to evaluate sleep duration before fetching next task", e)
+                        logger.error("${logId}]: Failed to evaluate sleep duration before fetching next task", e)
                     }
                 }
                 // don't use Thread.sleep(..) as it would wait for the whole duration in case of graceful shutdown
@@ -353,15 +355,15 @@ class HumbleSweatShop : SweatShop {
                 runAndIgnoreExceptions {
                     val isExpected = shutdownInfo.wasShutdownTriggered()
                     if (isExpected) {
-                        logger.info("[${workerId}]: Worker thread has been interrupted")
+                        logger.info("[${logId}]: Worker thread has been interrupted")
                     } else {
-                        logger.error("[${workerId}]: Worker thread has been interrupted", e)
+                        logger.error("[${logId}]: Worker thread has been interrupted", e)
                     }
                 }
                 break
             } catch (e: Exception) {
                 runAndIgnoreExceptions {
-                    logger.error("${workerId}]: Unexpected failure", e)
+                    logger.error("${logId}]: Unexpected failure", e)
                 }
             }
         }
@@ -374,7 +376,7 @@ class HumbleSweatShop : SweatShop {
             }
 
             runAndIgnoreExceptions {
-                logger.info("[${workerId}]: Worker thread has been shut down gracefully")
+                logger.info("[${logId}]: Worker thread has been shut down gracefully")
             }
 
             runAndIgnoreExceptions {
@@ -382,7 +384,7 @@ class HumbleSweatShop : SweatShop {
             }
         } else {
             runAndIgnoreExceptions {
-                logger.info("[${workerId}]: Worker thread has been shut down")
+                logger.info("[${logId}]: Worker thread has been shut down")
             }
         }
     }
@@ -390,7 +392,8 @@ class HumbleSweatShop : SweatShop {
     private fun <T> startHeartBeater(
         workContext: WorkContext<T>,
         worker: Worker<T>,
-        task: T
+        task: T,
+        logId: String
     ) {
         val workerId = workContext.workerId
 
@@ -415,9 +418,9 @@ class HumbleSweatShop : SweatShop {
                 } catch (e: InterruptedException) {
                     runAndIgnoreExceptions {
                         if (heartBeaterId.equals(workContext.lastHeartBeaterId.get())) {
-                            logger.error("[${workerId}]: Heart beat thread has been interrupted", e)
+                            logger.error("[${logId}]: Heart beat thread has been interrupted", e)
                         } else {
-                            logger.info("[${workerId}]: Heart beat thread has finished")
+                            logger.info("[${logId}]: Heart beat thread has finished")
                         }
                     }
                     break
@@ -425,9 +428,9 @@ class HumbleSweatShop : SweatShop {
                     runAndIgnoreExceptions {
                         val taskString: String? = taskToLoggableString(worker, task, workerId)
                         if (isBlank(taskString)) {
-                            logger.error("[${workerId}]: Failed to update heart beat for task", e)
+                            logger.error("[${logId}]: Failed to update heart beat for task", e)
                         } else {
-                            logger.error("[${workerId}]: Failed to update heart beat for task '${taskString}'", e)
+                            logger.error("[${logId}]: Failed to update heart beat for task '${taskString}'", e)
                         }
                     }
                 }

@@ -29,6 +29,10 @@ interface Worker<Task> {
         // do nothing
     }
 
+    fun workerLogId(workerId: WorkerId): String {
+        return "${ this::class.simpleName?.let{ it + ":" } ?: "" }${ workerId }"
+    }
+
     fun taskToLoggableString(
         task: Task,
         workerId: WorkerId
