@@ -60,9 +60,9 @@ class DistributedLockDao(
             val result = coll.updateOne(
                 doc(
                     LOCK_ID to lockId,
-                    "\$or" to doc(
-                        WORKER_ID to workerId,
-                        LOCKED_UNTIL to doc("\$lt" to now)
+                    "\$or" to listOf(
+                        doc(WORKER_ID to workerId),
+                        doc(LOCKED_UNTIL to doc("\$lt" to now))
                     )
                 ),
                 doc(
