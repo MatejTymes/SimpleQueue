@@ -25,9 +25,9 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
-// todo: mtymes - provide proper throws annotations
-// todo: mtymes - add flag - retainOnlyLastExecution
 // todo: mtymes - return current execution status if it fails to registerHeartBeat so we could interrupt the worker if it is cancelled
+// todo: mtymes - add flag - retainOnlyLastExecution
+// todo: mtymes - provide proper throws annotations
 // todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension
 // todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
 class UniversalScheduler(
@@ -537,9 +537,6 @@ class UniversalScheduler(
             customTaskUpdates = docBuilder()
                 .putAll(
                     CAN_BE_EXECUTED_AS_OF to now.plus(options.suspendFor),
-
-                    // $inc - section
-                    // todo: mtymes - handle differently
                     EXECUTION_ATTEMPTS_LEFT to doc("\$sum" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 1))
                 )
                 .putIf(options.newTTL != null) {
@@ -548,9 +545,6 @@ class UniversalScheduler(
                 .build(),
             customExecutionUpdates = doc(
                 SUSPENDED_AT to now,
-
-                // $inc - section
-                // todo: mtymes - handle differently
                 SUSPENSION_COUNT to doc("\$sum" to listOf("\$" + SUSPENSION_COUNT, 1))
             ),
             additionalTaskData = additionalTaskData,
