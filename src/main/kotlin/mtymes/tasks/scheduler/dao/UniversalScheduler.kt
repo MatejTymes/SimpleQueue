@@ -56,8 +56,9 @@ class UniversalScheduler(
         const val CREATED_AT = "createdAt"
         const val DELETABLE_AFTER = "deletableAfter"
 
-        const val MAX_EXECUTION_ATTEMPTS_COUNT = "maxAttemptsCount"
-        const val EXECUTION_ATTEMPTS_LEFT = "attemptsLeft"
+        const val MAX_EXECUTIONS_COUNT = "maxExecutionsCount"
+        const val EXECUTION_ATTEMPTS_LEFT = "execAttemptsLeft"
+        const val EXECUTIONS_COUNT = "executionsCount"
 
         // todo: mtymes - remove when execution started and move onto the execution as COULD_BE_EXECUTED_AS_OF
         const val CAN_BE_EXECUTED_AS_OF = "canBeExecutedAsOf"
@@ -69,12 +70,9 @@ class UniversalScheduler(
         // todo: mtymes - add task.unPausedAt
         // todo: mtymes - add task.finishedAt
 
-        const val PREVIOUS_EXECUTIONS = "prevExecutions"
-        const val LAST_EXECUTION = "lastExecution" // contains: EXECUTION_ID, STATUS, TIMES_OUT_AFTER
-
-        // when recording only last execution
         // todo: mtymes - add this field for retainOnlyLastExecution
-//        const val EXECUTION_COUNT = "executionCount"
+        const val PREVIOUS_EXECUTIONS = "prevExecutions"
+        const val LAST_EXECUTION = "lastExecution"
 
         // EXECUTION FIELDS
 
@@ -129,9 +127,11 @@ class UniversalScheduler(
                 CREATED_AT to now,
                 DATA to data,
                 DELETABLE_AFTER to now.plus(options.ttl),
-                MAX_EXECUTION_ATTEMPTS_COUNT to options.maxAttemptsCount,
 
+                MAX_EXECUTIONS_COUNT to options.maxAttemptsCount,
                 EXECUTION_ATTEMPTS_LEFT to options.maxAttemptsCount,
+                EXECUTIONS_COUNT to 0,
+
                 CAN_BE_EXECUTED_AS_OF to now.plus(options.delayStartBy),
 
                 STATUS to status,
@@ -853,7 +853,6 @@ class UniversalScheduler(
                     .putAll(
                         STATUS to TaskStatus.inProgress,
                         STATUS_UPDATED_AT to now,
-                        EXECUTION_ATTEMPTS_LEFT to doc("\$sum" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, -1)),
                         PREVIOUS_EXECUTIONS to doc(
                             "\$cond" to listOf(
                                 doc("\$eq" to listOf(doc("\$type" to "\$" + LAST_EXECUTION), "object")),
@@ -877,6 +876,8 @@ class UniversalScheduler(
                             TIMES_OUT_AFTER to keepAliveUntil,
                             UPDATED_AT to now,
                         ),
+                        EXECUTION_ATTEMPTS_LEFT to doc("\$sum" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, -1)),
+                        EXECUTIONS_COUNT to doc("\$sum" to listOf("\$" + EXECUTIONS_COUNT, 1)),
                         UPDATED_AT to now,
                     )
                     .putIf(newTTL != null) {

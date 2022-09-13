@@ -6,8 +6,9 @@ import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTIONS_COUNT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
-import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTION_ATTEMPTS_COUNT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTIONS_COUNT
 import mtymes.tasks.scheduler.domain.ExecutionId
 import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
 import mtymes.tasks.scheduler.domain.SubmitTaskOptions
@@ -132,8 +133,9 @@ object CancelTask {
         dao.fetchNextTaskExecution(workerId)
 
         displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTION_ATTEMPTS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT
+            MAX_EXECUTIONS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            EXECUTIONS_COUNT
         ))
     }
 }
@@ -157,8 +159,9 @@ object CancelExecution {
         dao.fetchNextTaskExecution(workerId)
 
         displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTION_ATTEMPTS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT
+            MAX_EXECUTIONS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            EXECUTIONS_COUNT
         ))
     }
 }
@@ -186,8 +189,9 @@ object FailToCancelTaskInProgress {
 
 
         displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTION_ATTEMPTS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT
+            MAX_EXECUTIONS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            EXECUTIONS_COUNT
         ))
     }
 }

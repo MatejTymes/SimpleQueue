@@ -7,10 +7,11 @@ import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_AS_OF
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTIONS_COUNT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.FINISHED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
-import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTION_ATTEMPTS_COUNT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTIONS_COUNT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STARTED_AT
 import mtymes.tasks.scheduler.domain.ExecutionId
@@ -200,8 +201,9 @@ object WorkerFailing {
         }
 
         displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTION_ATTEMPTS_COUNT,
+            MAX_EXECUTIONS_COUNT,
             EXECUTION_ATTEMPTS_LEFT,
+            EXECUTIONS_COUNT,
             PREVIOUS_EXECUTIONS + "." + STARTED_AT,
             PREVIOUS_EXECUTIONS + "." + FINISHED_AT,
             LAST_EXECUTION + "." + STARTED_AT,
@@ -227,8 +229,9 @@ object FailThenSucceed {
 
 
         displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTION_ATTEMPTS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT
+            MAX_EXECUTIONS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            EXECUTIONS_COUNT
         ))
 
 
@@ -237,8 +240,9 @@ object FailThenSucceed {
 
 
         displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTION_ATTEMPTS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT
+            MAX_EXECUTIONS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            EXECUTIONS_COUNT
         ))
 
 
@@ -266,8 +270,9 @@ object UnrecoverableFailure {
 
 
         displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTION_ATTEMPTS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT
+            MAX_EXECUTIONS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            EXECUTIONS_COUNT
         ))
 
 
@@ -298,8 +303,9 @@ object DelayedRetryAfterFailure {
         dao.fetchNextTaskExecution(workerId)
 
         displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTION_ATTEMPTS_COUNT,
+            MAX_EXECUTIONS_COUNT,
             EXECUTION_ATTEMPTS_LEFT,
+            EXECUTIONS_COUNT,
             CAN_BE_EXECUTED_AS_OF
         ))
 
@@ -310,8 +316,9 @@ object DelayedRetryAfterFailure {
         dao.fetchNextTaskExecution(workerId)
 
         displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTION_ATTEMPTS_COUNT,
+            MAX_EXECUTIONS_COUNT,
             EXECUTION_ATTEMPTS_LEFT,
+            EXECUTIONS_COUNT,
             CAN_BE_EXECUTED_AS_OF
         ))
     }
