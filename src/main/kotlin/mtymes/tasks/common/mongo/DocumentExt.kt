@@ -47,4 +47,8 @@ object DocumentExt {
     fun Document.getListOfDocuments(key: String): List<Document> {
         return this.getList(key, Document::class.java)
     }
+
+    fun Document.getNullableListOfDocuments(key: String): List<Document>? {
+        return this.getList(key, Document::class.java)
+    }
 }

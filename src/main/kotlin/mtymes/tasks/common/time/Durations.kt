@@ -16,7 +16,12 @@ object Durations {
     val FOUR_SECONDS: Duration = Duration.ofSeconds(4)
     val FIVE_SECONDS: Duration = Duration.ofSeconds(5)
     val TEN_SECONDS: Duration = Duration.ofSeconds(10)
+    val FIFTEEN_SECONDS: Duration = Duration.ofSeconds(15)
+    val TWENTY_SECONDS: Duration = Duration.ofSeconds(20)
     val THIRTY_SECONDS: Duration = Duration.ofSeconds(30)
+    val FOURTY_SECONDS: Duration = Duration.ofSeconds(40)
+    val FOURTY_FIVE_SECONDS: Duration = Duration.ofSeconds(45)
+    val FIFTY_SECONDS: Duration = Duration.ofSeconds(50)
 
     val ONE_MINUTE: Duration = Duration.ofMinutes(1)
     val TWO_MINUTES: Duration = Duration.ofMinutes(2)

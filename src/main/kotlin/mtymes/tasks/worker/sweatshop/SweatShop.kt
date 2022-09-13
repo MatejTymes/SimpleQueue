@@ -27,6 +27,7 @@ interface SweatShop : AutoCloseable, Closeable {
 
     fun workerSummaries(): List<WorkerSummary>
 
+    // todo: mtymes - add option to only close a worker once it fails to acquire some work
     fun closeGracefully(
         waitTillDone: Boolean = false
     )

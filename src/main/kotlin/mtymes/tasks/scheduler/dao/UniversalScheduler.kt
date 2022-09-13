@@ -9,10 +9,8 @@ import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.exception.ExceptionUtil.runAndIgnoreExceptions
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.mongo.DocBuilder.Companion.docBuilder
-import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
 import mtymes.tasks.common.mongo.DocumentExt.areDefined
 import mtymes.tasks.common.mongo.DocumentExt.getDocument
-import mtymes.tasks.common.mongo.DocumentExt.getListOfDocuments
 import mtymes.tasks.common.mongo.DocumentExt.isDefined
 import mtymes.tasks.common.mongo.MongoCollectionExt.findOne
 import mtymes.tasks.common.mongo.MongoCollectionExt.insert
@@ -27,7 +25,6 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
-// todo: mtymes - split the data model to have lastExecution & prevExecutions
 // todo: mtymes - provide proper throws annotations
 // todo: mtymes - add flag - retainOnlyLastExecution
 // todo: mtymes - return current execution status if it fails to registerHeartBeat so we could interrupt the worker if it is cancelled
@@ -72,16 +69,12 @@ class UniversalScheduler(
         // todo: mtymes - add task.unPausedAt
         // todo: mtymes - add task.finishedAt
 
+        const val PREVIOUS_EXECUTIONS = "prevExecutions"
         const val LAST_EXECUTION = "lastExecution" // contains: EXECUTION_ID, STATUS, TIMES_OUT_AFTER
-
-        // when recording all executions
-        const val EXECUTIONS = "executions"
 
         // when recording only last execution
         // todo: mtymes - add this field for retainOnlyLastExecution
 //        const val EXECUTION_COUNT = "executionCount"
-        // todo: mtymes - add this field for retainOnlyLastExecution
-//        const val LAST_EXECUTION = "lastExecution"
 
         // EXECUTION FIELDS
 
@@ -254,7 +247,7 @@ class UniversalScheduler(
     ): ExecutionSummary? {
         val now = clock.now()
 
-        return updateExecution(
+        return updateLastExecution(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
@@ -282,7 +275,7 @@ class UniversalScheduler(
     ): ExecutionSummary? {
         val now = clock.now()
 
-        return updateExecution(
+        return updateLastExecution(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
@@ -325,7 +318,7 @@ class UniversalScheduler(
     ): ExecutionSummary? {
         val now = clock.now()
 
-        return updateExecution(
+        return updateLastExecution(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
@@ -403,7 +396,7 @@ class UniversalScheduler(
     ): ExecutionSummary? {
         val now = clock.now()
 
-        return updateExecution(
+        return updateLastExecution(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
@@ -533,7 +526,7 @@ class UniversalScheduler(
     ): ExecutionSummary? {
         val now = clock.now()
 
-        return updateExecution(
+        return updateLastExecution(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = TaskStatus.inProgress,
@@ -599,7 +592,7 @@ class UniversalScheduler(
 
                 val now = clock.now()
 
-                val summary = updateExecution(
+                val summary = updateLastExecution(
                     coll = coll,
                     executionId = lastExecutionId,
                     fromTaskStatus = currentTaskStatus,
@@ -650,17 +643,16 @@ class UniversalScheduler(
         val keepAliveUntil = now.plus(options.keepAliveFor)
 
         val result = coll.updateOne(
-            queryForExecution(
-                executionId = executionId,
-                taskStatus = TaskStatus.inProgress,
-                executionStatuses = listOf(ExecutionStatus.running)
+            doc(
+                STATUS to TaskStatus.inProgress,
+                LAST_EXECUTION + "." + EXECUTION_ID to executionId,
+                LAST_EXECUTION + "." + STATUS to ExecutionStatus.running
             ),
             doc(
                 "\$set" to docBuilder()
                     .putAll(
-                        LAST_EXECUTION + "." + TIMES_OUT_AFTER to keepAliveUntil,
-                        EXECUTIONS + ".\$." + HEARTBEAT_AT to now,
-                        EXECUTIONS + ".\$." + TIMES_OUT_AFTER to keepAliveUntil,
+                        LAST_EXECUTION + "." + HEARTBEAT_AT to now,
+                        LAST_EXECUTION + "." + TIMES_OUT_AFTER to keepAliveUntil
                     )
                     .putAllIf(additionalTaskData.isDefined()) {
                         additionalTaskData!!.mapKeys { entry ->
@@ -669,14 +661,14 @@ class UniversalScheduler(
                     }
                     .putAllIf(additionalExecutionData.isDefined()) {
                         additionalExecutionData!!.mapKeys { entry ->
-                            EXECUTIONS + ".\$." + DATA + "." + entry.key
+                            LAST_EXECUTION + "." + DATA + "." + entry.key
                         }
-                    }
-                    .putIf(options.affectsUpdatedAtField || additionalExecutionData.isDefined()) {
-                        EXECUTIONS + ".\$." + UPDATED_AT to now
                     }
                     .putIf(options.affectsUpdatedAtField || additionalTaskData.isDefined() || additionalExecutionData.isDefined()) {
                         UPDATED_AT to now
+                    }
+                    .putIf(options.affectsUpdatedAtField || additionalExecutionData.isDefined()) {
+                        LAST_EXECUTION + "." + UPDATED_AT to now
                     }
                     .putIf(options.newTTL != null) {
                         DELETABLE_AFTER to now.plus(options.newTTL!!)
@@ -737,17 +729,10 @@ class UniversalScheduler(
 
         val now = clock.now()
 
-        val result = coll.findOneAndUpdate(
-            if (options.mustBeLastExecution) {
-                doc(
-                    LAST_EXECUTION + "." + EXECUTION_ID to executionId,
-                    EXECUTIONS to doc("\$elemMatch" to doc(EXECUTION_ID to executionId)),
-                )
-            } else {
-                doc(
-                    EXECUTIONS to doc("\$elemMatch" to doc(EXECUTION_ID to executionId))
-                )
-            },
+        var result = coll.findOneAndUpdate(
+            doc(
+                LAST_EXECUTION + "." + EXECUTION_ID to executionId
+            ),
             doc(
                 "\$set" to docBuilder()
                     .putAllIf(additionalTaskData.isDefined()) {
@@ -757,11 +742,11 @@ class UniversalScheduler(
                     }
                     .putAll(
                         additionalExecutionData.mapKeys { entry ->
-                            EXECUTIONS + ".\$." + DATA + "." + entry.key
+                            LAST_EXECUTION + "." + DATA + "." + entry.key
                         }
                     )
                     .putAll(
-                        EXECUTIONS + ".\$." + UPDATED_AT to now,
+                        LAST_EXECUTION + "." + UPDATED_AT to now,
                         UPDATED_AT to now
                     )
                     .putIf(options.newTTL != null) {
@@ -772,6 +757,37 @@ class UniversalScheduler(
             FindOneAndUpdateOptions()
                 .returnDocument(ReturnDocument.AFTER)
         )
+
+        if (result == null && !options.mustBeLastExecution) {
+            result = coll.findOneAndUpdate(
+                doc(
+                    PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to executionId
+                ),
+                doc(
+                    "\$set" to docBuilder()
+                        .putAllIf(additionalTaskData.isDefined()) {
+                            additionalTaskData!!.mapKeys { entry ->
+                                DATA + "." + entry.key
+                            }
+                        }
+                        .putAll(
+                            additionalExecutionData.mapKeys { entry ->
+                                PREVIOUS_EXECUTIONS + ".\$." + DATA + "." + entry.key
+                            }
+                        )
+                        .putAll(
+                            PREVIOUS_EXECUTIONS + ".\$." + UPDATED_AT to now,
+                            UPDATED_AT to now
+                        )
+                        .putIf(options.newTTL != null) {
+                            DELETABLE_AFTER to now.plus(options.newTTL!!)
+                        }
+                        .build(),
+                ),
+                FindOneAndUpdateOptions()
+                    .returnDocument(ReturnDocument.AFTER)
+            )
+        }
 
         return result?.toExecutionSummary(
             executionId = executionId
@@ -806,7 +822,10 @@ class UniversalScheduler(
     ): ExecutionSummary? {
         return coll.findOne(
             doc(
-                EXECUTIONS + "." + EXECUTION_ID to executionId
+                "\$or" to listOf(
+                    doc(LAST_EXECUTION + "." + EXECUTION_ID to executionId),
+                    doc(PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to executionId)
+                )
             )
         )?.toExecutionSummary(
             executionId = executionId
@@ -828,6 +847,44 @@ class UniversalScheduler(
 
         val executionId = ExecutionId(UUID.randomUUID())
 
+        val update = listOf(
+            doc(
+                "\$set" to docBuilder()
+                    .putAll(
+                        STATUS to TaskStatus.inProgress,
+                        STATUS_UPDATED_AT to now,
+                        EXECUTION_ATTEMPTS_LEFT to doc("\$sum" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, -1)),
+                        PREVIOUS_EXECUTIONS to doc(
+                            "\$cond" to listOf(
+                                doc("\$eq" to listOf(doc("\$type" to "\$" + LAST_EXECUTION), "object")),
+                                doc(
+                                    "\$concatArrays" to listOf(
+                                        "\$" + PREVIOUS_EXECUTIONS,
+                                        listOf("\$" + LAST_EXECUTION)
+                                    )
+                                ),
+                                listOf<Document>()
+                            ),
+                        ),
+                        LAST_EXECUTION to doc(
+                            EXECUTION_ID to executionId,
+                            STARTED_AT to now,
+                            WORKER_ID to workerId,
+                            // todo: mtymes - WTF is this not allowed in the aggregation mode ???
+//                            DATA to emptyDoc(),
+                            STATUS to ExecutionStatus.running,
+                            STATUS_UPDATED_AT to now,
+                            TIMES_OUT_AFTER to keepAliveUntil,
+                            UPDATED_AT to now,
+                        ),
+                        UPDATED_AT to now,
+                    )
+                    .putIf(newTTL != null) {
+                        DELETABLE_AFTER to now.plus(newTTL!!)
+                    }
+                    .build(),
+            )
+        )
         val modifiedTask = coll.findOneAndUpdate(
             docBuilder()
                 .putAllIf(additionalConstraints.areDefined()) {
@@ -840,41 +897,7 @@ class UniversalScheduler(
                     EXECUTION_ATTEMPTS_LEFT to doc("\$gte", 1)
                 )
                 .build(),
-            doc(
-                "\$addToSet" to doc(
-                    EXECUTIONS to doc(
-                        EXECUTION_ID to executionId,
-                        STARTED_AT to now,
-                        WORKER_ID to workerId,
-                        STATUS to ExecutionStatus.running,
-                        STATUS_UPDATED_AT to now,
-                        DATA to emptyDoc(),
-                        TIMES_OUT_AFTER to keepAliveUntil,
-                        UPDATED_AT to now,
-                    )
-                ),
-                "\$set" to docBuilder()
-                    .putAll(
-                        STATUS to TaskStatus.inProgress,
-                        STATUS_UPDATED_AT to now,
-                        LAST_EXECUTION to doc(
-                            EXECUTION_ID to executionId,
-                            STATUS to ExecutionStatus.running,
-                            TIMES_OUT_AFTER to keepAliveUntil,
-                        ),
-                        UPDATED_AT to now,
-                    )
-                    .putIf(newTTL != null) {
-                        DELETABLE_AFTER to now.plus(newTTL!!)
-                    }
-                    .build(),
-//                "\$unset" to doc(
-//                    CAN_BE_EXECUTED_AS_OF to 1
-//                ),
-                "\$inc" to doc(
-                    EXECUTION_ATTEMPTS_LEFT to -1
-                )
-            ),
+            update,
             FindOneAndUpdateOptions()
                 .returnDocument(ReturnDocument.AFTER)
                 .sort(sortOrder)
@@ -908,12 +931,6 @@ class UniversalScheduler(
                     STATUS to TaskStatus.suspended,
                     LAST_EXECUTION + "." + EXECUTION_ID to lastExpectedExecutionId,
                     LAST_EXECUTION + "." + STATUS to ExecutionStatus.suspended,
-                    EXECUTIONS to doc(
-                        "\$elemMatch" to doc(
-                            EXECUTION_ID to lastExpectedExecutionId,
-                            STATUS to ExecutionStatus.suspended,
-                        )
-                    ),
                     CAN_BE_EXECUTED_AS_OF to doc("\$lte", now),
                     EXECUTION_ATTEMPTS_LEFT to doc("\$gte", 1)
                 )
@@ -923,14 +940,14 @@ class UniversalScheduler(
                     .putAll(
                         STATUS to TaskStatus.inProgress,
                         STATUS_UPDATED_AT to now,
+
                         LAST_EXECUTION + "." + STATUS to ExecutionStatus.running,
+                        LAST_EXECUTION + "." + STATUS_UPDATED_AT to now,
+                        LAST_EXECUTION + "." + UN_SUSPENDED_AT to now,
+                        LAST_EXECUTION + "." + WORKER_ID to workerId,
                         LAST_EXECUTION + "." + TIMES_OUT_AFTER to keepAliveUntil,
-                        EXECUTIONS + ".\$." + STATUS to ExecutionStatus.running,
-                        EXECUTIONS + ".\$." + STATUS_UPDATED_AT to now,
-                        EXECUTIONS + ".\$." + UN_SUSPENDED_AT to now,
-                        EXECUTIONS + ".\$." + WORKER_ID to workerId,
-                        EXECUTIONS + ".\$." + TIMES_OUT_AFTER to keepAliveUntil,
-                        EXECUTIONS + ".\$." + UPDATED_AT to now,
+                        LAST_EXECUTION + "." + UPDATED_AT to now,
+
                         UPDATED_AT to now
 
                     )
@@ -1018,15 +1035,15 @@ class UniversalScheduler(
                 } else {
                     throw UnexpectedStatusException(
                         if (fromTaskStatuses.size == 1) {
-                            "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected '${fromTaskStatuses[0]}' but got '${currentTaskStatus}' Task status instead"
+                            "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected '${fromTaskStatuses[0]}' Task status, but got '${currentTaskStatus}' Task status instead"
                         } else {
-                            "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected one of these statuses ${
+                            "Failed to mark Task '${taskId}' as '${toTaskStatus}' as expected either ${
                                 fromTaskStatuses.joinToString(
-                                    ", ",
+                                    "' or '",
                                     "'",
                                     "'"
                                 )
-                            } but got '${currentTaskStatus}' Task status instead"
+                            } Task status, but got '${currentTaskStatus}' Task status instead"
                         }
                     )
                 }
@@ -1080,8 +1097,8 @@ class UniversalScheduler(
         return result.modifiedCount
     }
 
-    // todo: mtymes - change return type from Task? -> Task and declare thrown Exceptions on the method
-    private fun updateExecution(
+    // todo: mtymes - change return type from ExecutionSummary? -> ExecutionSummary and declare thrown Exceptions on the method
+    private fun updateLastExecution(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         fromTaskStatus: TaskStatus,
@@ -1096,10 +1113,14 @@ class UniversalScheduler(
     ): ExecutionSummary? {
         expectAtLeastOneItem("fromExecutionStatuses", fromExecutionStatuses)
 
-        val query = queryForExecution(
-            executionId = executionId,
-            taskStatus = fromTaskStatus,
-            executionStatuses = fromExecutionStatuses
+        val query = doc(
+            STATUS to fromTaskStatus,
+            LAST_EXECUTION + "." + EXECUTION_ID to executionId,
+            LAST_EXECUTION + "." + STATUS to if (fromExecutionStatuses.size == 1) {
+                fromExecutionStatuses[0]
+            } else {
+                doc("\$in" to fromExecutionStatuses)
+            }
         )
         val update = doc(
             "\$set" to docBuilder()
@@ -1116,47 +1137,23 @@ class UniversalScheduler(
                                     toTaskStatus.statusIfNOAttemptsAvailable
                                 )
                             )
-
                     },
                     STATUS_UPDATED_AT to now,
                     LAST_EXECUTION + "." + STATUS to toExecutionStatus,
-                    EXECUTIONS to doc(
-                        // todo: mtymes - check the performance of this
-                        "\$map" to doc(
-                            "input" to "\$" + EXECUTIONS,
-                            "as" to "ex",
-                            "in" to doc(
-                                "\$cond" to listOf(
-                                    doc("\$eq" to listOf("\$\$ex." + EXECUTION_ID, executionId)),
-                                    doc(
-                                        "\$mergeObjects" to listOf(
-                                            "\$\$ex", docBuilder()
-                                                .putAll(
-                                                    STATUS to toExecutionStatus,
-                                                    STATUS_UPDATED_AT to now,
-                                                    UPDATED_AT to now
-                                                )
-                                                .putIf(additionalExecutionData.isDefined()) {
-                                                    DATA to doc(
-                                                        "\$mergeObjects" to listOf(
-                                                            "\$\$ex.data",
-                                                            additionalExecutionData
-                                                        )
-                                                    )
-                                                }
-                                                .putAllIf(customExecutionUpdates.areDefined()) {
-                                                    customExecutionUpdates!!
-                                                }
-                                                .build()
-                                        )
-                                    ),
-                                    "\$\$ex"
-                                )
-                            )
-                        )
-                    ),
+                    LAST_EXECUTION + "." + STATUS_UPDATED_AT to now,
+                    LAST_EXECUTION + "." + UPDATED_AT to now,
                     UPDATED_AT to now
                 )
+                .putAllIf(additionalExecutionData.isDefined()) {
+                    additionalExecutionData!!.mapKeys {
+                        LAST_EXECUTION + "." + DATA + "." + it.key
+                    }
+                }
+                .putAllIf(customExecutionUpdates.areDefined()) {
+                    customExecutionUpdates!!.mapKeys {
+                        LAST_EXECUTION + "." + it.key
+                    }
+                }
                 .putAllIf(additionalTaskData.isDefined()) {
                     additionalTaskData!!.mapKeys { entry ->
                         DATA + "." + entry.key
@@ -1180,25 +1177,33 @@ class UniversalScheduler(
             )
         } else {
             val task: Document? = coll.findOne(
-                doc(EXECUTIONS + "." + EXECUTION_ID to executionId)
+                doc(LAST_EXECUTION + "." + EXECUTION_ID to executionId)
             )
 
             if (task == null) {
-                throw ExecutionNotFoundException(
-                    "Execution '${executionId}' NOT FOUND"
+                val taskWithPreviousExecution = coll.findOne(
+                    doc(PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to executionId)
                 )
+                if (taskWithPreviousExecution != null) {
+                    val taskId = TaskId(
+                        taskWithPreviousExecution.getString(TASK_ID)
+                    )
+                    val lastExecutionId = ExecutionId(
+                        taskWithPreviousExecution.getDocument(LAST_EXECUTION).getString(EXECUTION_ID)
+                    )
+
+                    throw NotLastExecutionException(
+                        "Execution '${executionId}' for Task '${taskId}' is NOT LAST execution (Execution '${lastExecutionId}' is)"
+                    )
+                } else {
+                    throw ExecutionNotFoundException(
+                        "Execution '${executionId}' NOT FOUND"
+                    )
+                }
             }
 
             val taskId = TaskId(task.getString(TASK_ID))
-            val lastExecutionId = ExecutionId(task.getDocument(LAST_EXECUTION).getString(EXECUTION_ID))
-            if (executionId != lastExecutionId) {
-                throw NotLastExecutionException(
-                    "Execution '${executionId}' for Task '${taskId}' is NOT LAST execution (Execution '${lastExecutionId}' is)"
-                )
-            }
-
-            val executions = task.getListOfDocuments(EXECUTIONS)
-            val execution = executions.last { executionId == ExecutionId(it.getString(EXECUTION_ID)) }
+            val execution = task.getDocument(LAST_EXECUTION)
             val currentExecutionStatus = ExecutionStatus.valueOf(execution.getString(STATUS))
             val currentTaskStatus = TaskStatus.valueOf(task.getString(STATUS))
 
@@ -1221,7 +1226,8 @@ class UniversalScheduler(
                     if (fromExecutionStatuses.size == 1) {
                         expectedExecutionStatusString = fromExecutionStatuses[0].toString()
                     } else {
-                        expectedExecutionStatusString = fromExecutionStatuses.map { it.toString() }.joinToString { "' or '" }
+                        expectedExecutionStatusString =
+                            fromExecutionStatuses.map { it.toString() }.joinToString { "' or '" }
                     }
 
                     throw UnexpectedStatusException(
@@ -1237,7 +1243,7 @@ class UniversalScheduler(
         }
     }
 
-    private fun updateExecution(
+    private fun updateLastExecution(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         fromTaskStatus: TaskStatus,
@@ -1250,7 +1256,7 @@ class UniversalScheduler(
         additionalTaskData: Document?,
         additionalExecutionData: Document?
     ): ExecutionSummary? {
-        return updateExecution(
+        return updateLastExecution(
             coll = coll,
             executionId = executionId,
             fromTaskStatus = fromTaskStatus,
@@ -1265,33 +1271,11 @@ class UniversalScheduler(
         )
     }
 
-    private fun queryForExecution(
-        executionId: ExecutionId,
-        taskStatus: TaskStatus,
-        executionStatuses: List<ExecutionStatus>
-    ): Document {
-        expectAtLeastOneItem("executionStatuses", executionStatuses)
-
-        return doc(
-            STATUS to taskStatus,
-            LAST_EXECUTION + "." + EXECUTION_ID to executionId,
-            EXECUTIONS to doc(
-                "\$elemMatch" to doc(
-                    EXECUTION_ID to executionId,
-                    STATUS to if (executionStatuses.size == 1)
-                        executionStatuses[0]
-                    else
-                        doc("\$in" to executionStatuses)
-                )
-            )
-        )
-    }
-
     private fun Document.toFetchedExecutionSummary(
         expectedLastExecutionId: ExecutionId,
         wasSuspended: Boolean
     ): FetchedExecutionSummary {
-        val lastExecutionId = ExecutionId(this.getDocument(LAST_EXECUTION).getString(EXECUTION_ID))
+        val lastExecutionId = ExecutionId(getDocument(LAST_EXECUTION).getString(EXECUTION_ID))
 
         if (expectedLastExecutionId != lastExecutionId) {
             throw NotLastExecutionException(
@@ -1299,14 +1283,12 @@ class UniversalScheduler(
             )
         }
 
-        val executionDoc = this
-            .getListOfDocuments(EXECUTIONS)
-            .first { ExecutionId(it.getString(EXECUTION_ID)) == lastExecutionId }
+        val task = this.toTask()
 
         return FetchedExecutionSummary(
-            fetchedExecution = executionDoc.toExecution(),
+            fetchedExecution = task.lastExecution!!,
             wasAwokenFromSuspension = wasSuspended,
-            underlyingTask = this.toTask()
+            underlyingTask = task
         )
     }
 

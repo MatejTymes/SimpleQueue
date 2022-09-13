@@ -1,9 +1,10 @@
 package mtymes.tasks.scheduler.domain
 
 import javafixes.`object`.Microtype
+import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
 import mtymes.tasks.common.mongo.DocumentExt.getDocument
-import mtymes.tasks.common.mongo.DocumentExt.getListOfDocuments
 import mtymes.tasks.common.mongo.DocumentExt.getNullableDocument
+import mtymes.tasks.common.mongo.DocumentExt.getNullableListOfDocuments
 import mtymes.tasks.common.mongo.DocumentExt.getNullableZonedDateTime
 import mtymes.tasks.common.mongo.DocumentExt.getZonedDateTime
 import mtymes.tasks.scheduler.dao.UniversalScheduler
@@ -11,13 +12,13 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_A
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CREATED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DATA
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DELETABLE_AFTER
-import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTIONS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ID
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.FINISHED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.HEARTBEAT_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTION_ATTEMPTS_COUNT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STARTED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS_UPDATED_AT
@@ -94,32 +95,28 @@ data class Task(
 ) {
     val taskId: TaskId = TaskId(taskDocument.getString(UniversalScheduler.TASK_ID))
     val status: TaskStatus = TaskStatus.valueOf(taskDocument.getString(STATUS))
-    val executions: List<Execution> = taskDocument
-        .getListOfDocuments(EXECUTIONS)
-        .map { executionDoc -> Execution(executionDoc) }
+    val previousExecutions: List<Execution> = taskDocument
+        .getNullableListOfDocuments(PREVIOUS_EXECUTIONS)
+        ?.map { executionDoc -> Execution(executionDoc) }
+        ?: emptyList()
+    val lastExecution: Execution? = taskDocument.getNullableDocument(LAST_EXECUTION)
+        ?.let { executionDoc -> Execution(executionDoc) }
+    val allExecutions: List<Execution> = if (lastExecution == null) {
+        previousExecutions
+    } else {
+        previousExecutions.plus(lastExecution)
+    }
 
     fun data(): Document {
         return taskDocument.getDocument(DATA)
     }
 
     fun executionIds(): List<ExecutionId> {
-        return executions.map { execution -> execution.executionId }
-    }
-
-    fun lastExecutionId(): ExecutionId? {
-        return taskDocument.getNullableDocument(LAST_EXECUTION)?.getString(EXECUTION_ID)?.let { ExecutionId(it) }
-    }
-
-    fun lastExecutionStatus(): ExecutionStatus? {
-        return taskDocument.getNullableDocument(LAST_EXECUTION)?.getString(STATUS)?.let { ExecutionStatus.valueOf(it) }
-    }
-
-    fun lastExecutionTimesOutAfter(): ZonedDateTime? {
-        return taskDocument.getNullableDocument(LAST_EXECUTION)?.getZonedDateTime(TIMES_OUT_AFTER)
+        return allExecutions.map { execution -> execution.executionId }
     }
 
     fun execution(executionId: ExecutionId): Execution? {
-        return executions.find { execution ->
+        return allExecutions.find { execution ->
             execution.executionId == executionId
         }
     }
@@ -164,7 +161,7 @@ data class Execution(
     val status: ExecutionStatus = ExecutionStatus.valueOf(executionDoc.getString(STATUS))
 
     fun data(): Document {
-        return executionDoc.getDocument(DATA)
+        return executionDoc.getNullableDocument(DATA) ?: emptyDoc()
     }
 
     fun startedAt(): ZonedDateTime {
