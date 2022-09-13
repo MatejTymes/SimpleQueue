@@ -6,12 +6,17 @@ import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_AS_OF
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTION_ATTEMPTS_COUNT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.SUSPENSION_COUNT
 import mtymes.tasks.scheduler.domain.ExecutionId
 import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
 import mtymes.tasks.scheduler.domain.MarkAsSuspendedOptions
 import mtymes.tasks.scheduler.domain.SubmitTaskOptions
 import mtymes.tasks.test.mongo.emptyLocalCollection
-import mtymes.tasks.test.task.TaskViewer
+import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
 import org.bson.Document
 import printTimedString
 import java.time.Duration
@@ -135,10 +140,11 @@ object DelayedStart {
             delayStartBy = Duration.ofSeconds(1)
         )
 
-        TaskViewer.displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft", "canBeExecutedAsOf")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            CAN_BE_EXECUTED_AS_OF
+        ))
 
         dao.fetchNextTaskExecution(workerId)
 
@@ -148,10 +154,11 @@ object DelayedStart {
 
         dao.fetchNextTaskExecution(workerId)
 
-        TaskViewer.displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft", "canBeExecutedAsOf")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            CAN_BE_EXECUTED_AS_OF
+        ))
     }
 }
 
@@ -173,10 +180,12 @@ object TaskSuspension {
             suspendFor = Duration.ofSeconds(0)
         )
 
-        TaskViewer.displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft", "canBeExecutedAsOf", "executions.suspensionCount")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            CAN_BE_EXECUTED_AS_OF,
+            LAST_EXECUTION + "." + SUSPENSION_COUNT
+        ))
 
         // fetch non-suspendable only
         dao.fetchNextTaskExecution(
@@ -190,20 +199,24 @@ object TaskSuspension {
             fetchSuspendedTasksAsWell = true
         )!!.executionId
 
-        TaskViewer.displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft", "canBeExecutedAsOf", "executions.suspensionCount")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            CAN_BE_EXECUTED_AS_OF,
+            LAST_EXECUTION + "." + SUSPENSION_COUNT
+        ))
 
         dao.markAsSuspended(
             executionId = anotherExecutionId,
             suspendFor = Duration.ofSeconds(1)
         )
 
-        TaskViewer.displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft", "canBeExecutedAsOf", "executions.suspensionCount")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            CAN_BE_EXECUTED_AS_OF,
+            LAST_EXECUTION + "." + SUSPENSION_COUNT
+        ))
         dao.fetchNextTaskExecution(
             workerId = workerId
         )

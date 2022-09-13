@@ -6,12 +6,14 @@ import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTION_ATTEMPTS_COUNT
 import mtymes.tasks.scheduler.domain.ExecutionId
 import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
 import mtymes.tasks.scheduler.domain.SubmitTaskOptions
 import mtymes.tasks.scheduler.domain.TaskId
 import mtymes.tasks.test.mongo.emptyLocalCollection
-import mtymes.tasks.test.task.TaskViewer
+import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
 import org.bson.Document
 import printTimedString
 
@@ -114,7 +116,6 @@ class CancellationSupportingTaskDao(
 }
 
 
-
 object CancelTask {
 
     @JvmStatic
@@ -130,13 +131,12 @@ object CancelTask {
 
         dao.fetchNextTaskExecution(workerId)
 
-        TaskViewer.displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT
+        ))
     }
 }
-
 
 
 object CancelExecution {
@@ -156,13 +156,12 @@ object CancelExecution {
 
         dao.fetchNextTaskExecution(workerId)
 
-        TaskViewer.displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT
+        ))
     }
 }
-
 
 
 object FailToCancelTaskInProgress {
@@ -186,9 +185,9 @@ object FailToCancelTaskInProgress {
         }
 
 
-        TaskViewer.displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT
+        ))
     }
 }

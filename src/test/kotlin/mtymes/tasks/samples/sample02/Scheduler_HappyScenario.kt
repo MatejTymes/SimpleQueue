@@ -7,6 +7,8 @@ import mtymes.tasks.common.time.Durations.FIVE_MINUTES
 import mtymes.tasks.common.time.Durations.SEVEN_DAYS
 import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.WORKER_ID
 import mtymes.tasks.scheduler.domain.ExecutionId
 import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
 import mtymes.tasks.scheduler.domain.SubmitTaskOptions
@@ -214,6 +216,8 @@ object OneWorkerRegisteredMultipleTimes {
             Thread.sleep(4_000)
         }
 
-        displayTinyTasksSummary(coll, setOf("executions.workerId"))
+        displayTinyTasksSummary(coll, setOf(
+            "${LAST_EXECUTION}.${WORKER_ID}"
+        ))
     }
 }

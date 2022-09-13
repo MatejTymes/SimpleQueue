@@ -2,6 +2,13 @@ package mtymes.tasks.test.task
 
 import com.mongodb.client.MongoCollection
 import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DATA
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ID
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.TASK_ID
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.WORKER_ID
 import org.bson.Document
 
 object TaskViewer {
@@ -23,17 +30,23 @@ object TaskViewer {
     ) {
         displayTasksSummary(collection) { field ->
             setOf(
-                "_id",
-                "data",
-                "status",
-                "executions",
-                "executions.id",
-                "executions.data",
-                "executions.status",
-                "executions.workerId"
+                TASK_ID,
+                DATA,
+                STATUS,
+                PREVIOUS_EXECUTIONS,
+                PREVIOUS_EXECUTIONS + "." + EXECUTION_ID,
+                PREVIOUS_EXECUTIONS + "." + DATA,
+                PREVIOUS_EXECUTIONS + "." + STATUS,
+                PREVIOUS_EXECUTIONS + "." + WORKER_ID,
+                LAST_EXECUTION,
+                LAST_EXECUTION + "." + EXECUTION_ID,
+                LAST_EXECUTION + "." + DATA,
+                LAST_EXECUTION + "." + STATUS,
+                LAST_EXECUTION + "." + WORKER_ID,
             ).contains(field) || additionalFieldMatches.contains(field) || setOf(
-                "data.",
-                "executions.data."
+                DATA + ".",
+                PREVIOUS_EXECUTIONS + "." + DATA + ".",
+                LAST_EXECUTION + "." + DATA + "."
             ).any { path -> field.startsWith(path) }
         }
     }

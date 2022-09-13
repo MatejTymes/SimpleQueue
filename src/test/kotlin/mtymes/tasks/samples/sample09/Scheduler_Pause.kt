@@ -10,9 +10,10 @@ import mtymes.tasks.common.time.Durations.TWO_MINUTES
 import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DATA
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DELETABLE_AFTER
 import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.test.mongo.emptyLocalCollection
-import mtymes.tasks.test.task.TaskViewer
+import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
 import org.bson.Document
 import printTimedString
 
@@ -170,9 +171,8 @@ object SubmitPausedTasksAsAGroup {
         dao.fetchNextTaskExecution(workerId) // fetches nothing
 
 
-        TaskViewer.displayTinyTasksSummary(
-            coll,
-            setOf("deletableAfter")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            DELETABLE_AFTER
+        ))
     }
 }

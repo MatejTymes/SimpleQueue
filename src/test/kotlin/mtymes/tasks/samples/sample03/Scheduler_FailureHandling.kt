@@ -6,6 +6,13 @@ import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_AS_OF
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.FINISHED_AT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTION_ATTEMPTS_COUNT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STARTED_AT
 import mtymes.tasks.scheduler.domain.ExecutionId
 import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
 import mtymes.tasks.scheduler.domain.MarkAsFailedButCanRetryOptions
@@ -192,10 +199,14 @@ object WorkerFailing {
             Thread.sleep(4_500)
         }
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft", "executions.startedAt", "executions.finishedAt")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            PREVIOUS_EXECUTIONS + "." + STARTED_AT,
+            PREVIOUS_EXECUTIONS + "." + FINISHED_AT,
+            LAST_EXECUTION + "." + STARTED_AT,
+            LAST_EXECUTION + "." + FINISHED_AT,
+        ))
     }
 }
 
@@ -215,20 +226,20 @@ object FailThenSucceed {
         dao.markAsFailed(executionId1, IllegalStateException("It should have worked"))
 
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT
+        ))
 
 
         val executionId2 = dao.fetchNextTaskExecution(workerId)!!.executionId
         dao.markAsSucceeded(executionId2, "So glad it's over. I'm not doing this again")
 
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT
+        ))
 
 
         dao.fetchNextTaskExecution(workerId)
@@ -254,10 +265,10 @@ object UnrecoverableFailure {
         )
 
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT
+        ))
 
 
         dao.fetchNextTaskExecution(workerId)
@@ -286,11 +297,11 @@ object DelayedRetryAfterFailure {
 
         dao.fetchNextTaskExecution(workerId)
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft", "canBeExecutedAsOf")
-        )
-
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            CAN_BE_EXECUTED_AS_OF
+        ))
 
 
         Thread.sleep(2_500)
@@ -298,9 +309,10 @@ object DelayedRetryAfterFailure {
 
         dao.fetchNextTaskExecution(workerId)
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("maxAttemptsCount", "attemptsLeft", "canBeExecutedAsOf")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTION_ATTEMPTS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            CAN_BE_EXECUTED_AS_OF
+        ))
     }
 }

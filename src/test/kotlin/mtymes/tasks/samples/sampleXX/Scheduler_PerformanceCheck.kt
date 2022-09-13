@@ -11,9 +11,9 @@ import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_AS_OF
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DELETABLE_AFTER
-import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTIONS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ID
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS
 import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.test.mongo.emptyLocalCollection
@@ -249,7 +249,7 @@ private fun createDefaultIndexes(coll: MongoCollection<Document>) {
         )
     )
     coll.createIndex(
-        doc(EXECUTIONS + "." + EXECUTION_ID to 1)
+        doc(PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to 1)
     )
     coll.createIndex(
         doc(DELETABLE_AFTER to 1),

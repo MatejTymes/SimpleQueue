@@ -551,7 +551,7 @@ class UniversalScheduler(
 
                 // $inc - section
                 // todo: mtymes - handle differently
-                SUSPENSION_COUNT to doc("\$sum" to listOf("\$\$ex." + SUSPENSION_COUNT, 1))
+                SUSPENSION_COUNT to doc("\$sum" to listOf("\$" + SUSPENSION_COUNT, 1))
             ),
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData

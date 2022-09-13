@@ -6,6 +6,10 @@ import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.HEARTBEAT_AT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.TIMES_OUT_AFTER
 import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
@@ -148,20 +152,24 @@ object TaskDoesNOTTimeOutAutomatically {
         Thread.sleep(2_000)
 
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
+            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            LAST_EXECUTION + "." + HEARTBEAT_AT,
+            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+        ))
 
 
         dao.fetchNextTaskExecution(workerId)
         dao.markAsSucceeded(executionId)
 
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
+            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            LAST_EXECUTION + "." + HEARTBEAT_AT,
+            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+        ))
     }
 }
 
@@ -187,10 +195,12 @@ object CallingTaskToMarkExecutionAsTimedOut {
         dao.findAndMarkTimedOutTasks(Duration.ofSeconds(0))
 
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
+            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            LAST_EXECUTION + "." + HEARTBEAT_AT,
+            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+        ))
 
         try {
             dao.markAsSucceeded(executionId)
@@ -200,10 +210,12 @@ object CallingTaskToMarkExecutionAsTimedOut {
 
         dao.fetchNextTaskExecution(workerId)
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
+            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            LAST_EXECUTION + "." + HEARTBEAT_AT,
+            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+        ))
     }
 }
 
@@ -234,10 +246,12 @@ object HeartBeatExtendsKeepAlivePeriod {
 
         dao.findAndMarkTimedOutTasks(Duration.ofSeconds(0))
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
+            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            LAST_EXECUTION + "." + HEARTBEAT_AT,
+            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+        ))
     }
 }
 
@@ -257,10 +271,12 @@ class LazyHeartBeatingWorker(
             keepAliveFor = Duration.ofSeconds(3)
         )
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
+            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            LAST_EXECUTION + "." + HEARTBEAT_AT,
+            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+        ))
     }
 
     override fun fetchNextTaskToProcess(workerId: WorkerId): TaskToProcess? {
@@ -309,9 +325,11 @@ object WorkerWithHeartBeatShowcase {
             executor.shutdownNow()
         }
 
-        displayTinyTasksSummary(
-            coll,
-            setOf("executions.lastHeartBeatAt", "executions.timesOutAfter")
-        )
+        displayTinyTasksSummary(coll, setOf(
+            PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
+            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            LAST_EXECUTION + "." + HEARTBEAT_AT,
+            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+        ))
     }
 }
