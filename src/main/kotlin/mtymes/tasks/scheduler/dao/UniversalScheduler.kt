@@ -30,6 +30,7 @@ import java.util.*
 // todo: mtymes - provide proper throws annotations
 // todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension
 // todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
+// todo: mtymes - add ability to have unlimited amount of executions
 class UniversalScheduler(
     val clock: Clock = UTCClock
 ) {
@@ -1300,9 +1301,5 @@ class UniversalScheduler(
 
     private fun Document.toTask(): Task {
         return Task(this)
-    }
-
-    private fun Document.toExecution(): Execution {
-        return Execution(this)
     }
 }

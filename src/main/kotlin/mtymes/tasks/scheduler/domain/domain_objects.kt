@@ -48,9 +48,9 @@ enum class TaskStatus(
 ) {
     available,
     paused,
-    cancelled(true),
     inProgress,
     suspended,
+    cancelled(true),
     succeeded(true),
     failed(true),
     timedOut(true);
@@ -97,10 +97,10 @@ data class Task(
     val status: TaskStatus = TaskStatus.valueOf(taskDocument.getString(STATUS))
     val previousExecutions: List<Execution> = taskDocument
         .getNullableListOfDocuments(PREVIOUS_EXECUTIONS)
-        ?.map { executionDoc -> Execution(executionDoc) }
+        ?.map { executionDoc -> Execution(executionDoc, false) }
         ?: emptyList()
     val lastExecution: Execution? = taskDocument.getNullableDocument(LAST_EXECUTION)
-        ?.let { executionDoc -> Execution(executionDoc) }
+        ?.let { executionDoc -> Execution(executionDoc, true) }
     val allExecutions: List<Execution> = if (lastExecution == null) {
         previousExecutions
     } else {
@@ -159,7 +159,8 @@ data class Task(
 }
 
 data class Execution(
-    private val executionDoc: Document
+    private val executionDoc: Document,
+    val isLastExecution: Boolean
 ) {
     val executionId: ExecutionId = ExecutionId(executionDoc.getString(EXECUTION_ID))
     val status: ExecutionStatus = ExecutionStatus.valueOf(executionDoc.getString(STATUS))
