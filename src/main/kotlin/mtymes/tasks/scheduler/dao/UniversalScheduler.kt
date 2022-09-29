@@ -9,6 +9,7 @@ import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.exception.ExceptionUtil.runAndIgnoreExceptions
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
 import mtymes.tasks.common.mongo.DocBuilder.Companion.docBuilder
+import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
 import mtymes.tasks.common.mongo.DocumentExt.areDefined
 import mtymes.tasks.common.mongo.DocumentExt.getDocument
 import mtymes.tasks.common.mongo.DocumentExt.isDefined
@@ -95,6 +96,41 @@ class UniversalScheduler(
         const val FINISHED_AT = "finishedAt"
         const val WAS_RETRYABLE_FAIL = "wasRetryableFail"
 
+        fun Document.toExecutionSummary(
+            executionId: ExecutionId
+        ): ExecutionSummary {
+            val task = this.toTask()
+            val execution = task.execution(executionId)!!
+            return ExecutionSummary(
+                execution = execution,
+                underlyingTask = task
+            )
+        }
+
+        fun Document.toTask(): Task {
+            return Task(this)
+        }
+
+        private fun Document.toFetchedExecutionSummary(
+            expectedLastExecutionId: ExecutionId,
+            wasSuspended: Boolean
+        ): FetchedExecutionSummary {
+            val lastExecutionId = ExecutionId(getDocument(LAST_EXECUTION).getString(EXECUTION_ID))
+
+            if (expectedLastExecutionId != lastExecutionId) {
+                throw NotLastExecutionException(
+                    "No idea how this happened but our started Execution '${expectedLastExecutionId}' was superseded by Execution '${lastExecutionId}'"
+                )
+            }
+
+            val task = this.toTask()
+
+            return FetchedExecutionSummary(
+                fetchedExecution = task.lastExecution!!,
+                wasAwokenFromSuspension = wasSuspended,
+                underlyingTask = task
+            )
+        }
     }
 
 
@@ -107,6 +143,45 @@ class UniversalScheduler(
         val statusIfAttemptsAvailable: TaskStatus,
         val statusIfNOAttemptsAvailable: TaskStatus
     ) : ToTaskStatus
+
+
+    fun findTask(
+        coll: MongoCollection<Document>,
+        taskId: TaskId
+    ): Task? {
+        return coll.findOne(
+            doc(
+                TASK_ID to taskId
+            )
+        )?.toTask()
+    }
+
+    fun findExecution(
+        coll: MongoCollection<Document>,
+        executionId: ExecutionId
+    ): ExecutionSummary? {
+        return coll.findOne(
+            doc(
+                "\$or" to listOf(
+                    doc(LAST_EXECUTION + "." + EXECUTION_ID to executionId),
+                    doc(PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to executionId)
+                )
+            )
+        )?.toExecutionSummary(
+            executionId = executionId
+        )
+    }
+
+    fun findTasks(
+        coll: MongoCollection<Document>,
+        customConstraints: Document? = null,
+        sortOrder: Document? = null
+    ): Iterable<Task> {
+        return coll
+            .find(customConstraints ?: emptyDoc())
+            .sort(sortOrder)
+            .map { it.toTask()}
+    }
 
 
     @Throws(IllegalStateException::class)
@@ -789,44 +864,6 @@ class UniversalScheduler(
         )
     }
 
-    fun getTask(
-        coll: MongoCollection<Document>,
-        taskId: TaskId
-    ): Task? {
-        return coll.findOne(
-            doc(
-                TASK_ID to taskId
-            )
-        )?.toTask()
-    }
-
-    fun getTasks(
-        coll: MongoCollection<Document>,
-        customConstraints: Document
-    ): Iterable<Task> {
-        return coll.find(
-            customConstraints
-        ).map {
-            it.toTask()
-        }
-    }
-
-    fun getExecution(
-        coll: MongoCollection<Document>,
-        executionId: ExecutionId
-    ): ExecutionSummary? {
-        return coll.findOne(
-            doc(
-                "\$or" to listOf(
-                    doc(LAST_EXECUTION + "." + EXECUTION_ID to executionId),
-                    doc(PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to executionId)
-                )
-            )
-        )?.toExecutionSummary(
-            executionId = executionId
-        )
-    }
-
 
     private fun startNewExecution(
         coll: MongoCollection<Document>,
@@ -1265,41 +1302,5 @@ class UniversalScheduler(
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
-    }
-
-    private fun Document.toFetchedExecutionSummary(
-        expectedLastExecutionId: ExecutionId,
-        wasSuspended: Boolean
-    ): FetchedExecutionSummary {
-        val lastExecutionId = ExecutionId(getDocument(LAST_EXECUTION).getString(EXECUTION_ID))
-
-        if (expectedLastExecutionId != lastExecutionId) {
-            throw NotLastExecutionException(
-                "No idea how this happened but our started Execution '${expectedLastExecutionId}' was superseded by Execution '${lastExecutionId}'"
-            )
-        }
-
-        val task = this.toTask()
-
-        return FetchedExecutionSummary(
-            fetchedExecution = task.lastExecution!!,
-            wasAwokenFromSuspension = wasSuspended,
-            underlyingTask = task
-        )
-    }
-
-    private fun Document.toExecutionSummary(
-        executionId: ExecutionId
-    ): ExecutionSummary {
-        val task = this.toTask()
-        val execution = task.execution(executionId)!!
-        return ExecutionSummary(
-            execution = execution,
-            underlyingTask = task
-        )
-    }
-
-    private fun Document.toTask(): Task {
-        return Task(this)
     }
 }

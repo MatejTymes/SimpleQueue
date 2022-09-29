@@ -77,19 +77,6 @@ enum class ExecutionStatus(
     }
 }
 
-data class FetchedExecutionSummary(
-    val fetchedExecution: Execution,
-    val wasAwokenFromSuspension: Boolean,
-
-    val underlyingTask: Task
-)
-
-data class ExecutionSummary(
-    val execution: Execution,
-
-    val underlyingTask: Task
-)
-
 data class Task(
     private val taskDocument: Document
 ) {
@@ -209,3 +196,16 @@ data class Execution(
         return executionDoc.getBoolean(WAS_RETRYABLE_FAIL)
     }
 }
+
+data class ExecutionSummary(
+    val execution: Execution,
+
+    val underlyingTask: Task
+)
+
+data class FetchedExecutionSummary(
+    val fetchedExecution: Execution,
+    val wasAwokenFromSuspension: Boolean,
+
+    val underlyingTask: Task
+)

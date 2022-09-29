@@ -10,18 +10,23 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.TASK_ID
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.WORKER_ID
 import org.bson.Document
+import java.util.concurrent.atomic.AtomicInteger
 
 object TaskViewer {
 
     fun displayTasksSummary(
         collection: MongoCollection<Document>,
+        query: Document = emptyDoc(),
         canDisplayField: (String) -> Boolean = { true }
     ) {
-        val query = emptyDoc()
-
+        val totalCount = AtomicInteger(0)
         collection
             .find(query)
-            .forEach { taskDoc -> displayTaskDoc(taskDoc, canDisplayField) }
+            .forEach { taskDoc ->
+                totalCount.incrementAndGet()
+                displayTaskDoc(taskDoc, canDisplayField)
+            }
+        println("\ntotal task count = ${totalCount.get()}\n")
     }
 
     fun displayTinyTasksSummary(

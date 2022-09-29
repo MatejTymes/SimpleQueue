@@ -51,6 +51,35 @@ class GenericScheduler(
     val scheduler: UniversalScheduler = UNIVERSAL_SCHEDULER
 ) {
 
+    fun findTask(
+        taskId: TaskId
+    ): Task? {
+        return scheduler.findTask(
+            coll = collection,
+            taskId = taskId
+        )
+    }
+
+    fun findExecution(
+        executionId: ExecutionId
+    ): ExecutionSummary? {
+        return scheduler.findExecution(
+            coll = collection,
+            executionId = executionId
+        )
+    }
+
+    fun findTasks(
+        customConstraints: Document? = null,
+        sortOrder: Document? = null
+    ): Iterable<Task> {
+        return scheduler.findTasks(
+            coll = collection,
+            customConstraints = customConstraints,
+            sortOrder = sortOrder
+        )
+    }
+
     fun submitTask(
         customData: Document,
         options: SubmitTaskOptions
@@ -512,33 +541,6 @@ class GenericScheduler(
             options = defaults.updateExecutionDataOptions ?: UpdateExecutionDataOptions.DEFAULT,
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
-        )
-    }
-
-    fun getTask(
-        taskId: TaskId
-    ): Task? {
-        return scheduler.getTask(
-            coll = collection,
-            taskId = taskId
-        )
-    }
-
-    fun getTasks(
-        customConstraints: Document
-    ): Iterable<Task> {
-        return scheduler.getTasks(
-            coll = collection,
-            customConstraints = customConstraints
-        )
-    }
-
-    fun getExecution(
-        executionId: ExecutionId
-    ): ExecutionSummary? {
-        return scheduler.getExecution(
-            coll = collection,
-            executionId = executionId
         )
     }
 
