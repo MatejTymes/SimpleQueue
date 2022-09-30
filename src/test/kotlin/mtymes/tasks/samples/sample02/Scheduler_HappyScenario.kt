@@ -16,6 +16,7 @@ import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
 import mtymes.tasks.worker.Worker
 import mtymes.tasks.worker.sweatshop.HumbleSweatShop
+import mtymes.tasks.worker.sweatshop.ShutDownMode.OnceNoMoreWork
 import org.bson.Document
 import printTimedString
 
@@ -24,7 +25,6 @@ data class TaskToProcess(
     val executionId: ExecutionId,
     val request: String
 )
-
 
 
 class SimpleTaskDao(
@@ -86,7 +86,6 @@ class SimpleTaskDao(
 }
 
 
-
 open class SimpleWorker(
     val dao: SimpleTaskDao
 ) : Worker<TaskToProcess> {
@@ -106,7 +105,6 @@ open class SimpleWorker(
 }
 
 
-
 object WorkerDoingWork {
 
     @JvmStatic
@@ -122,14 +120,15 @@ object WorkerDoingWork {
         HumbleSweatShop().use { sweatShop ->
 
             val worker = SimpleWorker(dao)
-
             sweatShop.addAndStartWorker(worker)
 
-            Thread.sleep(4_000)
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = true
+            )
         }
     }
 }
-
 
 
 class ReadableSimpleWorker(
@@ -140,7 +139,6 @@ class ReadableSimpleWorker(
         return task.request
     }
 }
-
 
 
 object MoreReadableWorkerDoingWork {
@@ -161,7 +159,10 @@ object MoreReadableWorkerDoingWork {
 
             sweatShop.addAndStartWorker(worker)
 
-            Thread.sleep(4_000)
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = true
+            )
         }
     }
 }
@@ -187,11 +188,13 @@ object MultipleWorkersRegistered {
             sweatShop.addAndStartWorker(worker1)
             sweatShop.addAndStartWorker(worker2)
 
-            Thread.sleep(4_000)
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = true
+            )
         }
     }
 }
-
 
 
 object OneWorkerRegisteredMultipleTimes {
@@ -213,11 +216,16 @@ object OneWorkerRegisteredMultipleTimes {
             sweatShop.addAndStartWorker(worker)
             sweatShop.addAndStartWorker(worker)
 
-            Thread.sleep(4_000)
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = true
+            )
         }
 
-        displayTinyTasksSummary(coll, setOf(
-            "${LAST_EXECUTION}.${WORKER_ID}"
-        ))
+        displayTinyTasksSummary(
+            coll, setOf(
+                "${LAST_EXECUTION}.${WORKER_ID}"
+            )
+        )
     }
 }

@@ -6,6 +6,8 @@ import mtymes.tasks.common.exception.ExceptionUtil.runAndIgnoreExceptions
 import mtymes.tasks.common.time.Durations.ONE_MINUTE
 import mtymes.tasks.worker.HeartBeatingWorker
 import mtymes.tasks.worker.Worker
+import mtymes.tasks.worker.sweatshop.ShutDownMode.OnceNoMoreWork
+import mtymes.tasks.worker.sweatshop.UpdateOutcome.*
 import org.apache.commons.lang3.StringUtils.isBlank
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -31,30 +33,61 @@ class HumbleSweatShop : SweatShop {
         val runner: Runner,
         val taskInProgress: AtomicReference<T> = AtomicReference(null),
 
-        val isBeingGracefullyShutDown: AtomicBoolean = AtomicBoolean(false),
-        val gracefulShutdownCountDown: CountDownLatch = CountDownLatch(1),
+        val shutDownMode: AtomicReference<ShutDownMode> = AtomicReference(null),
+        val waitForNextTaskCountDownLatch: CountDownLatch = CountDownLatch(1),
 
         val hasHeartBeatSupport: Boolean,
         val lastHeartBeaterId: AtomicReference<UUID> = AtomicReference(null),
         val lastHeartBeater: AtomicReference<Future<*>> = AtomicReference(null)
     ) {
-        fun shutDownGracefully() {
-            isBeingGracefullyShutDown.set(true)
-            try {
-                gracefulShutdownCountDown.countDown()
-            } catch (e: Exception) {
-                // ignore
+        val logId: String = worker.workerLogId(workerId)
+
+
+        fun applyShutDownMode(newMode: ShutDownMode): UpdateOutcome {
+            val outcome: UpdateOutcome
+
+            synchronized(shutDownMode) {
+                val currentMode = shutDownMode.get()
+                if (currentMode == null || currentMode.priority < newMode.priority) {
+                    shutDownMode.set(newMode)
+                    if (newMode.priority >= ShutDownMode.OnceCurrentTaskIsFinished.priority) {
+                        waitForNextTaskCountDownLatch.countDown()
+                    }
+                    runAndIgnoreExceptions {
+                        logger.info("[${logId}]: Applied ShutDownMode '${newMode}'")
+                    }
+                    outcome = WasApplied
+                } else if (currentMode.priority == newMode.priority) {
+                    outcome = WasAlreadyInWantedState
+                } else {
+                    outcome = WasNotApplied
+                }
+            }
+
+            return outcome
+        }
+
+        fun canWorkOnNextTask(): Boolean {
+            val currentShutDownMode = shutDownMode.get()
+            if (currentShutDownMode == null || currentShutDownMode.priority < ShutDownMode.OnceCurrentTaskIsFinished.priority) {
+                return true
+            } else {
+                return false
             }
         }
 
-        fun isBeingGracefullyShutDown(): Boolean {
-            return isBeingGracefullyShutDown.get()
+        fun endIfNoWorkFound(): Boolean {
+            return shutDownMode.get() == OnceNoMoreWork
         }
 
-        fun sleepIfNoShutdown(
+        fun isBeingGracefullyShutDown(): Boolean {
+            return shutDownMode.get()?.isGraceful ?: false
+        }
+
+        fun sleepIfWillAskForNextTask(
             sleepDuration: Duration
         ) {
-            gracefulShutdownCountDown.await(sleepDuration.toMillis(), TimeUnit.MILLISECONDS)
+            waitForNextTaskCountDownLatch.await(sleepDuration.toMillis(), TimeUnit.MILLISECONDS)
         }
     }
 
@@ -100,33 +133,28 @@ class HumbleSweatShop : SweatShop {
         }
     }
 
-    override fun stopAndRemoveWorker(
+    override fun stopWorker(
         workerId: WorkerId,
-        stopGracefully: Boolean
-    ): Boolean {
+        shutDownMode: ShutDownMode
+    ): UpdateOutcome {
         synchronized(workers) {
-            if (stopGracefully) {
+            if (shutDownMode.isGraceful) {
                 val context = workers.get(workerId)
                 if (context == null) {
                     // worker not recognized
-                    return false
+                    return WasNotApplied
                 } else {
-                    if (context.isBeingGracefullyShutDown()) {
-                        // already being gracefully shut down
-                        return false
-                    } else {
-                        context.shutDownGracefully()
-                        return true
-                    }
+                    return context.applyShutDownMode(shutDownMode)
                 }
             } else {
                 val context = workers.remove(workerId)
                 if (context == null) {
                     // worker not recognized
-                    return false
+                    return WasNotApplied
                 } else {
+                    context.applyShutDownMode(shutDownMode)
                     context.runner.shutdownNow()
-                    return true
+                    return WasApplied
                 }
             }
         }
@@ -139,16 +167,21 @@ class HumbleSweatShop : SweatShop {
                     workerId = context.workerId,
                     worker = context.worker,
                     isWorking = context.taskInProgress.get() != null,
-                    isGracefullyDying = context.isBeingGracefullyShutDown()
+                    whenShouldStop = context.shutDownMode.get()
                 )
             }
         }
     }
 
-    override fun closeGracefully(
+    override fun close(
+        shutDownMode: ShutDownMode,
         waitTillDone: Boolean
     ) {
         val allRunners = mutableListOf<Runner>()
+
+        runAndIgnoreExceptions {
+            logger.info("${this.javaClass.simpleName} will try to close using ShutDownMode '${shutDownMode}'")
+        }
 
         synchronized(workers) {
             if (!workers.isEmpty()) {
@@ -163,18 +196,24 @@ class HumbleSweatShop : SweatShop {
                     }
 
                     runAndIgnoreExceptions {
-                        stopAndRemoveWorker(
+                        stopWorker(
                             workerId = workerId,
-                            stopGracefully = true
+                            shutDownMode = shutDownMode
                         )
                     }
                 }
             }
 
-            isClosed.set(true)
+            val wasClosedBefore = isClosed.getAndSet(true)
 
-            runAndIgnoreExceptions {
-                logger.info("${this.javaClass.simpleName} has been closed gracefully")
+            if (!wasClosedBefore) {
+                runAndIgnoreExceptions {
+                    logger.info("${this.javaClass.simpleName} has been closed")
+                }
+            } else {
+                runAndIgnoreExceptions {
+                    logger.info("${this.javaClass.simpleName} was already closed")
+                }
             }
         }
 
@@ -187,27 +226,6 @@ class HumbleSweatShop : SweatShop {
         }
     }
 
-    override fun close() {
-        synchronized(workers) {
-            if (!workers.isEmpty()) {
-                val workerIds = workers.keys.toList()
-                for (workerId in workerIds) {
-                    runAndIgnoreExceptions {
-                        stopAndRemoveWorker(
-                            workerId = workerId,
-                            stopGracefully = false
-                        )
-                    }
-                }
-            }
-
-            isClosed.set(true)
-
-            runAndIgnoreExceptions {
-                logger.info("${this.javaClass.simpleName} has been closed")
-            }
-        }
-    }
 
 
     private fun <T> startWorker(
@@ -216,14 +234,14 @@ class HumbleSweatShop : SweatShop {
     ): Future<Void>? = workContext.runner.run { shutdownInfo ->
 
         val workerId = workContext.workerId
-        val logId: String = worker.workerLogId(workerId)
+        val logId: String = workContext.logId
 
         runAndIgnoreExceptions {
             logger.info("[${logId}]: Worker just started")
         }
 
         var taskNotFoundNTimesInARow = 0L
-        while (!shutdownInfo.wasShutdownTriggered() && !workContext.isBeingGracefullyShutDown()) {
+        while (!shutdownInfo.wasShutdownTriggered() && workContext.canWorkOnNextTask()) {
 
             try {
 
@@ -248,10 +266,17 @@ class HumbleSweatShop : SweatShop {
                 if (task == null) {
                     taskNotFoundNTimesInARow += 1
 
-                    runAndIgnoreExceptions {
-                        logger.debug("[${logId}]: No available task found")
-                    }
 
+                    if (workContext.endIfNoWorkFound()) {
+                        runAndIgnoreExceptions {
+                            logger.debug("[${logId}]: Stopping worker as NO available task was found")
+                        }
+                        break
+                    } else {
+                        runAndIgnoreExceptions {
+                            logger.debug("[${logId}]: NO available task was found")
+                        }
+                    }
                 } else {
                     taskNotFoundNTimesInARow = 0
 
@@ -349,7 +374,7 @@ class HumbleSweatShop : SweatShop {
                 }
                 // don't use Thread.sleep(..) as it would wait for the whole duration in case of graceful shutdown
                 // (graceful shutdown = no InterruptedException)
-                workContext.sleepIfNoShutdown(sleepDuration)
+                workContext.sleepIfWillAskForNextTask(sleepDuration)
 
             } catch (e: InterruptedException) {
                 runAndIgnoreExceptions {

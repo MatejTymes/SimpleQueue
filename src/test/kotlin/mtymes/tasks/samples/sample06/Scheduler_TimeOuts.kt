@@ -15,6 +15,7 @@ import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
 import mtymes.tasks.worker.HeartBeatingWorker
 import mtymes.tasks.worker.sweatshop.HumbleSweatShop
+import mtymes.tasks.worker.sweatshop.ShutDownMode.OnceNoMoreWork
 import org.bson.Document
 import printTimedString
 import java.time.Duration
@@ -319,7 +320,10 @@ object WorkerWithHeartBeatShowcase {
 
                 sweatShop.addAndStartWorker(worker)
 
-                Thread.sleep(8_500)
+                sweatShop.close(
+                    shutDownMode = OnceNoMoreWork,
+                    waitTillDone = true
+                )
             }
         } finally {
             executor.shutdownNow()

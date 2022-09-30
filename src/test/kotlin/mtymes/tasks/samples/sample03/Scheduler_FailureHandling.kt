@@ -22,6 +22,7 @@ import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
 import mtymes.tasks.worker.Worker
 import mtymes.tasks.worker.sweatshop.HumbleSweatShop
+import mtymes.tasks.worker.sweatshop.ShutDownMode.OnceNoMoreWork
 import org.bson.Document
 import printTimedString
 import java.time.Duration
@@ -197,7 +198,10 @@ object WorkerFailing {
 
             sweatShop.addAndStartWorker(worker)
 
-            Thread.sleep(4_500)
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = true
+            )
         }
 
         displayTinyTasksSummary(coll, setOf(

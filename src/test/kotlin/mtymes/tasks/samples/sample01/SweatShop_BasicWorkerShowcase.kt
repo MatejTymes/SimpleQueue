@@ -4,6 +4,7 @@ import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.domain.WorkerId.Companion.uniqueWorkerId
 import mtymes.tasks.worker.Worker
 import mtymes.tasks.worker.sweatshop.HumbleSweatShop
+import mtymes.tasks.worker.sweatshop.ShutDownMode.*
 import java.util.concurrent.CopyOnWriteArrayList
 
 
@@ -38,7 +39,10 @@ object WorkerDoingWork {
                 worker
             )
 
-            Thread.sleep(4_000)
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = true
+            )
         }
     }
 }
@@ -64,7 +68,10 @@ object CustomWorkerId {
                 workerId = WorkerId("DobbyTheElf")
             )
 
-            Thread.sleep(4_000)
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = true
+            )
         }
     }
 }
@@ -156,9 +163,9 @@ object InterruptWorker {
 
             Thread.sleep(1_250)
 
-            sweatShop.stopAndRemoveWorker(
+            sweatShop.stopWorker(
                 workerId = workerId,
-                stopGracefully = false
+                shutDownMode = Immediately
             )
 
             sweatShop.workerSummaries().forEach { summary ->
@@ -172,7 +179,7 @@ object InterruptWorker {
 
 
 
-object InterruptWorkerGracefully {
+object InterruptWorkerGracefullyOnTaskFinish {
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -185,9 +192,9 @@ object InterruptWorkerGracefully {
 
             Thread.sleep(1_250)
 
-            sweatShop.stopAndRemoveWorker(
+            sweatShop.stopWorker(
                 workerId = workerId,
-                stopGracefully = true
+                shutDownMode = OnceCurrentTaskIsFinished
             )
 
             sweatShop.workerSummaries().forEach { summary ->
@@ -195,8 +202,48 @@ object InterruptWorkerGracefully {
             }
 
 
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = true
+            )
+
+
+            sweatShop.workerSummaries().forEach { summary ->
+                println("- ${summary}")
+            }
+        }
+    }
+}
+
+
+
+object InterruptWorkerGracefullyOnceNoMoreWork {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+
+        HumbleSweatShop().use { sweatShop ->
+
+            val workerId = sweatShop.addAndStartWorker(
+                LazyWorker()
+            )
+
             Thread.sleep(1_250)
 
+            sweatShop.stopWorker(
+                workerId = workerId,
+                shutDownMode = OnceNoMoreWork
+            )
+
+            sweatShop.workerSummaries().forEach { summary ->
+                println("- ${summary}")
+            }
+
+
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = true
+            )
 
             sweatShop.workerSummaries().forEach { summary ->
                 println("- ${summary}")
