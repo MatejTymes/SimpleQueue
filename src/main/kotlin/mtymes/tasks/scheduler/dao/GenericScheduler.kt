@@ -242,7 +242,6 @@ class GenericScheduler(
         )
     }
 
-    // todo: mtymes - add sample for this one
     fun markTasksAsCancelled(
         options: MarkTasksAsCancelledOptions,
         customConstraints: Document,
@@ -257,7 +256,6 @@ class GenericScheduler(
         )
     }
 
-    // todo: mtymes - add sample for this one
     fun markTasksAsCancelled(
         customConstraints: Document,
         additionalTaskData: Document? = null
@@ -297,7 +295,6 @@ class GenericScheduler(
         )
     }
 
-    // todo: mtymes - write a sample for this
     fun markTaskAsPaused(
         taskId: TaskId,
         options: MarkTaskAsPausedOptions,
@@ -311,7 +308,6 @@ class GenericScheduler(
         )
     }
 
-    // todo: mtymes - write a sample for this
     fun markTaskAsPaused(
         taskId: TaskId,
         additionalTaskData: Document? = null
@@ -324,7 +320,6 @@ class GenericScheduler(
         )
     }
 
-    // todo: mtymes - add sample for this one
     fun markTasksAsPaused(
         options: MarkTasksAsPausedOptions,
         customConstraints: Document,
@@ -339,7 +334,6 @@ class GenericScheduler(
         )
     }
 
-    // todo: mtymes - add sample for this one
     fun markTasksAsPaused(
         customConstraints: Document,
         additionalTaskData: Document? = null
@@ -353,7 +347,6 @@ class GenericScheduler(
         )
     }
 
-    // todo: mtymes - write a sample for this
     fun markTaskAsUnPaused(
         taskId: TaskId,
         options: MarkTaskAsUnPausedOptions,
@@ -367,7 +360,6 @@ class GenericScheduler(
         )
     }
 
-    // todo: mtymes - write a sample for this
     fun markTaskAsUnPaused(
         taskId: TaskId,
         additionalTaskData: Document? = null
@@ -379,7 +371,6 @@ class GenericScheduler(
         )
     }
 
-    // todo: mtymes - add sample for this one
     fun markTasksAsUnPaused(
         options: MarkTasksAsUnPausedOptions,
         customConstraints: Document,
@@ -393,7 +384,6 @@ class GenericScheduler(
         )
     }
 
-    // todo: mtymes - add sample for this one
     fun markTasksAsUnPaused(
         customConstraints: Document,
         additionalTaskData: Document? = null

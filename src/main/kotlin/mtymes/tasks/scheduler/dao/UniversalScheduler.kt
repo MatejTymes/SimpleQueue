@@ -438,7 +438,6 @@ class UniversalScheduler(
         )
     }
 
-    // todo: mtymes - add sample for this one
     fun markTasksAsCancelled(
         coll: MongoCollection<Document>,
         options: MarkTasksAsCancelledOptions,
@@ -491,7 +490,6 @@ class UniversalScheduler(
         )
     }
 
-    // todo: mtymes - add sample for this one
     fun markTaskAsPaused(
         coll: MongoCollection<Document>,
         taskId: TaskId,
@@ -516,7 +514,6 @@ class UniversalScheduler(
         )
     }
 
-    // todo: mtymes - add sample for this one
     fun markTasksAsPaused(
         coll: MongoCollection<Document>,
         options: MarkTasksAsPausedOptions,
@@ -542,7 +539,6 @@ class UniversalScheduler(
         )
     }
 
-    // todo: mtymes - add sample for this one
     fun markTaskAsUnPaused(
         coll: MongoCollection<Document>,
         taskId: TaskId,
@@ -567,7 +563,6 @@ class UniversalScheduler(
         )
     }
 
-    // todo: mtymes - add sample for this one
     fun markTasksAsUnPaused(
         coll: MongoCollection<Document>,
         options: MarkTasksAsUnPausedOptions,
