@@ -44,7 +44,6 @@ data class SchedulerDefaults(
     val updateExecutionDataOptions: UpdateExecutionDataOptions? = null
 )
 
-// todo: mtymes - merge no options functions with options functions - currently separated because of java
 class GenericScheduler(
     val collection: MongoCollection<Document>,
     val defaults: SchedulerDefaults,
@@ -472,6 +471,37 @@ class GenericScheduler(
         additionalExecutionData: Document? = null
     ): Boolean {
         return registerHeartBeat(
+            executionId = executionId,
+            options = defaultOptions(
+                "this.defaults.registerHeartBeatOptions",
+                defaults.registerHeartBeatOptions
+            ),
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData
+        )
+    }
+
+    fun registerHeartBeatAndProvideOutcome(
+        executionId: ExecutionId,
+        options: RegisterHeartBeatOptions,
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
+    ): HeartBeatOutcome {
+        return scheduler.registerHeartBeatAndProvideOutcome(
+            coll = collection,
+            executionId = executionId,
+            options = options,
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData
+        )
+    }
+
+    fun registerHeartBeatAndProvideOutcome(
+        executionId: ExecutionId,
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
+    ): HeartBeatOutcome {
+        return registerHeartBeatAndProvideOutcome(
             executionId = executionId,
             options = defaultOptions(
                 "this.defaults.registerHeartBeatOptions",

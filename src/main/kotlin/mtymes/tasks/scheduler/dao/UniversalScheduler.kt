@@ -745,6 +745,41 @@ class UniversalScheduler(
         return result.modifiedCount > 0
     }
 
+    fun registerHeartBeatAndProvideOutcome(
+        coll: MongoCollection<Document>,
+        executionId: ExecutionId,
+        options: RegisterHeartBeatOptions,
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
+    ): HeartBeatOutcome {
+        val success = registerHeartBeat(
+            coll = coll,
+            executionId = executionId,
+            options = options,
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData
+        )
+
+        if (success) {
+            return HeartBeatApplied
+        }
+
+        val task = coll.findOne(doc(LAST_EXECUTION + "." + EXECUTION_ID to executionId))?.toTask()
+            ?: coll.findOne(doc(PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to executionId))?.toTask()
+
+        if (task == null) {
+            return NoExecutionFoundToApplyHeartBeatTo
+        }
+
+        val lastExecution = task.lastExecution!!
+
+        return HeartBeatNotApplied(
+            currentTaskStatus = task.status,
+            currentLastExecutionId = lastExecution.executionId,
+            currentExecutionStatus = lastExecution.status
+        )
+    }
+
     // todo: mtymes - maybe add custom query criteria
     fun updateTaskData(
         coll: MongoCollection<Document>,

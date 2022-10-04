@@ -209,3 +209,13 @@ data class FetchedExecutionSummary(
 
     val underlyingTask: Task
 )
+
+
+sealed interface HeartBeatOutcome
+object HeartBeatApplied : HeartBeatOutcome
+object NoExecutionFoundToApplyHeartBeatTo : HeartBeatOutcome
+data class HeartBeatNotApplied(
+    val currentTaskStatus: TaskStatus,
+    val currentLastExecutionId: ExecutionId,
+    val currentExecutionStatus: ExecutionStatus
+) : HeartBeatOutcome
