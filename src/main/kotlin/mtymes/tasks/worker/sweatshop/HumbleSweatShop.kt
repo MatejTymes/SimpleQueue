@@ -173,6 +173,47 @@ class HumbleSweatShop : SweatShop {
         }
     }
 
+    override fun stopAllWorkers(
+        shutDownMode: ShutDownMode,
+        waitTillDone: Boolean
+    ) {
+        val allRunners = mutableListOf<Runner>()
+
+        runAndIgnoreExceptions {
+            logger.info("${this.javaClass.simpleName} will try to stop All Workers using ShutDownMode '${shutDownMode}'")
+        }
+
+        synchronized(workers) {
+            if (workers.isNotEmpty()) {
+                val workerIds = workers.keys.toList()
+                for (workerId in workerIds) {
+                    if (waitTillDone) {
+                        runAndIgnoreExceptions {
+                            workers.get(workerId)?.also {
+                                allRunners.add(it.runner)
+                            }
+                        }
+                    }
+
+                    runAndIgnoreExceptions {
+                        stopWorker(
+                            workerId = workerId,
+                            shutDownMode = shutDownMode
+                        )
+                    }
+                }
+            }
+        }
+
+        if (waitTillDone) {
+            for (runner in allRunners) {
+                runAndIgnoreExceptions {
+                    runner.waitTillDone()
+                }
+            }
+        }
+    }
+
     override fun close(
         shutDownMode: ShutDownMode,
         waitTillDone: Boolean
@@ -184,7 +225,7 @@ class HumbleSweatShop : SweatShop {
         }
 
         synchronized(workers) {
-            if (!workers.isEmpty()) {
+            if (workers.isNotEmpty()) {
                 val workerIds = workers.keys.toList()
                 for (workerId in workerIds) {
                     if (waitTillDone) {

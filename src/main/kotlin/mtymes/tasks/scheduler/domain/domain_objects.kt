@@ -48,6 +48,7 @@ enum class TaskStatus(
 ) {
     available,
     paused,
+    // todo: mtymes - maybe rename to running
     inProgress,
     suspended,
     cancelled(true),

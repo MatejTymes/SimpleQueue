@@ -44,6 +44,11 @@ interface SweatShop : AutoCloseable, Closeable {
 
     fun workerSummaries(): List<WorkerSummary>
 
+    fun stopAllWorkers(
+        shutDownMode: ShutDownMode,
+        waitTillDone: Boolean
+    )
+
     fun close(
         shutDownMode: ShutDownMode,
         waitTillDone: Boolean = false
