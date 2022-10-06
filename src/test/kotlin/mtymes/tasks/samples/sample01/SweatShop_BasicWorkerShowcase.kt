@@ -5,6 +5,7 @@ import mtymes.tasks.common.domain.WorkerId.Companion.uniqueWorkerId
 import mtymes.tasks.worker.Worker
 import mtymes.tasks.worker.sweatshop.HumbleSweatShop
 import mtymes.tasks.worker.sweatshop.ShutDownMode.*
+import java.util.UUID.randomUUID
 import java.util.concurrent.CopyOnWriteArrayList
 
 
@@ -248,6 +249,100 @@ object InterruptWorkerGracefullyOnceNoMoreWork {
             sweatShop.workerSummaries().forEach { summary ->
                 println("- ${summary}")
             }
+        }
+    }
+}
+
+
+
+object CloseableWorker : Worker<String> {
+    override fun fetchNextTaskToProcess(workerId: WorkerId): String? {
+        return randomUUID().toString()
+    }
+
+    override fun executeTask(task: String, workerId: WorkerId) {
+        println("Starting task")
+        Thread.sleep(10_000)
+    }
+
+    override fun close() {
+        println("Me closing! You're fine with that ???")
+    }
+}
+
+object CloseTheWorker {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+
+        println("Immediate shutdown")
+
+        HumbleSweatShop().use { sweatShop ->
+            sweatShop.addAndStartWorker(
+                CloseableWorker
+            )
+
+            Thread.sleep(2500)
+        }
+
+        println("Graceful shutdown")
+
+        HumbleSweatShop().use { sweatShop ->
+            sweatShop.addAndStartWorker(
+                CloseableWorker
+            )
+
+            Thread.sleep(2500)
+            sweatShop.close(
+                shutDownMode = OnceCurrentTaskIsFinished,
+                waitTillDone = true
+            )
+        }
+
+        println("Graceful & then Immediate shutdown")
+
+        HumbleSweatShop().use { sweatShop ->
+            sweatShop.addAndStartWorker(
+                CloseableWorker
+            )
+
+            Thread.sleep(2500)
+            sweatShop.close(
+                shutDownMode = OnceCurrentTaskIsFinished,
+                waitTillDone = false
+            )
+        }
+
+        println("Graceful -> Graceful -> Immediate")
+
+        HumbleSweatShop().use { sweatShop ->
+            sweatShop.addAndStartWorker(
+                CloseableWorker
+            )
+
+            Thread.sleep(2500)
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = false
+            )
+
+            Thread.sleep(2500)
+            sweatShop.close(
+                shutDownMode = OnceCurrentTaskIsFinished,
+                waitTillDone = false
+            )
+
+            Thread.sleep(2500)
+            sweatShop.close(
+                shutDownMode = Immediately,
+                waitTillDone = false
+            )
+
+            Thread.sleep(2500)
+            sweatShop.close(
+                shutDownMode = Immediately,
+                waitTillDone = false
+            )
         }
     }
 }

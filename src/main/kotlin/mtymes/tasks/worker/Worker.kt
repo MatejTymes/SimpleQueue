@@ -7,10 +7,12 @@ import mtymes.tasks.common.time.Durations.ONE_SECOND
 import mtymes.tasks.common.time.Durations.TEN_SECONDS
 import mtymes.tasks.common.time.Durations.THIRTY_SECONDS
 import mtymes.tasks.common.time.Durations.THREE_SECONDS
+import java.io.Closeable
+import java.io.IOException
 import java.time.Duration
 
 
-interface Worker<Task> {
+interface Worker<Task> : Closeable {
 
     fun fetchNextTaskToProcess(
         workerId: WorkerId
@@ -57,5 +59,10 @@ interface Worker<Task> {
         workerId: WorkerId
     ): Duration {
         return ONE_MILLISECOND
+    }
+
+    @Throws(IOException::class)
+    override fun close() {
+        // do nothing
     }
 }

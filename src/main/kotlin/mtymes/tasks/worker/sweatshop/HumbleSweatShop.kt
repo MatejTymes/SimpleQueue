@@ -281,176 +281,186 @@ class HumbleSweatShop : SweatShop {
             logger.info("[${logId}]: Worker just started")
         }
 
-        var taskNotFoundNTimesInARow = 0L
-        while (!shutdownInfo.wasShutdownTriggered() && workContext.canWorkOnNextTask()) {
+        try {
+            var taskNotFoundNTimesInARow = 0L
+            while (!shutdownInfo.wasShutdownTriggered() && workContext.canWorkOnNextTask()) {
 
-            try {
-
-                // FETCH TASK
-
-                var task: T? = null
                 try {
-                    task = worker.fetchNextTaskToProcess(workerId)
-                } catch (e: InterruptedException) {
-                    throw e
-                } catch (e: Exception) {
-                    runAndIgnoreExceptions {
-                        logger.error("[${logId}]: Failed to fetch next task", e)
-                    }
-                }
 
+                    // FETCH TASK
 
-                // PROCESS TASK
-
-                workContext.taskInProgress.set(task)
-
-                if (task == null) {
-                    taskNotFoundNTimesInARow += 1
-
-
-                    if (workContext.endIfNoWorkFound()) {
-                        runAndIgnoreExceptions {
-                            logger.debug("[${logId}]: Stopping worker as NO available task was found")
-                        }
-                        break
-                    } else {
-                        runAndIgnoreExceptions {
-                            logger.debug("[${logId}]: NO available task was found")
-                        }
-                    }
-                } else {
-                    taskNotFoundNTimesInARow = 0
-
-                    runAndIgnoreExceptions {
-                        val taskString: String? = taskToLoggableString(worker, task, workerId)
-                        if (isBlank(taskString)) {
-                            logger.info("[${logId}]: Going to process next available task")
-                        } else {
-                            logger.info("[${logId}]: Going to process next available task '${taskString}'")
-                        }
-                    }
-
+                    var task: T? = null
                     try {
-                        if (workContext.hasHeartBeatSupport) {
-                            startHeartBeater(
-                                workContext = workContext,
-                                worker = worker,
-                                task = task,
-                                logId = logId
-                            )
-                        }
-
-                        worker.executeTask(
-                            task = task,
-                            workerId = workerId
-                        )
-
-                        runAndIgnoreExceptions {
-                            val taskString: String? = taskToLoggableString(worker, task, workerId)
-                            if (isBlank(taskString)) {
-                                logger.info("[${logId}]: Finished processing task")
-                            } else {
-                                logger.info("[${logId}]: Finished processing task '${taskString}'")
-                            }
-                        }
+                        task = worker.fetchNextTaskToProcess(workerId)
                     } catch (e: InterruptedException) {
                         throw e
                     } catch (e: Exception) {
                         runAndIgnoreExceptions {
+                            logger.error("[${logId}]: Failed to fetch next task", e)
+                        }
+                    }
+
+
+                    // PROCESS TASK
+
+                    workContext.taskInProgress.set(task)
+
+                    if (task == null) {
+                        taskNotFoundNTimesInARow += 1
+
+
+                        if (workContext.endIfNoWorkFound()) {
+                            runAndIgnoreExceptions {
+                                logger.debug("[${logId}]: Stopping worker as NO available task was found")
+                            }
+                            break
+                        } else {
+                            runAndIgnoreExceptions {
+                                logger.debug("[${logId}]: NO available task was found")
+                            }
+                        }
+                    } else {
+                        taskNotFoundNTimesInARow = 0
+
+                        runAndIgnoreExceptions {
                             val taskString: String? = taskToLoggableString(worker, task, workerId)
                             if (isBlank(taskString)) {
-                                logger.warn("[${logId}]: Failed to execute task", e)
+                                logger.info("[${logId}]: Going to process next available task")
                             } else {
-                                logger.warn("[${logId}]: Failed to execute task '${taskString}'", e)
+                                logger.info("[${logId}]: Going to process next available task '${taskString}'")
                             }
                         }
 
                         try {
-                            worker.handleExecutionFailure(
+                            if (workContext.hasHeartBeatSupport) {
+                                startHeartBeater(
+                                    workContext = workContext,
+                                    worker = worker,
+                                    task = task,
+                                    logId = logId
+                                )
+                            }
+
+                            worker.executeTask(
                                 task = task,
-                                workerId = workerId,
-                                exception = e
+                                workerId = workerId
                             )
+
+                            runAndIgnoreExceptions {
+                                val taskString: String? = taskToLoggableString(worker, task, workerId)
+                                if (isBlank(taskString)) {
+                                    logger.info("[${logId}]: Finished processing task")
+                                } else {
+                                    logger.info("[${logId}]: Finished processing task '${taskString}'")
+                                }
+                            }
                         } catch (e: InterruptedException) {
                             throw e
                         } catch (e: Exception) {
                             runAndIgnoreExceptions {
                                 val taskString: String? = taskToLoggableString(worker, task, workerId)
                                 if (isBlank(taskString)) {
-                                    logger.error("[${logId}]: Failed to handle failure of task", e)
+                                    logger.warn("[${logId}]: Failed to execute task", e)
                                 } else {
-                                    logger.error("[${logId}]: Failed to handle failure of task '${taskString}'", e)
+                                    logger.warn("[${logId}]: Failed to execute task '${taskString}'", e)
                                 }
                             }
-                        }
-                    } finally {
-                        workContext.taskInProgress.set(null)
 
-                        if (workContext.hasHeartBeatSupport) {
-                            stopAndRemoveHeartBeater(workContext)
+                            try {
+                                worker.handleExecutionFailure(
+                                    task = task,
+                                    workerId = workerId,
+                                    exception = e
+                                )
+                            } catch (e: InterruptedException) {
+                                throw e
+                            } catch (e: Exception) {
+                                runAndIgnoreExceptions {
+                                    val taskString: String? = taskToLoggableString(worker, task, workerId)
+                                    if (isBlank(taskString)) {
+                                        logger.error("[${logId}]: Failed to handle failure of task", e)
+                                    } else {
+                                        logger.error("[${logId}]: Failed to handle failure of task '${taskString}'", e)
+                                    }
+                                }
+                            }
+                        } finally {
+                            workContext.taskInProgress.set(null)
+
+                            if (workContext.hasHeartBeatSupport) {
+                                stopAndRemoveHeartBeater(workContext)
+                            }
                         }
                     }
-                }
 
 
-                // SLEEP DELAY BEFORE FETCHING NEXT TASK
+                    // SLEEP DELAY BEFORE FETCHING NEXT TASK
 
-                // default to 1 minute if fails to get the sleep duration
-                var sleepDuration: Duration = ONE_MINUTE
-                try {
-                    if (task != null) {
-                        sleepDuration = worker.sleepDurationIfTaskWasProcessed(
-                            workerId
-                        )
-                    } else {
-                        sleepDuration = worker.sleepDurationIfNoTaskWasAvailable(
-                            taskNotFoundNTimesInARow,
-                            workerId
-                        )
+                    // default to 1 minute if fails to get the sleep duration
+                    var sleepDuration: Duration = ONE_MINUTE
+                    try {
+                        if (task != null) {
+                            sleepDuration = worker.sleepDurationIfTaskWasProcessed(
+                                workerId
+                            )
+                        } else {
+                            sleepDuration = worker.sleepDurationIfNoTaskWasAvailable(
+                                taskNotFoundNTimesInARow,
+                                workerId
+                            )
+                        }
+                    } catch (e: Exception) {
+                        runAndIgnoreExceptions {
+                            logger.error("${logId}]: Failed to evaluate sleep duration before fetching next task", e)
+                        }
                     }
+                    // don't use Thread.sleep(..) as it would wait for the whole duration in case of graceful shutdown
+                    // (graceful shutdown = no InterruptedException)
+                    workContext.sleepIfWillAskForNextTask(sleepDuration)
+
+                } catch (e: InterruptedException) {
+                    runAndIgnoreExceptions {
+                        val isExpected = shutdownInfo.wasShutdownTriggered()
+                        if (isExpected) {
+                            logger.info("[${logId}]: Worker thread has been interrupted")
+                        } else {
+                            logger.error("[${logId}]: Worker thread has been interrupted", e)
+                        }
+                    }
+                    break
                 } catch (e: Exception) {
                     runAndIgnoreExceptions {
-                        logger.error("${logId}]: Failed to evaluate sleep duration before fetching next task", e)
+                        logger.error("${logId}]: Unexpected failure", e)
                     }
                 }
-                // don't use Thread.sleep(..) as it would wait for the whole duration in case of graceful shutdown
-                // (graceful shutdown = no InterruptedException)
-                workContext.sleepIfWillAskForNextTask(sleepDuration)
-
-            } catch (e: InterruptedException) {
+            }
+        } finally {
+            if (workContext.isBeingGracefullyShutDown()) {
                 runAndIgnoreExceptions {
-                    val isExpected = shutdownInfo.wasShutdownTriggered()
-                    if (isExpected) {
-                        logger.info("[${logId}]: Worker thread has been interrupted")
-                    } else {
-                        logger.error("[${logId}]: Worker thread has been interrupted", e)
+                    synchronized(workers) {
+                        workers.remove(workerId)
                     }
                 }
-                break
-            } catch (e: Exception) {
+
                 runAndIgnoreExceptions {
-                    logger.error("${logId}]: Unexpected failure", e)
+                    logger.info("[${logId}]: Worker thread has been shut down gracefully")
                 }
-            }
-        }
 
-        if (workContext.isBeingGracefullyShutDown()) {
-            runAndIgnoreExceptions {
-                synchronized(workers) {
-                    workers.remove(workerId)
+                runAndIgnoreExceptions {
+                    worker.close()
                 }
-            }
 
-            runAndIgnoreExceptions {
-                logger.info("[${logId}]: Worker thread has been shut down gracefully")
-            }
+                runAndIgnoreExceptions {
+                    workContext.runner.shutdownNow()
+                }
+            } else {
+                runAndIgnoreExceptions {
+                    worker.close()
+                }
 
-            runAndIgnoreExceptions {
-                workContext.runner.shutdownNow()
-            }
-        } else {
-            runAndIgnoreExceptions {
-                logger.info("[${logId}]: Worker thread has been shut down")
+                runAndIgnoreExceptions {
+                    logger.info("[${logId}]: Worker thread has been shut down")
+                }
             }
         }
     }
