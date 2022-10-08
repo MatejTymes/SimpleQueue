@@ -26,6 +26,8 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
+// todo: mtymes - distinguish between runStatus and dependenciesStatus
+// todo: mtymes - add task with unlimited retry count that is recording only last execution
 // todo: mtymes - return current execution status if it fails to registerHeartBeat so we could interrupt the worker if it is cancelled
 // todo: mtymes - add flag - retainOnlyLastExecution
 // todo: mtymes - provide proper throws annotations

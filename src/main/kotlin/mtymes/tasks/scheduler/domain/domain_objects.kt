@@ -54,6 +54,7 @@ enum class TaskStatus(
     cancelled(true),
     succeeded(true),
     failed(true),
+    // todo: mtymes - find some better name: interrupted/died/terminated/aborted/timedOut
     timedOut(true);
 
     companion object {
@@ -70,6 +71,7 @@ enum class ExecutionStatus(
     cancelled(true),
     succeeded(true),
     failed(true),
+    // todo: mtymes - find some better name: interrupted/died/terminated/aborted/timedOut
     timedOut(true);
 
     companion object {
