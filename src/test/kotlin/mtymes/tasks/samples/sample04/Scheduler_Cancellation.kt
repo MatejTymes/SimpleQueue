@@ -167,7 +167,7 @@ object CancelExecution {
 }
 
 
-object FailToCancelTaskInProgress {
+object FailToCancelRunningTask {
 
     @JvmStatic
     fun main(args: Array<String>) {

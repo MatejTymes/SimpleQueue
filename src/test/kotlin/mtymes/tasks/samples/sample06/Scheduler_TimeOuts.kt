@@ -7,9 +7,9 @@ import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.HEARTBEAT_AT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.KILLABLE_AFTER
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
-import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.TIMES_OUT_AFTER
 import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
@@ -104,8 +104,8 @@ class TimeOutingTasksDao(
     ) {
         printTimedString("searching and Marking TIMED OUT Executions")
 
-        val timedOutCount = scheduler.markDeadExecutionsAsTimedOut(
-            options = MarkDeadExecutionsAsTimedOutOptions(
+        val timedOutCount = scheduler.markDeadExecutionsAsDied(
+            options = MarkDeadExecutionsAsDiedOptions(
                 retryDelay = retryDelay
             ),
             additionalExecutionData = doc(
@@ -155,9 +155,9 @@ object TaskDoesNOTTimeOutAutomatically {
 
         displayTinyTasksSummary(coll, setOf(
             PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
-            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            PREVIOUS_EXECUTIONS + "." + KILLABLE_AFTER,
             LAST_EXECUTION + "." + HEARTBEAT_AT,
-            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+            LAST_EXECUTION + "." + KILLABLE_AFTER
         ))
 
 
@@ -167,9 +167,9 @@ object TaskDoesNOTTimeOutAutomatically {
 
         displayTinyTasksSummary(coll, setOf(
             PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
-            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            PREVIOUS_EXECUTIONS + "." + KILLABLE_AFTER,
             LAST_EXECUTION + "." + HEARTBEAT_AT,
-            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+            LAST_EXECUTION + "." + KILLABLE_AFTER
         ))
     }
 }
@@ -198,9 +198,9 @@ object CallingTaskToMarkExecutionAsTimedOut {
 
         displayTinyTasksSummary(coll, setOf(
             PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
-            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            PREVIOUS_EXECUTIONS + "." + KILLABLE_AFTER,
             LAST_EXECUTION + "." + HEARTBEAT_AT,
-            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+            LAST_EXECUTION + "." + KILLABLE_AFTER
         ))
 
         try {
@@ -213,9 +213,9 @@ object CallingTaskToMarkExecutionAsTimedOut {
 
         displayTinyTasksSummary(coll, setOf(
             PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
-            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            PREVIOUS_EXECUTIONS + "." + KILLABLE_AFTER,
             LAST_EXECUTION + "." + HEARTBEAT_AT,
-            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+            LAST_EXECUTION + "." + KILLABLE_AFTER
         ))
     }
 }
@@ -249,9 +249,9 @@ object HeartBeatExtendsKeepAlivePeriod {
 
         displayTinyTasksSummary(coll, setOf(
             PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
-            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            PREVIOUS_EXECUTIONS + "." + KILLABLE_AFTER,
             LAST_EXECUTION + "." + HEARTBEAT_AT,
-            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+            LAST_EXECUTION + "." + KILLABLE_AFTER
         ))
     }
 }
@@ -274,9 +274,9 @@ class LazyHeartBeatingWorker(
 
         displayTinyTasksSummary(coll, setOf(
             PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
-            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            PREVIOUS_EXECUTIONS + "." + KILLABLE_AFTER,
             LAST_EXECUTION + "." + HEARTBEAT_AT,
-            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+            LAST_EXECUTION + "." + KILLABLE_AFTER
         ))
     }
 
@@ -331,9 +331,9 @@ object WorkerWithHeartBeatShowcase {
 
         displayTinyTasksSummary(coll, setOf(
             PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
-            PREVIOUS_EXECUTIONS + "." + TIMES_OUT_AFTER,
+            PREVIOUS_EXECUTIONS + "." + KILLABLE_AFTER,
             LAST_EXECUTION + "." + HEARTBEAT_AT,
-            LAST_EXECUTION + "." + TIMES_OUT_AFTER
+            LAST_EXECUTION + "." + KILLABLE_AFTER
         ))
     }
 }

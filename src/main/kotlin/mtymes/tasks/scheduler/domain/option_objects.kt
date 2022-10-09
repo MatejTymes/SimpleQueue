@@ -168,7 +168,7 @@ data class MarkAsSuspendedOptions(
     }
 }
 
-data class MarkDeadExecutionsAsTimedOutOptions(
+data class MarkDeadExecutionsAsDiedOptions(
     val retryDelay: Duration? = null,
     val newTTL: Duration? = null
 ) {
@@ -178,7 +178,7 @@ data class MarkDeadExecutionsAsTimedOutOptions(
     }
 
     companion object {
-        val DEFAULT = MarkDeadExecutionsAsTimedOutOptions()
+        val DEFAULT = MarkDeadExecutionsAsDiedOptions()
     }
 }
 

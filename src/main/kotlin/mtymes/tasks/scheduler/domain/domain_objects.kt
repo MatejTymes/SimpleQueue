@@ -16,6 +16,7 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ID
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.FINISHED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.HEARTBEAT_AT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.KILLABLE_AFTER
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTIONS_COUNT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
@@ -24,7 +25,6 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS_UPDATED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.SUSPENDED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.SUSPENSION_COUNT
-import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.TIMES_OUT_AFTER
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.UN_SUSPENDED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.UPDATED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.WAS_RETRYABLE_FAIL
@@ -48,14 +48,13 @@ enum class TaskStatus(
 ) {
     available,
     paused,
-    // todo: mtymes - maybe rename to running
-    inProgress,
+    running,
     suspended,
     cancelled(true),
     succeeded(true),
     failed(true),
-    // todo: mtymes - find some better name: interrupted/died/terminated/aborted/timedOut
-    timedOut(true);
+    // so far this is the best name from these: interrupted/timedOut/killed/dead/died/terminated/aborted/timedOut
+    died(true);
 
     companion object {
         val NON_FINAL_STATUSES = TaskStatus.values().filter { !it.isFinalStatus }.toList()
@@ -71,8 +70,8 @@ enum class ExecutionStatus(
     cancelled(true),
     succeeded(true),
     failed(true),
-    // todo: mtymes - find some better name: interrupted/died/terminated/aborted/timedOut
-    timedOut(true);
+    // so far this is the best name from these: interrupted/timedOut/killed/dead/died/terminated/aborted/timedOut
+    died(true);
 
     companion object {
         val NON_FINAL_STATUSES = ExecutionStatus.values().filter { !it.isFinalStatus }.toList()
@@ -171,8 +170,8 @@ data class Execution(
         return executionDoc.getZonedDateTime(STATUS_UPDATED_AT)
     }
 
-    fun timesOutAfter(): ZonedDateTime {
-        return executionDoc.getZonedDateTime(TIMES_OUT_AFTER)
+    fun diesAfter(): ZonedDateTime {
+        return executionDoc.getZonedDateTime(KILLABLE_AFTER)
     }
 
     fun heartBeatAt(): ZonedDateTime? {

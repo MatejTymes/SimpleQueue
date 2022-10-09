@@ -28,7 +28,7 @@ enum class UpdateOutcome{
 }
 
 
-// todo: mtymes - add the ability for heart beat thread to interrupt the work thread (if for example the execution has been cancelled/timedOut)
+// todo: mtymes - add the ability for heart beat thread to interrupt the work thread (if for example the execution has been cancelled/has died)
 // todo: mtymes - implement other alternatives (shared threads or coroutines) and compare performance/stability
 interface SweatShop : AutoCloseable, Closeable {
 

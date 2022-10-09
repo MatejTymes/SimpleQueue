@@ -89,7 +89,7 @@ class UniversalScheduler(
         const val HEARTBEAT_AT = "heartBeatAt"
 
         // todo: mtymes - remove once execution moves into final state ?
-        const val TIMES_OUT_AFTER = "timesOutAfter"
+        const val KILLABLE_AFTER = "killableAfter"
 
         const val SUSPENDED_AT = "suspendedAt"
         const val UN_SUSPENDED_AT = "unSuspendedAt"
@@ -328,7 +328,7 @@ class UniversalScheduler(
         return updateLastExecution(
             coll = coll,
             executionId = executionId,
-            fromTaskStatus = TaskStatus.inProgress,
+            fromTaskStatus = TaskStatus.running,
             fromExecutionStatuses = listOf(ExecutionStatus.running),
             toTaskStatus = TaskStatus.succeeded,
             toExecutionStatus = ExecutionStatus.succeeded,
@@ -356,7 +356,7 @@ class UniversalScheduler(
         return updateLastExecution(
             coll = coll,
             executionId = executionId,
-            fromTaskStatus = TaskStatus.inProgress,
+            fromTaskStatus = TaskStatus.running,
             fromExecutionStatuses = listOf(ExecutionStatus.running),
             toTaskStatus = ToAvailabilityBasedTaskStatus(
                 statusIfAttemptsAvailable = TaskStatus.available,
@@ -399,7 +399,7 @@ class UniversalScheduler(
         return updateLastExecution(
             coll = coll,
             executionId = executionId,
-            fromTaskStatus = TaskStatus.inProgress,
+            fromTaskStatus = TaskStatus.running,
             fromExecutionStatuses = listOf(ExecutionStatus.running),
             toTaskStatus = ToSingleTaskStatus(TaskStatus.failed),
             toExecutionStatus = ExecutionStatus.failed,
@@ -476,7 +476,7 @@ class UniversalScheduler(
         return updateLastExecution(
             coll = coll,
             executionId = executionId,
-            fromTaskStatus = TaskStatus.inProgress,
+            fromTaskStatus = TaskStatus.running,
             fromExecutionStatuses = ExecutionStatus.NON_FINAL_STATUSES,
             toTaskStatus = TaskStatus.cancelled,
             toExecutionStatus = ExecutionStatus.cancelled,
@@ -602,7 +602,7 @@ class UniversalScheduler(
         return updateLastExecution(
             coll = coll,
             executionId = executionId,
-            fromTaskStatus = TaskStatus.inProgress,
+            fromTaskStatus = TaskStatus.running,
             fromExecutionStatuses = listOf(ExecutionStatus.running),
             toTaskStatus = TaskStatus.suspended,
             toExecutionStatus = ExecutionStatus.suspended,
@@ -627,22 +627,22 @@ class UniversalScheduler(
 
     // todo: mtymes - allow to make this code a bit more dynamic - so the client could evaluate for example data to update based on task/execution data
     // todo: mtymes - maybe add custom query criteria
-    fun markDeadExecutionsAsTimedOut(
+    fun markDeadExecutionsAsDied(
         coll: MongoCollection<Document>,
-        options: MarkDeadExecutionsAsTimedOutOptions,
+        options: MarkDeadExecutionsAsDiedOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): Int {
 
         val deadTasks: List<Document> = coll.find(
             doc(
-                STATUS to doc("\$in", listOf(TaskStatus.inProgress, TaskStatus.suspended)),
+                STATUS to doc("\$in", listOf(TaskStatus.running, TaskStatus.suspended)),
                 LAST_EXECUTION + "." + STATUS to doc("\$in", ExecutionStatus.NON_FINAL_STATUSES),
-                LAST_EXECUTION + "." + TIMES_OUT_AFTER to (doc("\$lt" to clock.now())),
+                LAST_EXECUTION + "." + KILLABLE_AFTER to (doc("\$lt" to clock.now())),
             )
         ).toList()
 
-        var countOfTimedOutExecutions = 0
+        var countOfDiedExecutions = 0
         for (deadTask: Document in deadTasks) {
             try {
                 val currentTaskStatus = TaskStatus.valueOf(deadTask.getString(STATUS))
@@ -652,9 +652,9 @@ class UniversalScheduler(
                 val executionAttemptsLeft = deadTask.getInteger(EXECUTION_ATTEMPTS_LEFT)
 
                 val toTaskStatus = if (currentTaskStatus == TaskStatus.suspended) {
-                    if (executionAttemptsLeft > 1) TaskStatus.available else TaskStatus.timedOut
+                    if (executionAttemptsLeft > 1) TaskStatus.available else TaskStatus.died
                 } else {
-                    if (executionAttemptsLeft > 0) TaskStatus.available else TaskStatus.timedOut
+                    if (executionAttemptsLeft > 0) TaskStatus.available else TaskStatus.died
                 }
 
                 val now = clock.now()
@@ -665,7 +665,7 @@ class UniversalScheduler(
                     fromTaskStatus = currentTaskStatus,
                     fromExecutionStatuses = ExecutionStatus.NON_FINAL_STATUSES,
                     toTaskStatus = toTaskStatus,
-                    toExecutionStatus = ExecutionStatus.timedOut,
+                    toExecutionStatus = ExecutionStatus.died,
                     now = now,
                     customTaskUpdates = docBuilder()
                         .putIf(options.retryDelay != null) {
@@ -686,7 +686,7 @@ class UniversalScheduler(
                     additionalExecutionData = additionalExecutionData
                 )
                 if (summary != null) {
-                    countOfTimedOutExecutions++
+                    countOfDiedExecutions++
                 }
             } catch (e: Exception) {
                 runAndIgnoreExceptions {
@@ -696,7 +696,7 @@ class UniversalScheduler(
             }
         }
 
-        return countOfTimedOutExecutions
+        return countOfDiedExecutions
     }
 
     fun registerHeartBeat(
@@ -711,7 +711,7 @@ class UniversalScheduler(
 
         val result = coll.updateOne(
             doc(
-                STATUS to TaskStatus.inProgress,
+                STATUS to TaskStatus.running,
                 LAST_EXECUTION + "." + EXECUTION_ID to executionId,
                 LAST_EXECUTION + "." + STATUS to ExecutionStatus.running
             ),
@@ -719,7 +719,7 @@ class UniversalScheduler(
                 "\$set" to docBuilder()
                     .putAll(
                         LAST_EXECUTION + "." + HEARTBEAT_AT to now,
-                        LAST_EXECUTION + "." + TIMES_OUT_AFTER to keepAliveUntil
+                        LAST_EXECUTION + "." + KILLABLE_AFTER to keepAliveUntil
                     )
                     .putAllIf(additionalTaskData.isDefined()) {
                         additionalTaskData!!.mapKeys { entry ->
@@ -915,7 +915,7 @@ class UniversalScheduler(
             doc(
                 "\$set" to docBuilder()
                     .putAll(
-                        STATUS to TaskStatus.inProgress,
+                        STATUS to TaskStatus.running,
                         STATUS_UPDATED_AT to now,
                         PREVIOUS_EXECUTIONS to doc(
                             "\$cond" to listOf(
@@ -937,7 +937,7 @@ class UniversalScheduler(
 //                            DATA to emptyDoc(),
                             STATUS to ExecutionStatus.running,
                             STATUS_UPDATED_AT to now,
-                            TIMES_OUT_AFTER to keepAliveUntil,
+                            KILLABLE_AFTER to keepAliveUntil,
                             UPDATED_AT to now,
                         ),
                         EXECUTION_ATTEMPTS_LEFT to doc("\$sum" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, -1)),
@@ -1003,14 +1003,14 @@ class UniversalScheduler(
             doc(
                 "\$set" to docBuilder()
                     .putAll(
-                        STATUS to TaskStatus.inProgress,
+                        STATUS to TaskStatus.running,
                         STATUS_UPDATED_AT to now,
 
                         LAST_EXECUTION + "." + STATUS to ExecutionStatus.running,
                         LAST_EXECUTION + "." + STATUS_UPDATED_AT to now,
                         LAST_EXECUTION + "." + UN_SUSPENDED_AT to now,
                         LAST_EXECUTION + "." + WORKER_ID to workerId,
-                        LAST_EXECUTION + "." + TIMES_OUT_AFTER to keepAliveUntil,
+                        LAST_EXECUTION + "." + KILLABLE_AFTER to keepAliveUntil,
                         LAST_EXECUTION + "." + UPDATED_AT to now,
 
                         UPDATED_AT to now

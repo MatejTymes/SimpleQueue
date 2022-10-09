@@ -35,7 +35,7 @@ data class SchedulerDefaults(
 
     val markAsSuspendedOptions: MarkAsSuspendedOptions? = null,
 
-    val markDeadExecutionsAsTimedOutOptions: MarkDeadExecutionsAsTimedOutOptions? = null,
+    val markDeadExecutionsAsDiedOptions: MarkDeadExecutionsAsDiedOptions? = null,
 
     val registerHeartBeatOptions: RegisterHeartBeatOptions? = null,
 
@@ -426,12 +426,12 @@ class GenericScheduler(
         )
     }
 
-    fun markDeadExecutionsAsTimedOut(
-        options: MarkDeadExecutionsAsTimedOutOptions,
+    fun markDeadExecutionsAsDied(
+        options: MarkDeadExecutionsAsDiedOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): Int {
-        return scheduler.markDeadExecutionsAsTimedOut(
+        return scheduler.markDeadExecutionsAsDied(
             coll = collection,
             options = options,
             additionalTaskData = additionalTaskData,
@@ -439,12 +439,12 @@ class GenericScheduler(
         )
     }
 
-    fun markDeadExecutionsAsTimedOut(
+    fun markDeadExecutionsAsDied(
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): Int {
-        return markDeadExecutionsAsTimedOut(
-            options = defaults.markDeadExecutionsAsTimedOutOptions ?: MarkDeadExecutionsAsTimedOutOptions.DEFAULT,
+        return markDeadExecutionsAsDied(
+            options = defaults.markDeadExecutionsAsDiedOptions ?: MarkDeadExecutionsAsDiedOptions.DEFAULT,
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
