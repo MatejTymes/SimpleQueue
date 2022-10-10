@@ -14,7 +14,8 @@ data class SubmitTaskOptions(
     val maxAttemptsCount: Int = 1,
     val ttl: Duration,
     val delayStartBy: Duration = ZERO_SECONDS,
-    val submitAsPaused: Boolean = false
+    val submitAsPaused: Boolean = false,
+    val retainOnlyLastExecution: Boolean = false
 
 ) {
     init {

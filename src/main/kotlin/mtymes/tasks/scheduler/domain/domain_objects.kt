@@ -20,6 +20,7 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.KILLABLE_AFTER
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTIONS_COUNT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.RETAIN_ONLY_LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STARTED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS_UPDATED_AT
@@ -84,7 +85,8 @@ data class Task(
 ) {
     val taskId: TaskId = TaskId(taskDocument.getString(UniversalScheduler.TASK_ID))
     val status: TaskStatus = TaskStatus.valueOf(taskDocument.getString(STATUS))
-    val previousExecutions: List<Execution> = taskDocument
+    val retainOnlyLastExecution: Boolean = taskDocument.getBoolean(RETAIN_ONLY_LAST_EXECUTION, false)
+    val previousExecutions: List<Execution> = if (retainOnlyLastExecution) emptyList() else taskDocument
         .getNullableListOfDocuments(PREVIOUS_EXECUTIONS)
         ?.map { executionDoc -> Execution(executionDoc, false) }
         ?: emptyList()

@@ -29,7 +29,6 @@ import java.util.*
 // todo: mtymes - distinguish between runStatus and dependenciesStatus
 // todo: mtymes - add task with unlimited retry count that is recording only last execution
 // todo: mtymes - return current execution status if it fails to registerHeartBeat so we could interrupt the worker if it is cancelled
-// todo: mtymes - add flag - retainOnlyLastExecution
 // todo: mtymes - provide proper throws annotations
 // todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension
 // todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
@@ -74,9 +73,10 @@ class UniversalScheduler(
         // todo: mtymes - add task.unPausedAt
         // todo: mtymes - add task.finishedAt
 
-        // todo: mtymes - add this field for retainOnlyLastExecution
         const val PREVIOUS_EXECUTIONS = "prevExecutions"
         const val LAST_EXECUTION = "lastExecution"
+        const val RETAIN_ONLY_LAST_EXECUTION = "retainOnlyLastExecution"
+        const val PREVIOUS_EXECUTIONS_NOT_RETAINED = "NOT RETAINED"
 
         // EXECUTION FIELDS
 
@@ -182,7 +182,7 @@ class UniversalScheduler(
         return coll
             .find(customConstraints ?: emptyDoc())
             .sort(sortOrder)
-            .map { it.toTask()}
+            .map { it.toTask() }
     }
 
 
@@ -209,6 +209,7 @@ class UniversalScheduler(
                 MAX_EXECUTIONS_COUNT to options.maxAttemptsCount,
                 EXECUTION_ATTEMPTS_LEFT to options.maxAttemptsCount,
                 EXECUTIONS_COUNT to 0,
+                RETAIN_ONLY_LAST_EXECUTION to if (options.retainOnlyLastExecution) true else Optional.empty<Boolean>(),
 
                 CAN_BE_EXECUTED_AS_OF to now.plus(options.delayStartBy),
 
@@ -919,14 +920,20 @@ class UniversalScheduler(
                         STATUS_UPDATED_AT to now,
                         PREVIOUS_EXECUTIONS to doc(
                             "\$cond" to listOf(
-                                doc("\$eq" to listOf(doc("\$type" to "\$" + LAST_EXECUTION), "object")),
+                                doc("\$eq" to listOf("\$" + RETAIN_ONLY_LAST_EXECUTION, true)),
+                                PREVIOUS_EXECUTIONS_NOT_RETAINED,
                                 doc(
-                                    "\$concatArrays" to listOf(
-                                        "\$" + PREVIOUS_EXECUTIONS,
-                                        listOf("\$" + LAST_EXECUTION)
+                                    "\$cond" to listOf(
+                                        doc("\$eq" to listOf(doc("\$type" to "\$" + LAST_EXECUTION), "object")),
+                                        doc(
+                                            "\$concatArrays" to listOf(
+                                                "\$" + PREVIOUS_EXECUTIONS,
+                                                listOf("\$" + LAST_EXECUTION)
+                                            )
+                                        ),
+                                        listOf<Document>()
                                     )
-                                ),
-                                listOf<Document>()
+                                )
                             ),
                         ),
                         LAST_EXECUTION to doc(

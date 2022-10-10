@@ -14,10 +14,7 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTIONS_COUNT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STARTED_AT
-import mtymes.tasks.scheduler.domain.ExecutionId
-import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
-import mtymes.tasks.scheduler.domain.MarkAsFailedButCanRetryOptions
-import mtymes.tasks.scheduler.domain.SubmitTaskOptions
+import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
 import mtymes.tasks.worker.Worker
@@ -56,12 +53,23 @@ class FailureSupportingTaskDao(
     )
 
     fun submitTask(
-        request: String
-    ) {
-        scheduler.submitTask(
-            doc("request" to request)
+        request: String,
+        retainOnlyLastExecution: Boolean = false
+    ): TaskId {
+        val taskId = scheduler.submitTask(
+            customData = doc("request" to request),
+            options = scheduler.defaults.submitTaskOptions!!.copy(
+                retainOnlyLastExecution = retainOnlyLastExecution
+            )
         )
         printTimedString("submitted Task '${request}'")
+        return taskId
+    }
+
+    fun findTask(
+        taskId: TaskId
+    ): Task? {
+        return scheduler.findTask(taskId)
     }
 
     fun fetchNextTaskExecution(
@@ -213,6 +221,46 @@ object WorkerFailing {
             LAST_EXECUTION + "." + STARTED_AT,
             LAST_EXECUTION + "." + FINISHED_AT,
         ))
+    }
+}
+
+object WorkerFailingButRetainingOnlyLastExecution {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val coll = emptyLocalCollection("sample03tasks")
+        val dao = FailureSupportingTaskDao(coll)
+
+        val taskId = dao.submitTask(
+            request = "A",
+            retainOnlyLastExecution = true
+        )
+
+        HumbleSweatShop().use { sweatShop ->
+
+            val worker = BrokenWorker(dao)
+
+            sweatShop.addAndStartWorker(worker)
+
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = true
+            )
+        }
+
+        displayTinyTasksSummary(coll, setOf(
+            MAX_EXECUTIONS_COUNT,
+            EXECUTION_ATTEMPTS_LEFT,
+            EXECUTIONS_COUNT,
+            PREVIOUS_EXECUTIONS + "." + STARTED_AT,
+            PREVIOUS_EXECUTIONS + "." + FINISHED_AT,
+            LAST_EXECUTION + "." + STARTED_AT,
+            LAST_EXECUTION + "." + FINISHED_AT,
+        ))
+
+        dao.findTask(taskId)?.let {
+            println("allExecutions = " + it.allExecutions)
+        }
     }
 }
 
