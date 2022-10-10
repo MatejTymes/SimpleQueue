@@ -29,7 +29,7 @@ data class TaskToProcess(
 )
 
 
-class TimeOutingTasksDao(
+class KillingTasksDao(
     tasksCollection: MongoCollection<Document>
 ) {
     val scheduler = GenericScheduler(
@@ -99,12 +99,12 @@ class TimeOutingTasksDao(
         }
     }
 
-    fun findAndMarkTimedOutTasks(
+    fun findAndMarkKillableExecutions(
         retryDelay: Duration = Duration.ofSeconds(0)
     ) {
-        printTimedString("searching and Marking TIMED OUT Executions")
+        printTimedString("searching and Marking DEAD Executions")
 
-        val timedOutCount = scheduler.markKillableExecutionsAsDead(
+        val killedCount = scheduler.markKillableExecutionsAsDead(
             options = MarkKillableExecutionsAsDeadOptions(
                 retryDelay = retryDelay
             ),
@@ -113,7 +113,7 @@ class TimeOutingTasksDao(
             )
         )
 
-        printTimedString("Timed out ${ timedOutCount } Execution/s")
+        printTimedString("Killed ${ killedCount } Execution/s")
     }
 
     fun registerHeartBeat(
@@ -135,13 +135,13 @@ class TimeOutingTasksDao(
 }
 
 
-object TaskDoesNOTTimeOutAutomatically {
+object TaskDoesNOTDieAutomatically {
 
     @JvmStatic
     fun main(args: Array<String>) {
         val workerId = WorkerId("UnluckyInternDoingManualWork")
         val coll = emptyLocalCollection("sample06tasks")
-        val dao = TimeOutingTasksDao(coll)
+        val dao = KillingTasksDao(coll)
 
         dao.submitTask("A")
 
@@ -175,13 +175,13 @@ object TaskDoesNOTTimeOutAutomatically {
 }
 
 
-object CallingTaskToMarkExecutionAsTimedOut {
+object CallingTaskToMarkExecutionAsDead {
 
     @JvmStatic
     fun main(args: Array<String>) {
         val workerId = WorkerId("UnluckyInternDoingManualWork")
         val coll = emptyLocalCollection("sample06tasks")
-        val dao = TimeOutingTasksDao(coll)
+        val dao = KillingTasksDao(coll)
 
         dao.submitTask("A")
 
@@ -193,7 +193,7 @@ object CallingTaskToMarkExecutionAsTimedOut {
         Thread.sleep(2_000)
 
 
-        dao.findAndMarkTimedOutTasks(Duration.ofSeconds(0))
+        dao.findAndMarkKillableExecutions(Duration.ofSeconds(0))
 
 
         displayTinyTasksSummary(coll, setOf(
@@ -227,7 +227,7 @@ object HeartBeatExtendsKeepAlivePeriod {
     fun main(args: Array<String>) {
         val workerId = WorkerId("UnluckyInternDoingManualWork")
         val coll = emptyLocalCollection("sample06tasks")
-        val dao = TimeOutingTasksDao(coll)
+        val dao = KillingTasksDao(coll)
 
         dao.submitTask("A")
 
@@ -245,7 +245,7 @@ object HeartBeatExtendsKeepAlivePeriod {
 
         Thread.sleep(3_000)
 
-        dao.findAndMarkTimedOutTasks(Duration.ofSeconds(0))
+        dao.findAndMarkKillableExecutions(Duration.ofSeconds(0))
 
         displayTinyTasksSummary(coll, setOf(
             PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
@@ -258,7 +258,7 @@ object HeartBeatExtendsKeepAlivePeriod {
 
 
 class LazyHeartBeatingWorker(
-    val dao: TimeOutingTasksDao,
+    val dao: KillingTasksDao,
     val coll: MongoCollection<Document>
 ) : HeartBeatingWorker<TaskToProcess> {
 
@@ -305,13 +305,13 @@ object WorkerWithHeartBeatShowcase {
     @JvmStatic
     fun main(args: Array<String>) {
         val coll = emptyLocalCollection("sample06tasks")
-        val dao = TimeOutingTasksDao(coll)
+        val dao = KillingTasksDao(coll)
 
         dao.submitTask("A")
 
         val executor = Executors.newScheduledThreadPool(1)
 
-        executor.scheduleAtFixedRate({ dao.findAndMarkTimedOutTasks() }, 0, 1, TimeUnit.SECONDS)
+        executor.scheduleAtFixedRate({ dao.findAndMarkKillableExecutions() }, 0, 1, TimeUnit.SECONDS)
 
         try {
             HumbleSweatShop().use { sweatShop ->
