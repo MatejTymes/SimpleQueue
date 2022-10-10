@@ -35,7 +35,7 @@ object ComplexUpdate01 {
                 "executions" to listOf(
                     doc(
                         "id" to eId1,
-                        "status" to "died"
+                        "status" to "dead"
                     ),
                     doc(
                         "id" to eId2,

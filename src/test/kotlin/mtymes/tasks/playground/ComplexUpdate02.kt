@@ -33,7 +33,7 @@ object ComplexUpdate02 {
                 "prevExecutions" to listOf(
                     doc(
                         "id" to eId1,
-                        "status" to "died"
+                        "status" to "dead"
                     )
                 ),
                 "lastExecution" to doc(

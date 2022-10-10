@@ -55,7 +55,7 @@ enum class TaskStatus(
     succeeded(true),
     failed(true),
     // so far this is the best name from these: interrupted/timedOut/killed/dead/died/terminated/aborted/timedOut
-    died(true);
+    dead(true);
 
     companion object {
         val NON_FINAL_STATUSES = TaskStatus.values().filter { !it.isFinalStatus }.toList()
@@ -72,7 +72,7 @@ enum class ExecutionStatus(
     succeeded(true),
     failed(true),
     // so far this is the best name from these: interrupted/timedOut/killed/dead/died/terminated/aborted/timedOut
-    died(true);
+    dead(true);
 
     companion object {
         val NON_FINAL_STATUSES = ExecutionStatus.values().filter { !it.isFinalStatus }.toList()

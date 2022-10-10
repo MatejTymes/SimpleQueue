@@ -27,7 +27,6 @@ import java.time.ZonedDateTime
 import java.util.*
 
 // todo: mtymes - distinguish between runStatus and dependenciesStatus
-// todo: mtymes - add task with unlimited retry count that is recording only last execution
 // todo: mtymes - return current execution status if it fails to registerHeartBeat so we could interrupt the worker if it is cancelled
 // todo: mtymes - provide proper throws annotations
 // todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension
@@ -628,9 +627,9 @@ class UniversalScheduler(
 
     // todo: mtymes - allow to make this code a bit more dynamic - so the client could evaluate for example data to update based on task/execution data
     // todo: mtymes - maybe add custom query criteria
-    fun markDeadExecutionsAsDied(
+    fun markKillableExecutionsAsDead(
         coll: MongoCollection<Document>,
-        options: MarkDeadExecutionsAsDiedOptions,
+        options: MarkKillableExecutionsAsDeadOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): Int {
@@ -643,7 +642,7 @@ class UniversalScheduler(
             )
         ).toList()
 
-        var countOfDiedExecutions = 0
+        var countOfKilledExecutions = 0
         for (deadTask: Document in deadTasks) {
             try {
                 val currentTaskStatus = TaskStatus.valueOf(deadTask.getString(STATUS))
@@ -653,9 +652,9 @@ class UniversalScheduler(
                 val executionAttemptsLeft = deadTask.getInteger(EXECUTION_ATTEMPTS_LEFT)
 
                 val toTaskStatus = if (currentTaskStatus == TaskStatus.suspended) {
-                    if (executionAttemptsLeft > 1) TaskStatus.available else TaskStatus.died
+                    if (executionAttemptsLeft > 1) TaskStatus.available else TaskStatus.dead
                 } else {
-                    if (executionAttemptsLeft > 0) TaskStatus.available else TaskStatus.died
+                    if (executionAttemptsLeft > 0) TaskStatus.available else TaskStatus.dead
                 }
 
                 val now = clock.now()
@@ -666,7 +665,7 @@ class UniversalScheduler(
                     fromTaskStatus = currentTaskStatus,
                     fromExecutionStatuses = ExecutionStatus.NON_FINAL_STATUSES,
                     toTaskStatus = toTaskStatus,
-                    toExecutionStatus = ExecutionStatus.died,
+                    toExecutionStatus = ExecutionStatus.dead,
                     now = now,
                     customTaskUpdates = docBuilder()
                         .putIf(options.retryDelay != null) {
@@ -687,7 +686,7 @@ class UniversalScheduler(
                     additionalExecutionData = additionalExecutionData
                 )
                 if (summary != null) {
-                    countOfDiedExecutions++
+                    countOfKilledExecutions++
                 }
             } catch (e: Exception) {
                 runAndIgnoreExceptions {
@@ -697,7 +696,7 @@ class UniversalScheduler(
             }
         }
 
-        return countOfDiedExecutions
+        return countOfKilledExecutions
     }
 
     fun registerHeartBeat(

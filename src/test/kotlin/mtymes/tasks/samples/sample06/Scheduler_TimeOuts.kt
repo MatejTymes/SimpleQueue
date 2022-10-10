@@ -104,8 +104,8 @@ class TimeOutingTasksDao(
     ) {
         printTimedString("searching and Marking TIMED OUT Executions")
 
-        val timedOutCount = scheduler.markDeadExecutionsAsDied(
-            options = MarkDeadExecutionsAsDiedOptions(
+        val timedOutCount = scheduler.markKillableExecutionsAsDead(
+            options = MarkKillableExecutionsAsDeadOptions(
                 retryDelay = retryDelay
             ),
             additionalExecutionData = doc(
