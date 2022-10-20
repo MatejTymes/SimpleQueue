@@ -9,6 +9,7 @@ data class WorkerSummary(
     val workerId: WorkerId,
     val worker: Worker<out Any?>,
     val isWorking: Boolean,
+    val hasNeverEndingStreamOfWork: Boolean,
     val whenShouldStop: ShutDownMode?
 )
 
@@ -18,7 +19,19 @@ enum class ShutDownMode(
 ) {
     Immediately(3, false),
     OnceCurrentTaskIsFinished(2, true),
-    OnceNoMoreWork(1, true)
+    OnceNoMoreWork(1, true) {
+        override fun modeToUseIf(hasNeverEndingStreamOfWork: Boolean): ShutDownMode {
+            return if (hasNeverEndingStreamOfWork) {
+                OnceCurrentTaskIsFinished
+            } else {
+                this
+            }
+        }
+    };
+
+    open fun modeToUseIf(hasNeverEndingStreamOfWork: Boolean): ShutDownMode {
+        return this
+    }
 }
 
 enum class UpdateOutcome{

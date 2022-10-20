@@ -61,6 +61,8 @@ interface Worker<Task> : Closeable {
         return ONE_MILLISECOND
     }
 
+    fun hasNeverEndingStreamOfWork(): Boolean = false
+
     @Throws(IOException::class)
     override fun close() {
         // do nothing

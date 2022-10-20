@@ -41,23 +41,26 @@ class HumbleSweatShop : SweatShop {
         val lastHeartBeater: AtomicReference<Future<*>> = AtomicReference(null)
     ) {
         val logId: String = worker.workerLogId(workerId)
+        val hasNeverEndingStreamOfWork = worker.hasNeverEndingStreamOfWork()
 
 
-        fun applyShutDownMode(newMode: ShutDownMode): UpdateOutcome {
+        fun applyShutDownMode(suggestedMode: ShutDownMode): UpdateOutcome {
             val outcome: UpdateOutcome
+
+            val modeToApply = suggestedMode.modeToUseIf(hasNeverEndingStreamOfWork)
 
             synchronized(shutDownMode) {
                 val currentMode = shutDownMode.get()
-                if (currentMode == null || currentMode.priority < newMode.priority) {
-                    shutDownMode.set(newMode)
-                    if (newMode.priority >= ShutDownMode.OnceCurrentTaskIsFinished.priority) {
+                if (currentMode == null || currentMode.priority < modeToApply.priority) {
+                    shutDownMode.set(modeToApply)
+                    if (modeToApply.priority >= ShutDownMode.OnceCurrentTaskIsFinished.priority) {
                         waitForNextTaskCountDownLatch.countDown()
                     }
                     runAndIgnoreExceptions {
-                        logger.info("[${logId}]: Applied ShutDownMode '${newMode}'")
+                        logger.info("[${logId}]: Applied ShutDownMode '${modeToApply}'")
                     }
                     outcome = WasApplied
-                } else if (currentMode.priority == newMode.priority) {
+                } else if (currentMode.priority == modeToApply.priority) {
                     outcome = WasAlreadyInWantedState
                 } else {
                     outcome = WasNotApplied
@@ -69,11 +72,7 @@ class HumbleSweatShop : SweatShop {
 
         fun canWorkOnNextTask(): Boolean {
             val currentShutDownMode = shutDownMode.get()
-            if (currentShutDownMode == null || currentShutDownMode.priority < ShutDownMode.OnceCurrentTaskIsFinished.priority) {
-                return true
-            } else {
-                return false
-            }
+            return currentShutDownMode == null || currentShutDownMode.priority < ShutDownMode.OnceCurrentTaskIsFinished.priority
         }
 
         fun endIfNoWorkFound(): Boolean {
@@ -167,6 +166,7 @@ class HumbleSweatShop : SweatShop {
                     workerId = context.workerId,
                     worker = context.worker,
                     isWorking = context.taskInProgress.get() != null,
+                    hasNeverEndingStreamOfWork = context.hasNeverEndingStreamOfWork,
                     whenShouldStop = context.shutDownMode.get()
                 )
             }
