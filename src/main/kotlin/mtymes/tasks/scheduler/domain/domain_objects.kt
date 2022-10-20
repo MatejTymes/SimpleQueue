@@ -1,6 +1,7 @@
 package mtymes.tasks.scheduler.domain
 
 import javafixes.`object`.Microtype
+import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
 import mtymes.tasks.common.mongo.DocumentExt.getDocument
 import mtymes.tasks.common.mongo.DocumentExt.getNullableDocument
@@ -29,6 +30,7 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.SUSPENSION_COUNT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.UN_SUSPENDED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.UPDATED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.WAS_RETRYABLE_FAIL
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.WORKER_ID
 import org.bson.Document
 import java.time.ZonedDateTime
 import java.util.*
@@ -158,6 +160,10 @@ data class Execution(
 
     fun data(): Document {
         return executionDoc.getNullableDocument(DATA) ?: emptyDoc()
+    }
+
+    fun workerId(): WorkerId {
+        return WorkerId(executionDoc.getString(WORKER_ID))
     }
 
     fun startedAt(): ZonedDateTime {
