@@ -428,23 +428,27 @@ class GenericScheduler(
 
     fun markKillableExecutionsAsDead(
         options: MarkKillableExecutionsAsDeadOptions,
+        customConstraints: Document? = null,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): Int {
         return scheduler.markKillableExecutionsAsDead(
             coll = collection,
             options = options,
+            customConstraints = customConstraints,
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
     }
 
     fun markKillableExecutionsAsDead(
+        customConstraints: Document? = null,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): Int {
         return markKillableExecutionsAsDead(
             options = defaults.markKillableExecutionsAsDeadOptions ?: MarkKillableExecutionsAsDeadOptions.DEFAULT,
+            customConstraints = customConstraints,
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )

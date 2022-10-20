@@ -626,20 +626,29 @@ class UniversalScheduler(
     }
 
     // todo: mtymes - allow to make this code a bit more dynamic - so the client could evaluate for example data to update based on task/execution data
-    // todo: mtymes - maybe add custom query criteria
     fun markKillableExecutionsAsDead(
         coll: MongoCollection<Document>,
         options: MarkKillableExecutionsAsDeadOptions,
+        customConstraints: Document? = null,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): Int {
 
         val deadTasks: List<Document> = coll.find(
-            doc(
-                STATUS to doc("\$in", listOf(TaskStatus.running, TaskStatus.suspended)),
-                LAST_EXECUTION + "." + STATUS to doc("\$in", ExecutionStatus.NON_FINAL_STATUSES),
-                LAST_EXECUTION + "." + KILLABLE_AFTER to (doc("\$lt" to clock.now())),
-            )
+            docBuilder()
+                .let {
+                    if (customConstraints != null) {
+                        it.putAll(customConstraints)
+                    } else {
+                        it
+                    }
+                }
+                .putAll(
+                    STATUS to doc("\$in", listOf(TaskStatus.running, TaskStatus.suspended)),
+                    LAST_EXECUTION + "." + STATUS to doc("\$in", ExecutionStatus.NON_FINAL_STATUSES),
+                    LAST_EXECUTION + "." + KILLABLE_AFTER to (doc("\$lt" to clock.now())),
+                )
+                .build()
         ).toList()
 
         var countOfKilledExecutions = 0
