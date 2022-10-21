@@ -573,6 +573,6 @@ class GenericScheduler(
     }
 
     private fun <T> defaultOptions(fieldPath: String, value: T?): T {
-        return (value ?: throw IllegalStateException("'${fieldPath}' is NOT DEFINED"))
+        return (value ?: throw IllegalStateException("NEITHER '${fieldPath}' value NOR 'options' parameter is DEFINED"))
     }
 }
