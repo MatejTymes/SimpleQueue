@@ -149,6 +149,11 @@ data class Task(
     fun executionsCount(): Int {
         return taskDocument.getInteger(UniversalScheduler.EXECUTIONS_COUNT)
     }
+
+    // todo: mtymes - think of some better way how to do it (so it could be used for different DB types in the future)
+    fun rawDBTask(): Document {
+        return taskDocument
+    }
 }
 
 data class Execution(

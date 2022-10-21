@@ -27,7 +27,6 @@ import java.time.ZonedDateTime
 import java.util.*
 
 // todo: mtymes - distinguish between runStatus and dependenciesStatus
-// todo: mtymes - return current execution status if it fails to registerHeartBeat so we could interrupt the worker if it is cancelled
 // todo: mtymes - provide proper throws annotations
 // todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension
 // todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
@@ -791,11 +790,11 @@ class UniversalScheduler(
         )
     }
 
-    // todo: mtymes - maybe add custom query criteria
     fun updateTaskData(
         coll: MongoCollection<Document>,
         taskId: TaskId,
         options: UpdateTaskDataOptions,
+        customConstraints: Document? = null,
         additionalTaskData: Document
     ): Task? {
         expectNonEmptyDocument("additionalTaskData", additionalTaskData)
@@ -803,9 +802,16 @@ class UniversalScheduler(
         val now = clock.now()
 
         val result = coll.findOneAndUpdate(
-            doc(
-                TASK_ID to taskId
-            ),
+            docBuilder()
+                .let {
+                    if (customConstraints != null) {
+                        it.putAll(customConstraints)
+                    } else {
+                        it
+                    }
+                }
+                .put(TASK_ID to taskId)
+                .build(),
             doc(
                 "\$set" to docBuilder()
                     .putAll(

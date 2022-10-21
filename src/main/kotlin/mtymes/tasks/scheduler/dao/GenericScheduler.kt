@@ -519,23 +519,27 @@ class GenericScheduler(
     fun updateTaskData(
         taskId: TaskId,
         options: UpdateTaskDataOptions,
+        customConstraints: Document? = null,
         additionalTaskData: Document
     ): Task? {
         return scheduler.updateTaskData(
             coll = collection,
             taskId = taskId,
             options = options,
+            customConstraints = customConstraints,
             additionalTaskData = additionalTaskData
         )
     }
 
     fun updateTaskData(
         taskId: TaskId,
+        customConstraints: Document? = null,
         additionalTaskData: Document
     ): Task? {
         return updateTaskData(
             taskId = taskId,
             options = defaults.updateTaskDataOptions ?: UpdateTaskDataOptions.DEFAULT,
+            customConstraints = customConstraints,
             additionalTaskData = additionalTaskData
         )
     }
