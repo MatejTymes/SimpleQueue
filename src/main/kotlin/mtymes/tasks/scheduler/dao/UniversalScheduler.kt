@@ -950,17 +950,6 @@ class UniversalScheduler(
                                 )
                             ),
                         ),
-                        LAST_EXECUTION to doc(
-                            EXECUTION_ID to executionId,
-                            STARTED_AT to now,
-                            WORKER_ID to workerId,
-                            // todo: mtymes - WTF is this not allowed in the aggregation mode ???
-//                            DATA to emptyDoc(),
-                            STATUS to ExecutionStatus.running,
-                            STATUS_UPDATED_AT to now,
-                            KILLABLE_AFTER to keepAliveUntil,
-                            UPDATED_AT to now,
-                        ),
                         EXECUTION_ATTEMPTS_LEFT to doc("\$sum" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, -1)),
                         EXECUTIONS_COUNT to doc("\$sum" to listOf("\$" + EXECUTIONS_COUNT, 1)),
                         UPDATED_AT to now,
@@ -969,7 +958,21 @@ class UniversalScheduler(
                         DELETABLE_AFTER to now.plus(newTTL!!)
                     }
                     .build(),
-            )
+            ),
+            doc("\$unset" to LAST_EXECUTION),
+            doc("\$set" to doc(
+                LAST_EXECUTION to doc(
+                    EXECUTION_ID to executionId,
+                    STARTED_AT to now,
+                    WORKER_ID to workerId,
+                    // todo: mtymes - WTF is this not allowed in the aggregation mode ???
+//                            DATA to emptyDoc(),
+                    STATUS to ExecutionStatus.running,
+                    STATUS_UPDATED_AT to now,
+                    KILLABLE_AFTER to keepAliveUntil,
+                    UPDATED_AT to now,
+                )
+            ))
         )
         val modifiedTask = coll.findOneAndUpdate(
             docBuilder()
