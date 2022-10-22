@@ -834,11 +834,11 @@ class UniversalScheduler(
         return result?.toTask()
     }
 
-    // todo: mtymes - maybe add custom query criteria
     fun updateExecutionData(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         options: UpdateExecutionDataOptions,
+        customConstraints: Document? = null,
         additionalExecutionData: Document,
         additionalTaskData: Document? = null
     ): ExecutionSummary? {
@@ -847,9 +847,16 @@ class UniversalScheduler(
         val now = clock.now()
 
         var result = coll.findOneAndUpdate(
-            doc(
-                LAST_EXECUTION + "." + EXECUTION_ID to executionId
-            ),
+            docBuilder()
+                .let {
+                    if (customConstraints != null) {
+                        it.putAll(customConstraints)
+                    } else {
+                        it
+                    }
+                }
+                .put(LAST_EXECUTION + "." + EXECUTION_ID to executionId)
+                .build(),
             doc(
                 "\$set" to docBuilder()
                     .putAllIf(additionalTaskData.isDefined()) {
@@ -957,7 +964,7 @@ class UniversalScheduler(
                     .putIf(newTTL != null) {
                         DELETABLE_AFTER to now.plus(newTTL!!)
                     }
-                    .build(),
+                    .build()
             ),
             doc("\$unset" to LAST_EXECUTION),
             doc("\$set" to doc(

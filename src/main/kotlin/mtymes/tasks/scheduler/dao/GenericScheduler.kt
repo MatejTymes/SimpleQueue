@@ -547,6 +547,7 @@ class GenericScheduler(
     fun updateExecutionData(
         executionId: ExecutionId,
         options: UpdateExecutionDataOptions,
+        customConstraints: Document? = null,
         additionalExecutionData: Document,
         additionalTaskData: Document? = null
     ): ExecutionSummary? {
@@ -554,6 +555,7 @@ class GenericScheduler(
             coll = collection,
             executionId = executionId,
             options = options,
+            customConstraints = customConstraints,
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
@@ -561,12 +563,14 @@ class GenericScheduler(
 
     fun updateExecutionData(
         executionId: ExecutionId,
+        customConstraints: Document? = null,
         additionalExecutionData: Document,
         additionalTaskData: Document? = null
     ): ExecutionSummary? {
         return updateExecutionData(
             executionId = executionId,
             options = defaults.updateExecutionDataOptions ?: UpdateExecutionDataOptions.DEFAULT,
+            customConstraints = customConstraints,
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
