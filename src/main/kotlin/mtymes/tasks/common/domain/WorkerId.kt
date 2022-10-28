@@ -10,6 +10,7 @@ class WorkerId(value: String) : Microtype<String>(value) {
 
     companion object {
         private val counter = AtomicLong(0L)
+        private val uniqueAppPrefix = lazy { RandomStringUtils.randomAlphanumeric(3) }
 
         fun uniqueWorkerId(): WorkerId {
             return WorkerId("${HostUtil.shortLocalHostName()}-${uniqueSuffix()}")
@@ -20,7 +21,7 @@ class WorkerId(value: String) : Microtype<String>(value) {
         }
 
         private fun uniqueSuffix(): String {
-            return "${RandomStringUtils.randomAlphanumeric(3)}${counter.incrementAndGet()}"
+            return "${uniqueAppPrefix.value}-${RandomStringUtils.randomAlphanumeric(3)}-${counter.incrementAndGet()}"
 //            return counter.incrementAndGet().toString()
 //            return UUID.randomUUID().toString()
 //            return RandomStringUtils.randomAlphanumeric(8)
