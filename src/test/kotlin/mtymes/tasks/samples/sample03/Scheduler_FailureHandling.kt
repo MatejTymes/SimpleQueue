@@ -212,15 +212,17 @@ object WorkerFailing {
             )
         }
 
-        displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTIONS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT,
-            EXECUTIONS_COUNT,
-            PREVIOUS_EXECUTIONS + "." + STARTED_AT,
-            PREVIOUS_EXECUTIONS + "." + FINISHED_AT,
-            LAST_EXECUTION + "." + STARTED_AT,
-            LAST_EXECUTION + "." + FINISHED_AT,
-        ))
+        displayTinyTasksSummary(
+            coll, setOf(
+                MAX_EXECUTIONS_COUNT,
+                EXECUTION_ATTEMPTS_LEFT,
+                EXECUTIONS_COUNT,
+                PREVIOUS_EXECUTIONS + "." + STARTED_AT,
+                PREVIOUS_EXECUTIONS + "." + FINISHED_AT,
+                LAST_EXECUTION + "." + STARTED_AT,
+                LAST_EXECUTION + "." + FINISHED_AT,
+            )
+        )
     }
 }
 
@@ -248,15 +250,17 @@ object WorkerFailingButRetainingOnlyLastExecution {
             )
         }
 
-        displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTIONS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT,
-            EXECUTIONS_COUNT,
-            PREVIOUS_EXECUTIONS + "." + STARTED_AT,
-            PREVIOUS_EXECUTIONS + "." + FINISHED_AT,
-            LAST_EXECUTION + "." + STARTED_AT,
-            LAST_EXECUTION + "." + FINISHED_AT,
-        ))
+        displayTinyTasksSummary(
+            coll, setOf(
+                MAX_EXECUTIONS_COUNT,
+                EXECUTION_ATTEMPTS_LEFT,
+                EXECUTIONS_COUNT,
+                PREVIOUS_EXECUTIONS + "." + STARTED_AT,
+                PREVIOUS_EXECUTIONS + "." + FINISHED_AT,
+                LAST_EXECUTION + "." + STARTED_AT,
+                LAST_EXECUTION + "." + FINISHED_AT,
+            )
+        )
 
         dao.findTask(taskId)?.let {
             println("allExecutions = " + it.allExecutions)
@@ -280,22 +284,26 @@ object FailThenSucceed {
         dao.markAsFailed(executionId1, IllegalStateException("It should have worked"))
 
 
-        displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTIONS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT,
-            EXECUTIONS_COUNT
-        ))
+        displayTinyTasksSummary(
+            coll, setOf(
+                MAX_EXECUTIONS_COUNT,
+                EXECUTION_ATTEMPTS_LEFT,
+                EXECUTIONS_COUNT
+            )
+        )
 
 
         val executionId2 = dao.fetchNextTaskExecution(workerId)!!.executionId
         dao.markAsSucceeded(executionId2, "So glad it's over. I'm not doing this again")
 
 
-        displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTIONS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT,
-            EXECUTIONS_COUNT
-        ))
+        displayTinyTasksSummary(
+            coll, setOf(
+                MAX_EXECUTIONS_COUNT,
+                EXECUTION_ATTEMPTS_LEFT,
+                EXECUTIONS_COUNT
+            )
+        )
 
 
         dao.fetchNextTaskExecution(workerId)
@@ -321,11 +329,13 @@ object UnrecoverableFailure {
         )
 
 
-        displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTIONS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT,
-            EXECUTIONS_COUNT
-        ))
+        displayTinyTasksSummary(
+            coll, setOf(
+                MAX_EXECUTIONS_COUNT,
+                EXECUTION_ATTEMPTS_LEFT,
+                EXECUTIONS_COUNT
+            )
+        )
 
 
         dao.fetchNextTaskExecution(workerId)
@@ -354,12 +364,17 @@ object DelayedRetryAfterFailure {
 
         dao.fetchNextTaskExecution(workerId)
 
-        displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTIONS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT,
-            EXECUTIONS_COUNT,
-            CAN_BE_EXECUTED_AS_OF
-        ))
+        displayTinyTasksSummary(
+            coll, setOf(
+                MAX_EXECUTIONS_COUNT,
+                EXECUTION_ATTEMPTS_LEFT,
+                EXECUTIONS_COUNT,
+                CAN_BE_EXECUTED_AS_OF,
+                STARTED_AT,
+                PREVIOUS_EXECUTIONS + "." + STARTED_AT,
+                LAST_EXECUTION + "." + STARTED_AT,
+            )
+        )
 
 
         Thread.sleep(2_500)
@@ -367,11 +382,16 @@ object DelayedRetryAfterFailure {
 
         dao.fetchNextTaskExecution(workerId)
 
-        displayTinyTasksSummary(coll, setOf(
-            MAX_EXECUTIONS_COUNT,
-            EXECUTION_ATTEMPTS_LEFT,
-            EXECUTIONS_COUNT,
-            CAN_BE_EXECUTED_AS_OF
-        ))
+        displayTinyTasksSummary(
+            coll, setOf(
+                MAX_EXECUTIONS_COUNT,
+                EXECUTION_ATTEMPTS_LEFT,
+                EXECUTIONS_COUNT,
+                CAN_BE_EXECUTED_AS_OF,
+                STARTED_AT,
+                PREVIOUS_EXECUTIONS + "." + STARTED_AT,
+                LAST_EXECUTION + "." + STARTED_AT,
+            )
+        )
     }
 }

@@ -968,6 +968,7 @@ class UniversalScheduler(
             ),
             doc("\$unset" to LAST_EXECUTION),
             doc("\$set" to doc(
+                STARTED_AT to doc("\$min" to listOf("\$" + STARTED_AT, now)),
                 LAST_EXECUTION to doc(
                     EXECUTION_ID to executionId,
                     STARTED_AT to now,
