@@ -19,7 +19,6 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.FINISHED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.HEARTBEAT_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.KILLABLE_AFTER
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
-import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.MAX_EXECUTIONS_COUNT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.RETAIN_ONLY_LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STARTED_AT
@@ -134,9 +133,9 @@ data class Task(
         return taskDocument.getZonedDateTime(DELETABLE_AFTER)
     }
 
-    fun maxExecutionsCount(): Int {
-        return taskDocument.getInteger(MAX_EXECUTIONS_COUNT)
-    }
+//    fun maxExecutionsCount(): Int {
+//        return taskDocument.getInteger(MAX_EXECUTIONS_COUNT)
+//    }
 
     fun executionAttemptsLeft(): Int {
         var attemptsLeft = taskDocument.getInteger(EXECUTION_ATTEMPTS_LEFT)

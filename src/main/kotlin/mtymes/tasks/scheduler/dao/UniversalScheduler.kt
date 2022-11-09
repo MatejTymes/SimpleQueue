@@ -57,7 +57,7 @@ class UniversalScheduler(
         const val CREATED_AT = "createdAt"
         const val DELETABLE_AFTER = "deletableAfter"
 
-        const val MAX_EXECUTIONS_COUNT = "maxExecutionsCount" // todo: mtymes - remove this value
+//        const val MAX_EXECUTIONS_COUNT = "maxExecutionsCount" // todo: mtymes - remove this value
         const val EXECUTION_ATTEMPTS_LEFT = "execAttemptsLeft"
         const val EXECUTIONS_COUNT = "executionsCount"
 
@@ -204,7 +204,7 @@ class UniversalScheduler(
                 DATA to data,
                 DELETABLE_AFTER to now.plus(options.ttl),
 
-                MAX_EXECUTIONS_COUNT to options.maxAttemptsCount,
+//                MAX_EXECUTIONS_COUNT to options.maxAttemptsCount,
                 EXECUTION_ATTEMPTS_LEFT to options.maxAttemptsCount,
                 EXECUTIONS_COUNT to 0,
                 RETAIN_ONLY_LAST_EXECUTION to if (options.retainOnlyLastExecution) true else Optional.empty<Boolean>(),
