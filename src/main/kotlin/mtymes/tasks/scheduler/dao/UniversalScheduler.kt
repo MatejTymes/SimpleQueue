@@ -26,7 +26,7 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
-// todo: mtymes - distinguish between runStatus and dependenciesStatus
+// todo: mtymes - is it possible to wait for dependencies somehow ??
 // todo: mtymes - provide proper throws annotations
 // todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension
 // todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
@@ -57,7 +57,7 @@ class UniversalScheduler(
         const val CREATED_AT = "createdAt"
         const val DELETABLE_AFTER = "deletableAfter"
 
-        const val MAX_EXECUTIONS_COUNT = "maxExecutionsCount"
+        const val MAX_EXECUTIONS_COUNT = "maxExecutionsCount" // todo: mtymes - remove this value
         const val EXECUTION_ATTEMPTS_LEFT = "execAttemptsLeft"
         const val EXECUTIONS_COUNT = "executionsCount"
 
