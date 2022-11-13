@@ -59,6 +59,22 @@ class DocumentMatcher(
     private val ignoreMismatches: IgnoreTheseMismatches?
 ) : TypeSafeDiagnosingMatcher<Document>() {
 
+
+    companion object {
+        fun matchesDocument(expectedDocument: Document): DocumentMatcher {
+            return DocumentMatcher(expectedDocument, null)
+        }
+
+        fun matchesDocumentIgnoringFields(expectedDocument: Document, fieldsToIgnore: Collection<String>): DocumentMatcher {
+            return DocumentMatcher(expectedDocument, IgnoreTheseFields(fieldsToIgnore))
+        }
+
+        fun matchesDocumentIgnoringThese(expectedDocument: Document, ignoreTheseMismatches: IgnoreTheseMismatches): DocumentMatcher {
+            return DocumentMatcher(expectedDocument, ignoreTheseMismatches)
+        }
+    }
+
+
     override fun describeTo(description: Description?) {
         description?.appendText(expectedDocument.toString())
     }
