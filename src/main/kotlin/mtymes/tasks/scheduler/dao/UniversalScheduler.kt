@@ -26,6 +26,8 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
+// todo: mtyme - cancel task even when it has a running execution
+// todo: mtymes - add IS_UNFINISHED flag that will unify suspended and available status
 // todo: mtymes - is it possible to wait for dependencies somehow ??
 // todo: mtymes - provide proper throws annotations
 // todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension

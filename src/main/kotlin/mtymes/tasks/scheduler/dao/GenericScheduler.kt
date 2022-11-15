@@ -46,7 +46,7 @@ data class SchedulerDefaults(
 
 class GenericScheduler(
     val collection: MongoCollection<Document>,
-    val defaults: SchedulerDefaults,
+    val defaults: SchedulerDefaults = SchedulerDefaults(),
     val scheduler: UniversalScheduler = UNIVERSAL_SCHEDULER
 ) {
 
