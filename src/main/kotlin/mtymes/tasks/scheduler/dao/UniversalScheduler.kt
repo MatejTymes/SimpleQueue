@@ -520,7 +520,6 @@ class UniversalScheduler(
         options: MarkTasksAsPausedOptions,
         customConstraints: Document,
         additionalTaskData: Document? = null
-
     ): Long {
         val now = clock.now()
 
@@ -569,7 +568,6 @@ class UniversalScheduler(
         options: MarkTasksAsUnPausedOptions,
         customConstraints: Document,
         additionalTaskData: Document? = null
-
     ): Long {
         val now = clock.now()
 
@@ -624,7 +622,6 @@ class UniversalScheduler(
         )
     }
 
-    // todo: mtymes - allow to make this code a bit more dynamic - so the client could evaluate for example data to update based on task/execution data
     fun markKillableExecutionsAsDead(
         coll: MongoCollection<Document>,
         options: MarkKillableExecutionsAsDeadOptions,
@@ -635,13 +632,7 @@ class UniversalScheduler(
 
         val deadTasks: List<Document> = coll.find(
             docBuilder()
-                .let {
-                    if (customConstraints != null) {
-                        it.putAll(customConstraints)
-                    } else {
-                        it
-                    }
-                }
+                .putAll(customConstraints)
                 .putAll(
                     STATUS to doc("\$in", listOf(TaskStatus.running, TaskStatus.suspended)),
                     LAST_EXECUTION + "." + STATUS to doc("\$in", ExecutionStatus.NON_FINAL_STATUSES),
@@ -692,6 +683,88 @@ class UniversalScheduler(
                     ),
                     additionalTaskData = additionalTaskData,
                     additionalExecutionData = additionalExecutionData
+                )
+                if (summary != null) {
+                    countOfKilledExecutions++
+                }
+            } catch (e: Exception) {
+                runAndIgnoreExceptions {
+                    val executionId = ExecutionId(deadTask.getDocument(LAST_EXECUTION).getString(EXECUTION_ID))
+                    logger.error("Failed to mark Execution '${executionId}' as '${ExecutionStatus.suspended}'", e)
+                }
+            }
+        }
+
+        return countOfKilledExecutions
+    }
+
+    fun markKillableExecutionsAsDead(
+        coll: MongoCollection<Document>,
+        customConstraints: Document? = null,
+        deadTaskUpdateProvider: (ExecutionSummary) -> DeadTaskUpdate
+    ): Int {
+
+        val deadTasks: List<Document> = coll.find(
+            docBuilder()
+                .putAll(customConstraints)
+                .putAll(
+                    STATUS to doc("\$in", listOf(TaskStatus.running, TaskStatus.suspended)),
+                    LAST_EXECUTION + "." + STATUS to doc("\$in", ExecutionStatus.NON_FINAL_STATUSES),
+                    LAST_EXECUTION + "." + KILLABLE_AFTER to (doc("\$lt" to clock.now())),
+                )
+                .build()
+        ).toList()
+
+        var countOfKilledExecutions = 0
+        for (deadTask: Document in deadTasks) {
+            try {
+                val task = Task(deadTask)
+                val lastExecution = task.lastExecution!!
+
+                val currentTaskStatus = task.status
+                val lastExecutionId = lastExecution.executionId
+                val executionAttemptsLeft = task.executionAttemptsLeft()
+
+                val toTaskStatus = if (currentTaskStatus == TaskStatus.suspended) {
+                    if (executionAttemptsLeft > 1) TaskStatus.available else TaskStatus.dead
+                } else {
+                    if (executionAttemptsLeft > 0) TaskStatus.available else TaskStatus.dead
+                }
+
+                val deadTaskUpdate = deadTaskUpdateProvider.invoke(
+                    ExecutionSummary(
+                        execution = lastExecution,
+                        underlyingTask = task
+                    )
+                )
+
+                val now = clock.now()
+
+                val summary = updateLastExecution(
+                    coll = coll,
+                    executionId = lastExecutionId,
+                    fromTaskStatus = currentTaskStatus,
+                    fromExecutionStatuses = listOf(lastExecution.status),
+                    toTaskStatus = toTaskStatus,
+                    toExecutionStatus = ExecutionStatus.dead,
+                    now = now,
+                    customTaskUpdates = docBuilder()
+                        .putIf(deadTaskUpdate.retryDelay != null) {
+                            CAN_BE_EXECUTED_AS_OF to now.plus(deadTaskUpdate.retryDelay)
+                        }
+                        .putIf(deadTaskUpdate.newTTL != null) {
+                            DELETABLE_AFTER to now.plus(deadTaskUpdate.newTTL)
+                        }
+                        .putIf(currentTaskStatus == TaskStatus.suspended) {
+                            EXECUTION_ATTEMPTS_LEFT to executionAttemptsLeft - 1
+                        }
+                        .build(),
+                    customExecutionUpdates = doc(
+                        FINISHED_AT to now,
+                        WAS_RETRYABLE_FAIL to true
+                    ),
+                    additionalTaskData = deadTaskUpdate.additionalTaskData,
+                    additionalExecutionData = deadTaskUpdate.additionalExecutionData
                 )
                 if (summary != null) {
                     countOfKilledExecutions++
@@ -803,13 +876,7 @@ class UniversalScheduler(
 
         val result = coll.findOneAndUpdate(
             docBuilder()
-                .let {
-                    if (customConstraints != null) {
-                        it.putAll(customConstraints)
-                    } else {
-                        it
-                    }
-                }
+                .putAll(customConstraints)
                 .put(TASK_ID to taskId)
                 .build(),
             doc(
@@ -848,13 +915,7 @@ class UniversalScheduler(
 
         var result = coll.findOneAndUpdate(
             docBuilder()
-                .let {
-                    if (customConstraints != null) {
-                        it.putAll(customConstraints)
-                    } else {
-                        it
-                    }
-                }
+                .putAll(customConstraints)
                 .put(LAST_EXECUTION + "." + EXECUTION_ID to executionId)
                 .build(),
             doc(
@@ -967,20 +1028,22 @@ class UniversalScheduler(
                     .build()
             ),
             doc("\$unset" to LAST_EXECUTION),
-            doc("\$set" to doc(
-                STARTED_AT to doc("\$min" to listOf("\$" + STARTED_AT, now)),
-                LAST_EXECUTION to doc(
-                    EXECUTION_ID to executionId,
-                    STARTED_AT to now,
-                    WORKER_ID to workerId,
-                    // todo: mtymes - WTF is this not allowed in the aggregation mode ???
-//                            DATA to emptyDoc(),
-                    STATUS to ExecutionStatus.running,
-                    STATUS_UPDATED_AT to now,
-                    KILLABLE_AFTER to keepAliveUntil,
-                    UPDATED_AT to now,
+            doc(
+                "\$set" to doc(
+                    STARTED_AT to doc("\$min" to listOf("\$" + STARTED_AT, now)),
+                    LAST_EXECUTION to doc(
+                        EXECUTION_ID to executionId,
+                        STARTED_AT to now,
+                        WORKER_ID to workerId,
+                        // todo: mtymes - WTF is this not allowed in the aggregation mode ???
+//                        DATA to emptyDoc(),
+                        STATUS to ExecutionStatus.running,
+                        STATUS_UPDATED_AT to now,
+                        KILLABLE_AFTER to keepAliveUntil,
+                        UPDATED_AT to now,
+                    )
                 )
-            ))
+            )
         )
         val modifiedTask = coll.findOneAndUpdate(
             docBuilder()

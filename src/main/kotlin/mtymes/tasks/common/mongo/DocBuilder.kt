@@ -81,9 +81,11 @@ class DocBuilder {
         return this
     }
 
-    fun putAll(values: Map<String, Any?>): DocBuilder {
-        for ((key, value) in values) {
-            put(key, value)
+    fun putAll(values: Map<String, Any?>?): DocBuilder {
+        if (values != null) {
+            for ((key, value) in values) {
+                put(key, value)
+            }
         }
         return this
     }

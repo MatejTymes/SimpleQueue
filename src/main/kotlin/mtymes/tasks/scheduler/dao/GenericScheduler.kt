@@ -454,6 +454,17 @@ class GenericScheduler(
         )
     }
 
+    fun markKillableExecutionsAsDead(
+        customConstraints: Document? = null,
+        deadTaskUpdateProvider: (ExecutionSummary) -> DeadTaskUpdate
+    ): Int {
+        return scheduler.markKillableExecutionsAsDead(
+            coll = collection,
+            customConstraints = customConstraints,
+            deadTaskUpdateProvider = deadTaskUpdateProvider
+        )
+    }
+
     fun registerHeartBeat(
         executionId: ExecutionId,
         options: RegisterHeartBeatOptions,

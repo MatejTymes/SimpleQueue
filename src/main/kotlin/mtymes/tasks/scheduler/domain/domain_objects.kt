@@ -31,6 +31,7 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.UPDATED_AT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.WAS_RETRYABLE_FAIL
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.WORKER_ID
 import org.bson.Document
+import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -222,6 +223,13 @@ data class FetchedExecutionSummary(
     val wasAwokenFromSuspension: Boolean,
 
     val underlyingTask: Task
+)
+
+data class DeadTaskUpdate(
+    val additionalTaskData: Document? = null,
+    val additionalExecutionData: Document? = null,
+    val retryDelay: Duration? = null,
+    val newTTL: Duration? = null
 )
 
 
