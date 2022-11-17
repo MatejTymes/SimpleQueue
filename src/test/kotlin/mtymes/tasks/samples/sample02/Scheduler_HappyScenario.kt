@@ -10,7 +10,7 @@ import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.WORKER_ID
 import mtymes.tasks.scheduler.domain.ExecutionId
-import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
+import mtymes.tasks.scheduler.domain.PickNextExecutionOptions
 import mtymes.tasks.scheduler.domain.SubmitTaskOptions
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
@@ -38,7 +38,7 @@ class SimpleTaskDao(
                 ttl = SEVEN_DAYS
             ),
 
-            fetchNextExecutionOptions = FetchNextExecutionOptions(
+            pickNextExecutionOptions = PickNextExecutionOptions(
                 keepAliveFor = FIVE_MINUTES
             )
         )
@@ -53,21 +53,21 @@ class SimpleTaskDao(
         printTimedString("submitted Task '${request}'")
     }
 
-    fun fetchNextTaskExecution(
+    fun pickNextTaskExecution(
         workerId: WorkerId
     ): TaskToProcess? {
-        val result = scheduler.fetchNextAvailableExecution(workerId)
+        val result = scheduler.pickNextAvailableExecution(workerId)
             ?.let { summary ->
                 TaskToProcess(
-                    executionId = summary.fetchedExecution.executionId,
+                    executionId = summary.pickedExecution.executionId,
                     request = summary.underlyingTask.data().getString("request")
                 )
             }
 
         if (result != null) {
-            printTimedString("fetched Execution ${result.executionId} [${result.request}]")
+            printTimedString("picked Execution ${result.executionId} [${result.request}]")
         } else {
-            printTimedString("did NOT fetch any Execution")
+            printTimedString("did NOT pick any Execution")
         }
 
         return result
@@ -90,10 +90,10 @@ open class SimpleWorker(
     val dao: SimpleTaskDao
 ) : Worker<TaskToProcess> {
 
-    override fun fetchNextTaskToProcess(
+    override fun pickNextTaskToProcess(
         workerId: WorkerId
     ): TaskToProcess? {
-        return dao.fetchNextTaskExecution(workerId)
+        return dao.pickNextTaskExecution(workerId)
     }
 
     override fun executeTask(task: TaskToProcess, workerId: WorkerId) {

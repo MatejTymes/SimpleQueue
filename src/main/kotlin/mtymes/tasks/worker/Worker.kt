@@ -14,7 +14,7 @@ import java.time.Duration
 
 interface Worker<Task> : Closeable {
 
-    fun fetchNextTaskToProcess(
+    fun pickNextTaskToProcess(
         workerId: WorkerId
     ): Task?
 

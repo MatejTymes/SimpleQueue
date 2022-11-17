@@ -12,8 +12,8 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.SUSPENSION_COUNT
 import mtymes.tasks.scheduler.domain.ExecutionId
-import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
 import mtymes.tasks.scheduler.domain.MarkAsSuspendedOptions
+import mtymes.tasks.scheduler.domain.PickNextExecutionOptions
 import mtymes.tasks.scheduler.domain.SubmitTaskOptions
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
@@ -40,9 +40,9 @@ class SuspendingTaskDao(
                 maxAttemptsCount = 3
             ),
 
-            fetchNextExecutionOptions = FetchNextExecutionOptions(
+            pickNextExecutionOptions = PickNextExecutionOptions(
                 keepAliveFor = Durations.FIVE_MINUTES,
-                fetchSuspendedTasksAsWell = true
+                pickSuspendedTasksAsWell = true
             ),
 
             markAsSuspendedOptions = MarkAsSuspendedOptions(
@@ -65,26 +65,26 @@ class SuspendingTaskDao(
         printTimedString("submitted Task '${request}'")
     }
 
-    fun fetchNextTaskExecution(
+    fun pickNextTaskExecution(
         workerId: WorkerId,
-        fetchSuspendedTasksAsWell: Boolean = scheduler.defaults.fetchNextExecutionOptions!!.fetchSuspendedTasksAsWell
+        pickSuspendedTasksAsWell: Boolean = scheduler.defaults.pickNextExecutionOptions!!.pickSuspendedTasksAsWell
     ): TaskToProcess? {
-        val result = scheduler.fetchNextAvailableExecution(
+        val result = scheduler.pickNextAvailableExecution(
             workerId = workerId,
-            options = scheduler.defaults.fetchNextExecutionOptions!!.copy(
-                fetchSuspendedTasksAsWell = fetchSuspendedTasksAsWell
+            options = scheduler.defaults.pickNextExecutionOptions!!.copy(
+                pickSuspendedTasksAsWell = pickSuspendedTasksAsWell
             )
         )?.let { summary ->
             TaskToProcess(
-                executionId = summary.fetchedExecution.executionId,
+                executionId = summary.pickedExecution.executionId,
                 request = summary.underlyingTask.data().getString("request")
             )
         }
 
         if (result != null) {
-            printTimedString("fetched Execution ${result.executionId}")
+            printTimedString("picked Execution ${result.executionId}")
         } else {
-            printTimedString("did NOT fetch any Execution" + if(!fetchSuspendedTasksAsWell) " (fetching only NON-SUSPENDED tasks)" else "")
+            printTimedString("did NOT pick any Execution" + if(!pickSuspendedTasksAsWell) " (picking only NON-SUSPENDED tasks)" else "")
         }
 
         return result
@@ -147,13 +147,13 @@ object DelayedStart {
             CAN_BE_EXECUTED_AS_OF
         ))
 
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
 
 
         Thread.sleep(1_100)
 
 
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
 
         displayTinyTasksSummary(coll, setOf(
 //            MAX_EXECUTIONS_COUNT,
@@ -176,7 +176,7 @@ object TaskSuspension {
         dao.submitTask(request = "A")
 
 
-        val executionId = dao.fetchNextTaskExecution(workerId)!!.executionId
+        val executionId = dao.pickNextTaskExecution(workerId)!!.executionId
         dao.markAsSuspended(
             executionId = executionId,
             suspendFor = Duration.ofSeconds(0)
@@ -190,16 +190,16 @@ object TaskSuspension {
             LAST_EXECUTION + "." + SUSPENSION_COUNT
         ))
 
-        // fetch non-suspendable only
-        dao.fetchNextTaskExecution(
+        // pick non-suspendable only
+        dao.pickNextTaskExecution(
             workerId = workerId,
-            fetchSuspendedTasksAsWell = false
+            pickSuspendedTasksAsWell = false
         )
 
-        // fetch suspendable as well
-        val anotherExecutionId = dao.fetchNextTaskExecution(
+        // pick suspendable as well
+        val anotherExecutionId = dao.pickNextTaskExecution(
             workerId = workerId,
-            fetchSuspendedTasksAsWell = true
+            pickSuspendedTasksAsWell = true
         )!!.executionId
 
         displayTinyTasksSummary(coll, setOf(
@@ -222,7 +222,7 @@ object TaskSuspension {
             CAN_BE_EXECUTED_AS_OF,
             LAST_EXECUTION + "." + SUSPENSION_COUNT
         ))
-        dao.fetchNextTaskExecution(
+        dao.pickNextTaskExecution(
             workerId = workerId
         )
 
@@ -230,7 +230,7 @@ object TaskSuspension {
         Thread.sleep(1_100)
 
 
-        dao.fetchNextTaskExecution(
+        dao.pickNextTaskExecution(
             workerId = workerId
         )
     }

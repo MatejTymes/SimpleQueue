@@ -8,7 +8,7 @@ import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.dao.UniversalScheduler
 import mtymes.tasks.scheduler.domain.ExecutionId
-import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
+import mtymes.tasks.scheduler.domain.PickNextExecutionOptions
 import mtymes.tasks.scheduler.domain.SubmitTaskOptions
 import mtymes.tasks.scheduler.domain.TaskId
 import mtymes.tasks.test.mongo.emptyLocalCollection
@@ -36,7 +36,7 @@ class PriorityOrderedTasksDao(
                 maxAttemptsCount = 3
             ),
 
-            fetchNextExecutionOptions = FetchNextExecutionOptions(
+            pickNextExecutionOptions = PickNextExecutionOptions(
                 keepAliveFor = Durations.FIVE_MINUTES
             )
         )
@@ -57,11 +57,11 @@ class PriorityOrderedTasksDao(
         return taskId
     }
 
-    fun fetchNextTaskExecution(
+    fun pickNextTaskExecution(
         workerId: WorkerId
     ): TaskToProcess? {
         val result = scheduler
-            .fetchNextAvailableExecution(
+            .pickNextAvailableExecution(
                 workerId = workerId,
                 customSortOrder = doc(
                     "data.priority" to -1,
@@ -70,16 +70,16 @@ class PriorityOrderedTasksDao(
             )?.let { summary ->
                 TaskToProcess(
                     taskId = summary.underlyingTask.taskId,
-                    executionId = summary.fetchedExecution.executionId,
+                    executionId = summary.pickedExecution.executionId,
                     request = summary.underlyingTask.data().getString("request"),
                     priority = summary.underlyingTask.data().getInteger("priority")
                 )
             }
 
         if (result != null) {
-            printTimedString("fetched Execution ${result.executionId} [${result.request}] of Priority ${result.priority}")
+            printTimedString("picked Execution ${result.executionId} [${result.request}] of Priority ${result.priority}")
         } else {
-            printTimedString("did NOT fetch any Execution")
+            printTimedString("did NOT pick any Execution")
         }
 
         return result
@@ -139,12 +139,12 @@ object PickTasksBasedOnPriority {
         dao.submitTask("D", 5)
         dao.submitTask("E", 5)
 
-        dao.fetchNextTaskExecution(workerId)
-        dao.fetchNextTaskExecution(workerId)
-        dao.fetchNextTaskExecution(workerId)
-        dao.fetchNextTaskExecution(workerId)
-        dao.fetchNextTaskExecution(workerId)
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
     }
 }
 
@@ -161,12 +161,12 @@ object ChangingPriorityOnTheGo {
         val taskIdB = dao.submitTask("B", 100)
         val taskIdC = dao.submitTask("C", 1)
 
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
 
         dao.updatePriority(taskIdC, 130)
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
 
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
     }
 }
 
@@ -182,14 +182,14 @@ object JumpQueueOnFailure {
         dao.submitTask("A", 5)
         dao.submitTask("B", 5)
 
-        val executionIdA = dao.fetchNextTaskExecution(workerId)!!.executionId
+        val executionIdA = dao.pickNextTaskExecution(workerId)!!.executionId
 
         dao.submitTask("C", 100)
 
         dao.markAsFailed(executionIdA, "failed, but we need to replay this quickly", 999)
 
-        dao.fetchNextTaskExecution(workerId)
-        dao.fetchNextTaskExecution(workerId)
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
     }
 }

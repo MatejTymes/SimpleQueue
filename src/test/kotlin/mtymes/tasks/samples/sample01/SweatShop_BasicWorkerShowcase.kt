@@ -13,7 +13,7 @@ class LazyWorker : Worker<String> {
 
     private val tasksToProcess = CopyOnWriteArrayList(listOf("A", "B", "C"))
 
-    override fun fetchNextTaskToProcess(
+    override fun pickNextTaskToProcess(
         workerId: WorkerId
     ): String? {
         return tasksToProcess.removeFirstOrNull()
@@ -256,7 +256,7 @@ object InterruptWorkerGracefullyOnceNoMoreWork {
 
 
 object CloseableWorker : Worker<String> {
-    override fun fetchNextTaskToProcess(workerId: WorkerId): String? {
+    override fun pickNextTaskToProcess(workerId: WorkerId): String? {
         return randomUUID().toString()
     }
 

@@ -26,8 +26,8 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
-// todo: mtyme - cancel task even when it has a running execution
 // todo: mtymes - add IS_UNFINISHED/IS_PICKABLE flag that will unify suspended and available status
+// todo: mtymes - cancel task even when it has a running execution
 // todo: mtymes - is it possible to wait for dependencies somehow ??
 // todo: mtymes - provide proper throws annotations
 // todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension
@@ -113,10 +113,10 @@ class UniversalScheduler(
             return Task(this)
         }
 
-        private fun Document.toFetchedExecutionSummary(
+        private fun Document.toPickedExecutionSummary(
             expectedLastExecutionId: ExecutionId,
             wasSuspended: Boolean
-        ): FetchedExecutionSummary {
+        ): PickedExecutionSummary {
             val lastExecutionId = ExecutionId(getDocument(LAST_EXECUTION).getString(EXECUTION_ID))
 
             if (expectedLastExecutionId != lastExecutionId) {
@@ -127,8 +127,8 @@ class UniversalScheduler(
 
             val task = this.toTask()
 
-            return FetchedExecutionSummary(
-                fetchedExecution = task.lastExecution!!,
+            return PickedExecutionSummary(
+                pickedExecution = task.lastExecution!!,
                 wasAwokenFromSuspension = wasSuspended,
                 underlyingTask = task
             )
@@ -227,19 +227,19 @@ class UniversalScheduler(
         }
     }
 
-    fun fetchNextAvailableExecution(
+    fun pickNextAvailableExecution(
         coll: MongoCollection<Document>,
         workerId: WorkerId,
-        options: FetchNextExecutionOptions,
+        options: PickNextExecutionOptions,
         additionalConstraints: Document? = null,
         sortOrder: Document? = null
-    ): FetchedExecutionSummary? {
+    ): PickedExecutionSummary? {
         val usedSortOrder = sortOrder ?: doc(CAN_BE_EXECUTED_AS_OF to 1)
 
-        if (options.fetchSuspendedTasksAsWell) {
+        if (options.pickSuspendedTasksAsWell) {
             val now = clock.now()
 
-            val possibleTasksToFetch = coll.find(
+            val possibleTasksToPick = coll.find(
                 docBuilder()
                     .putAllIf(additionalConstraints.areDefined()) {
                         additionalConstraints!!
@@ -260,9 +260,9 @@ class UniversalScheduler(
                 )
             ).limit(5)
 
-            for (possibleTaskToFetch in possibleTasksToFetch) {
-                val taskId = TaskId(possibleTaskToFetch.getString(TASK_ID))
-                val taskStatus = TaskStatus.valueOf(possibleTaskToFetch.getString(STATUS))
+            for (possibleTaskToPick in possibleTasksToPick) {
+                val taskId = TaskId(possibleTaskToPick.getString(TASK_ID))
+                val taskStatus = TaskStatus.valueOf(possibleTaskToPick.getString(STATUS))
 
                 if (taskStatus == TaskStatus.available) {
                     val execution = startNewExecution(
@@ -280,7 +280,7 @@ class UniversalScheduler(
                     }
                 } else if (taskStatus == TaskStatus.suspended) {
                     val lastExecutionId = ExecutionId(
-                        possibleTaskToFetch.getDocument(LAST_EXECUTION).getString(EXECUTION_ID)
+                        possibleTaskToPick.getDocument(LAST_EXECUTION).getString(EXECUTION_ID)
                     )
 
                     val execution = resumeSuspendedExecution(
@@ -299,7 +299,7 @@ class UniversalScheduler(
                 }
             }
 
-            // todo: mtymes - if got some tasks, but all were already fetched (concurrently by other thread), then maybe try again
+            // todo: mtymes - if got some tasks, but all were already picked (concurrently by other thread), then maybe try again
 
             return null
         } else {
@@ -990,7 +990,7 @@ class UniversalScheduler(
         additionalConstraints: Document?,
         sortOrder: Document,
         newTTL: Duration?
-    ): FetchedExecutionSummary? {
+    ): PickedExecutionSummary? {
         val now = clock.now()
         val keepAliveUntil = now.plus(keepAliveFor)
 
@@ -1065,7 +1065,7 @@ class UniversalScheduler(
                 .sort(sortOrder)
         )
 
-        return modifiedTask?.toFetchedExecutionSummary(
+        return modifiedTask?.toPickedExecutionSummary(
             expectedLastExecutionId = executionId,
             wasSuspended = false
         )
@@ -1079,7 +1079,7 @@ class UniversalScheduler(
         keepAliveFor: Duration,
         additionalConstraints: Document?,
         newTTL: Duration?
-    ): FetchedExecutionSummary? {
+    ): PickedExecutionSummary? {
         val now = clock.now()
         val keepAliveUntil = now.plus(keepAliveFor)
 
@@ -1128,7 +1128,7 @@ class UniversalScheduler(
                 .returnDocument(ReturnDocument.AFTER)
         )
 
-        return modifiedTask?.toFetchedExecutionSummary(
+        return modifiedTask?.toPickedExecutionSummary(
             expectedLastExecutionId = lastExpectedExecutionId,
             wasSuspended = true
         )

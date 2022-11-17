@@ -218,8 +218,8 @@ data class ExecutionSummary(
     val underlyingTask: Task
 )
 
-data class FetchedExecutionSummary(
-    val fetchedExecution: Execution,
+data class PickedExecutionSummary(
+    val pickedExecution: Execution,
     val wasAwokenFromSuspension: Boolean,
 
     val underlyingTask: Task

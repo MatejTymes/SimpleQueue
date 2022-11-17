@@ -34,7 +34,7 @@ class SimpleTaskDao(
                 ttl = Durations.SEVEN_DAYS
             ),
 
-            fetchNextExecutionOptions = FetchNextExecutionOptions(
+            pickNextExecutionOptions = PickNextExecutionOptions(
                 keepAliveFor = Durations.FIVE_MINUTES
             )
         )
@@ -51,10 +51,10 @@ class SimpleTaskDao(
     }
 
 
-    fun fetchNextTaskExecution(
+    fun pickNextTaskExecution(
         workerId: WorkerId
-    ): FetchedExecutionSummary? {
-        return scheduler.fetchNextAvailableExecution(workerId)
+    ): PickedExecutionSummary? {
+        return scheduler.pickNextAvailableExecution(workerId)
     }
 
 }
@@ -124,26 +124,26 @@ object InsertionOnlyPerformance {
 }
 
 
-object InsertionAndFetchingPerformance {
+object InsertionAndPickingPerformance {
 
     @JvmStatic
     fun main(args: Array<String>) {
         val itemCount = 1_000_000
 
-        println("Insertion And Fetching:")
+        println("Insertion And Picking:")
 
         for (insertionThreadCount in listOf(
 //            1, 2, 3, 5,
             10
         )) {
-            for (fetchingThreadCount in listOf(
+            for (pickingThreadCount in listOf(
 //                1, 2, 3, 5,
                 10
             )) {
                 println("\n")
                 println("itemCount = ${itemCount}")
                 println("writerThreadCount = ${insertionThreadCount}")
-                println("fetchThreadCount = ${insertionThreadCount}")
+                println("pickThreadCount = ${insertionThreadCount}")
                 println("\n")
 
                 val coll = emptyLocalCollection("perfCheck")
@@ -158,7 +158,7 @@ object InsertionAndFetchingPerformance {
                 var insertMaxDuration = AtomicLong(-1L)
 
                 val insertionRunner = Runner(insertionThreadCount)
-                val fetchingRunner = Runner(fetchingThreadCount)
+                val pickingRunner = Runner(pickingThreadCount)
                 try {
                     val insertionCounter = AtomicInteger(1)
 
@@ -185,50 +185,50 @@ object InsertionAndFetchingPerformance {
                         }
                     }
 
-                    val fetchingCounter = AtomicInteger(0)
+                    val pickingCounter = AtomicInteger(0)
                     val workerId = WorkerId("SomeWorker")
 
-                    var fetchCount = AtomicLong(0L)
-                    var fetchTotalDuration = AtomicLong(0L)
-                    var fetchMaxDuration = AtomicLong(-1L)
+                    var pickCount = AtomicLong(0L)
+                    var pickTotalDuration = AtomicLong(0L)
+                    var pickMaxDuration = AtomicLong(-1L)
 
                     for (threadNo in 1..insertionThreadCount) {
-                        fetchingRunner.run { shutDownInfo ->
+                        pickingRunner.run { shutDownInfo ->
                             do {
                                 val startTime = System.currentTimeMillis()
-                                val result = dao.fetchNextTaskExecution(workerId)
+                                val result = dao.pickNextTaskExecution(workerId)
                                 val duration = System.currentTimeMillis() - startTime
 
-                                fetchCount.addAndGet(1)
-                                fetchTotalDuration.addAndGet(duration)
-                                if (fetchMaxDuration.get() < duration) {
-                                    fetchMaxDuration.set(duration)
+                                pickCount.addAndGet(1)
+                                pickTotalDuration.addAndGet(duration)
+                                if (pickMaxDuration.get() < duration) {
+                                    pickMaxDuration.set(duration)
                                 }
 
                                 if (result != null) {
-                                    fetchingCounter.incrementAndGet()
+                                    pickingCounter.incrementAndGet()
                                 }
-                            } while (fetchingCounter.get() < itemCount)
+                            } while (pickingCounter.get() < itemCount)
                         }
                     }
 
 
                     insertionRunner.waitTillDone()
-                    fetchingRunner.waitTillDone()
+                    pickingRunner.waitTillDone()
 
                     println("- taskCount = ${coll.countDocuments()}")
                     println("- totalInsertDuration = ${insertTotalDuration.get()}")
                     println("- avgInsertDuration = ${insertTotalDuration.get().toDouble() / insertCount.get().toDouble()}")
                     println("- maxInsertDuration = ${insertMaxDuration.get()}")
 
-                    println("- fetchCount = ${fetchCount.get()}")
-                    println("- totalFetchDuration = ${fetchTotalDuration.get()}")
-                    println("- avgFetchDuration = ${fetchTotalDuration.get().toDouble() / fetchCount.get().toDouble()}")
-                    println("- maxFetchDuration = ${fetchMaxDuration.get()}")
+                    println("- pickCount = ${pickCount.get()}")
+                    println("- totalPickDuration = ${pickTotalDuration.get()}")
+                    println("- avgPickDuration = ${pickTotalDuration.get().toDouble() / pickCount.get().toDouble()}")
+                    println("- maxPickDuration = ${pickMaxDuration.get()}")
 
                 } finally {
                     insertionRunner.shutdownNow()
-                    fetchingRunner.shutdownNow()
+                    pickingRunner.shutdownNow()
                 }
             }
         }

@@ -35,7 +35,7 @@ Sample06
 Sample07
 [ ] - custom ordering
 Sample08
-[ ] - custom fetch criteria
+[ ] - custom pick criteria
 Sample09
 [ ] - pause
 Sample10

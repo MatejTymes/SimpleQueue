@@ -25,10 +25,10 @@ data class SubmitTaskOptions(
     }
 }
 
-data class FetchNextExecutionOptions(
+data class PickNextExecutionOptions(
     val keepAliveFor: Duration,
     // todo: mtymes - change into enum with values: ONLY_NON_SUSPENDED, ONLY_SUSPENDED, SUSPENDED_AND_NON_SUSPENDED
-    val fetchSuspendedTasksAsWell: Boolean = false,
+    val pickSuspendedTasksAsWell: Boolean = false,
     val newTTL: Duration? = null
 ) {
     init {

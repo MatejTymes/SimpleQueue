@@ -9,7 +9,7 @@ import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTIONS_COUNT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
 import mtymes.tasks.scheduler.domain.ExecutionId
-import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
+import mtymes.tasks.scheduler.domain.PickNextExecutionOptions
 import mtymes.tasks.scheduler.domain.SubmitTaskOptions
 import mtymes.tasks.scheduler.domain.TaskId
 import mtymes.tasks.test.mongo.emptyLocalCollection
@@ -37,7 +37,7 @@ class CancellationSupportingTaskDao(
                 maxAttemptsCount = 3
             ),
 
-            fetchNextExecutionOptions = FetchNextExecutionOptions(
+            pickNextExecutionOptions = PickNextExecutionOptions(
                 keepAliveFor = Durations.FIVE_MINUTES
             )
         )
@@ -55,22 +55,22 @@ class CancellationSupportingTaskDao(
         return taskId
     }
 
-    fun fetchNextTaskExecution(
+    fun pickNextTaskExecution(
         workerId: WorkerId
     ): TaskToProcess? {
-        val result = scheduler.fetchNextAvailableExecution(workerId)
+        val result = scheduler.pickNextAvailableExecution(workerId)
             ?.let { summary ->
                 TaskToProcess(
                     taskId = summary.underlyingTask.taskId,
-                    executionId = summary.fetchedExecution.executionId,
+                    executionId = summary.pickedExecution.executionId,
                     request = summary.underlyingTask.data().getString("request")
                 )
             }
 
         if (result != null) {
-            printTimedString("fetched Execution ${result.executionId}")
+            printTimedString("picked Execution ${result.executionId}")
         } else {
-            printTimedString("did NOT fetch any Execution")
+            printTimedString("did NOT pick any Execution")
         }
 
         return result
@@ -129,7 +129,7 @@ object CancelTask {
         dao.markTaskAsCancelled(taskId, "clearing out the queue")
 
 
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
 
         displayTinyTasksSummary(coll, setOf(
 //            MAX_EXECUTIONS_COUNT,
@@ -151,11 +151,11 @@ object CancelExecution {
         dao.submitTask("A")
 
 
-        val executionId1 = dao.fetchNextTaskExecution(workerId)!!.executionId
+        val executionId1 = dao.pickNextTaskExecution(workerId)!!.executionId
         dao.markExecutionAsCancelled(executionId1, "subject no longer needed", "EO-66")
 
 
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
 
         displayTinyTasksSummary(coll, setOf(
 //            MAX_EXECUTIONS_COUNT,
@@ -179,7 +179,7 @@ object FailToCancelRunningTask {
 
         try {
 
-            val taskToProcess = dao.fetchNextTaskExecution(workerId)!!
+            val taskToProcess = dao.pickNextTaskExecution(workerId)!!
             dao.markTaskAsCancelled(taskToProcess.taskId, "clearing out the queue")
 
         } catch (e: Exception) {

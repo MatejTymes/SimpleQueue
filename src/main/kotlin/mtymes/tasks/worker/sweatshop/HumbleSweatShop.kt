@@ -287,16 +287,16 @@ class HumbleSweatShop : SweatShop {
 
                 try {
 
-                    // FETCH TASK
+                    // PICK TASK
 
                     var task: T? = null
                     try {
-                        task = worker.fetchNextTaskToProcess(workerId)
+                        task = worker.pickNextTaskToProcess(workerId)
                     } catch (e: InterruptedException) {
                         throw e
                     } catch (e: Exception) {
                         runAndIgnoreExceptions {
-                            logger.error("[${logId}]: Failed to fetch next task", e)
+                            logger.error("[${logId}]: Failed to pick next task", e)
                         }
                     }
 
@@ -394,7 +394,7 @@ class HumbleSweatShop : SweatShop {
                     }
 
 
-                    // SLEEP DELAY BEFORE FETCHING NEXT TASK
+                    // SLEEP DELAY BEFORE PICKING NEXT TASK
 
                     // default to 1 minute if fails to get the sleep duration
                     var sleepDuration: Duration = ONE_MINUTE
@@ -411,7 +411,7 @@ class HumbleSweatShop : SweatShop {
                         }
                     } catch (e: Exception) {
                         runAndIgnoreExceptions {
-                            logger.error("${logId}]: Failed to evaluate sleep duration before fetching next task", e)
+                            logger.error("${logId}]: Failed to evaluate sleep duration before picking next task", e)
                         }
                     }
                     // don't use Thread.sleep(..) as it would wait for the whole duration in case of graceful shutdown

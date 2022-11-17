@@ -11,7 +11,7 @@ data class SchedulerDefaults(
 
     val submitTaskOptions: SubmitTaskOptions? = null,
 
-    val fetchNextExecutionOptions: FetchNextExecutionOptions? = null,
+    val pickNextExecutionOptions: PickNextExecutionOptions? = null,
 
     val markAsSucceededOptions: MarkAsSucceededOptions? = null,
 
@@ -102,13 +102,13 @@ class GenericScheduler(
         )
     }
 
-    fun fetchNextAvailableExecution(
+    fun pickNextAvailableExecution(
         workerId: WorkerId,
-        options: FetchNextExecutionOptions,
+        options: PickNextExecutionOptions,
         additionalConstraints: Document? = null,
         customSortOrder: Document? = null
-    ): FetchedExecutionSummary? {
-        return scheduler.fetchNextAvailableExecution(
+    ): PickedExecutionSummary? {
+        return scheduler.pickNextAvailableExecution(
             coll = collection,
             workerId = workerId,
             options = options,
@@ -117,16 +117,16 @@ class GenericScheduler(
         )
     }
 
-    fun fetchNextAvailableExecution(
+    fun pickNextAvailableExecution(
         workerId: WorkerId,
         additionalConstraints: Document? = null,
         customSortOrder: Document? = null
-    ): FetchedExecutionSummary? {
-        return fetchNextAvailableExecution(
+    ): PickedExecutionSummary? {
+        return pickNextAvailableExecution(
             workerId = workerId,
             options = defaultOptions(
-                "this.defaults.fetchNextExecutionOptions",
-                defaults.fetchNextExecutionOptions
+                "this.defaults.pickNextExecutionOptions",
+                defaults.pickNextExecutionOptions
             ),
             additionalConstraints = additionalConstraints,
             customSortOrder = customSortOrder

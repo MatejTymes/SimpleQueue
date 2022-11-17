@@ -7,7 +7,7 @@ import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.domain.ExecutionId
-import mtymes.tasks.scheduler.domain.FetchNextExecutionOptions
+import mtymes.tasks.scheduler.domain.PickNextExecutionOptions
 import mtymes.tasks.scheduler.domain.SubmitTaskOptions
 import mtymes.tasks.scheduler.domain.TaskId
 import mtymes.tasks.test.mongo.emptyLocalCollection
@@ -32,7 +32,7 @@ class CustomQueryTasksDao(
                 ttl = Durations.SEVEN_DAYS
             ),
 
-            fetchNextExecutionOptions = FetchNextExecutionOptions(
+            pickNextExecutionOptions = PickNextExecutionOptions(
                 keepAliveFor = Durations.FIVE_MINUTES
             )
         )
@@ -53,28 +53,28 @@ class CustomQueryTasksDao(
         return taskId
     }
 
-    fun fetchNextTaskExecution(
+    fun pickNextTaskExecution(
         workerId: WorkerId,
         forGroup: String
     ): TaskToProcess? {
         val result = scheduler
-            .fetchNextAvailableExecution(
+            .pickNextAvailableExecution(
                 workerId = workerId,
                 additionalConstraints = doc(
                     "data.group" to forGroup
                 )
             )?.let { summary ->
                 TaskToProcess(
-                    executionId = summary.fetchedExecution.executionId,
+                    executionId = summary.pickedExecution.executionId,
                     request = summary.underlyingTask.data().getString("request"),
                     group = summary.underlyingTask.data().getString("group")
                 )
             }
 
         if (result != null) {
-            printTimedString("fetched Execution ${result.executionId} [${result.request}] for Group ${forGroup}")
+            printTimedString("picked Execution ${result.executionId} [${result.request}] for Group ${forGroup}")
         } else {
-            printTimedString("did NOT fetch any Execution for Group ${forGroup}")
+            printTimedString("did NOT pick any Execution for Group ${forGroup}")
         }
 
         return result
@@ -82,7 +82,7 @@ class CustomQueryTasksDao(
 }
 
 
-object FetchTasksBasedOnCustomQuery {
+object PickTasksBasedOnCustomQuery {
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -97,12 +97,12 @@ object FetchTasksBasedOnCustomQuery {
         dao.submitTask("D", "group1")
 
 
-        dao.fetchNextTaskExecution(workerId, "group1")
-        dao.fetchNextTaskExecution(workerId, "group1")
-        dao.fetchNextTaskExecution(workerId, "group1")
+        dao.pickNextTaskExecution(workerId, "group1")
+        dao.pickNextTaskExecution(workerId, "group1")
+        dao.pickNextTaskExecution(workerId, "group1")
 
-        dao.fetchNextTaskExecution(workerId, "group4")
-        dao.fetchNextTaskExecution(workerId, "group4")
-        dao.fetchNextTaskExecution(workerId, "group4")
+        dao.pickNextTaskExecution(workerId, "group4")
+        dao.pickNextTaskExecution(workerId, "group4")
+        dao.pickNextTaskExecution(workerId, "group4")
     }
 }

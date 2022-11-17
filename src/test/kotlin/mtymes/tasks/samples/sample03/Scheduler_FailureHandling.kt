@@ -41,7 +41,7 @@ class FailureSupportingTaskDao(
                 maxAttemptsCount = 3
             ),
 
-            fetchNextExecutionOptions = FetchNextExecutionOptions(
+            pickNextExecutionOptions = PickNextExecutionOptions(
                 keepAliveFor = Durations.FIVE_MINUTES
             ),
 
@@ -71,21 +71,21 @@ class FailureSupportingTaskDao(
         return scheduler.findTask(taskId)
     }
 
-    fun fetchNextTaskExecution(
+    fun pickNextTaskExecution(
         workerId: WorkerId
     ): TaskToProcess? {
-        val result = scheduler.fetchNextAvailableExecution(workerId)
+        val result = scheduler.pickNextAvailableExecution(workerId)
             ?.let { summary ->
                 TaskToProcess(
-                    executionId = summary.fetchedExecution.executionId,
+                    executionId = summary.pickedExecution.executionId,
                     request = summary.underlyingTask.data().getString("request")
                 )
             }
 
         if (result != null) {
-            printTimedString("fetched Execution ${result.executionId}")
+            printTimedString("picked Execution ${result.executionId}")
         } else {
-            printTimedString("did NOT fetch any Execution")
+            printTimedString("did NOT pick any Execution")
         }
 
         return result
@@ -169,8 +169,8 @@ class BrokenWorker(
     val dao: FailureSupportingTaskDao
 ) : Worker<TaskToProcess> {
 
-    override fun fetchNextTaskToProcess(workerId: WorkerId): TaskToProcess? {
-        return dao.fetchNextTaskExecution(workerId)
+    override fun pickNextTaskToProcess(workerId: WorkerId): TaskToProcess? {
+        return dao.pickNextTaskExecution(workerId)
     }
 
     override fun executeTask(task: TaskToProcess, workerId: WorkerId) {
@@ -279,7 +279,7 @@ object FailThenSucceed {
         dao.submitTask("A")
 
 
-        val executionId1 = dao.fetchNextTaskExecution(workerId)!!.executionId
+        val executionId1 = dao.pickNextTaskExecution(workerId)!!.executionId
         dao.markAsFailed(executionId1, IllegalStateException("It should have worked"))
 
 
@@ -292,7 +292,7 @@ object FailThenSucceed {
         )
 
 
-        val executionId2 = dao.fetchNextTaskExecution(workerId)!!.executionId
+        val executionId2 = dao.pickNextTaskExecution(workerId)!!.executionId
         dao.markAsSucceeded(executionId2, "So glad it's over. I'm not doing this again")
 
 
@@ -305,7 +305,7 @@ object FailThenSucceed {
         )
 
 
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
     }
 }
 
@@ -321,7 +321,7 @@ object UnrecoverableFailure {
         dao.submitTask("A")
 
 
-        val executionId1 = dao.fetchNextTaskExecution(workerId)!!.executionId
+        val executionId1 = dao.pickNextTaskExecution(workerId)!!.executionId
         dao.markAsFailedAndCanNOTRetry(
             executionId1,
             IllegalStateException("OK. So the building burned down!!! I think I can go home now")
@@ -337,7 +337,7 @@ object UnrecoverableFailure {
         )
 
 
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
     }
 }
 
@@ -353,7 +353,7 @@ object DelayedRetryAfterFailure {
         dao.submitTask("A")
 
 
-        val executionId1 = dao.fetchNextTaskExecution(workerId)!!.executionId
+        val executionId1 = dao.pickNextTaskExecution(workerId)!!.executionId
         dao.markAsFailed(
             executionId1,
             IllegalStateException("Hmm. So It's not as easy as I thought."),
@@ -361,7 +361,7 @@ object DelayedRetryAfterFailure {
         )
 
 
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
 
         displayTinyTasksSummary(
             coll, setOf(
@@ -379,7 +379,7 @@ object DelayedRetryAfterFailure {
         Thread.sleep(2_500)
 
 
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
 
         displayTinyTasksSummary(
             coll, setOf(

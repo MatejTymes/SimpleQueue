@@ -41,7 +41,7 @@ class KillingTasksDao(
                 maxAttemptsCount = 3
             ),
 
-            fetchNextExecutionOptions = FetchNextExecutionOptions(
+            pickNextExecutionOptions = PickNextExecutionOptions(
                 keepAliveFor = Durations.FIVE_MINUTES
             )
         )
@@ -60,27 +60,27 @@ class KillingTasksDao(
         return taskId
     }
 
-    fun fetchNextTaskExecution(
+    fun pickNextTaskExecution(
         workerId: WorkerId,
-        afterStartKeepAliveFor: Duration = scheduler.defaults.fetchNextExecutionOptions!!.keepAliveFor
+        afterStartKeepAliveFor: Duration = scheduler.defaults.pickNextExecutionOptions!!.keepAliveFor
     ): TaskToProcess? {
         val result = scheduler
-            .fetchNextAvailableExecution(
+            .pickNextAvailableExecution(
                 workerId = workerId,
-                options = scheduler.defaults.fetchNextExecutionOptions!!.copy(
+                options = scheduler.defaults.pickNextExecutionOptions!!.copy(
                     keepAliveFor = afterStartKeepAliveFor
                 )
             )?.let { summary ->
                 TaskToProcess(
-                    executionId = summary.fetchedExecution.executionId,
+                    executionId = summary.pickedExecution.executionId,
                     request = summary.underlyingTask.data().getString("request")
                 )
             }
 
         if (result != null) {
-            printTimedString("fetched Execution ${result.executionId} [${result.request}] that should be kept alive for ${afterStartKeepAliveFor}")
+            printTimedString("picked Execution ${result.executionId} [${result.request}] that should be kept alive for ${afterStartKeepAliveFor}")
         } else {
-            printTimedString("did NOT fetch any Execution")
+            printTimedString("did NOT pick any Execution")
         }
 
         return result
@@ -145,7 +145,7 @@ object TaskDoesNOTDieAutomatically {
 
         dao.submitTask("A")
 
-        val executionId = dao.fetchNextTaskExecution(
+        val executionId = dao.pickNextTaskExecution(
             workerId = workerId,
             afterStartKeepAliveFor = Duration.ofSeconds(1)
         )!!.executionId
@@ -161,7 +161,7 @@ object TaskDoesNOTDieAutomatically {
         ))
 
 
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
         dao.markAsSucceeded(executionId)
 
 
@@ -185,7 +185,7 @@ object CallingTaskToMarkExecutionAsDead {
 
         dao.submitTask("A")
 
-        val executionId = dao.fetchNextTaskExecution(
+        val executionId = dao.pickNextTaskExecution(
             workerId = workerId,
             afterStartKeepAliveFor = Duration.ofSeconds(1)
         )!!.executionId
@@ -209,7 +209,7 @@ object CallingTaskToMarkExecutionAsDead {
             printTimedString(e.message!!)
         }
 
-        dao.fetchNextTaskExecution(workerId)
+        dao.pickNextTaskExecution(workerId)
 
         displayTinyTasksSummary(coll, setOf(
             PREVIOUS_EXECUTIONS + "." + HEARTBEAT_AT,
@@ -231,7 +231,7 @@ object HeartBeatExtendsKeepAlivePeriod {
 
         dao.submitTask("A")
 
-        val executionId = dao.fetchNextTaskExecution(
+        val executionId = dao.pickNextTaskExecution(
             workerId = workerId,
             afterStartKeepAliveFor = Duration.ofSeconds(2)
         )!!.executionId
@@ -280,8 +280,8 @@ class LazyHeartBeatingWorker(
         ))
     }
 
-    override fun fetchNextTaskToProcess(workerId: WorkerId): TaskToProcess? {
-        return dao.fetchNextTaskExecution(
+    override fun pickNextTaskToProcess(workerId: WorkerId): TaskToProcess? {
+        return dao.pickNextTaskExecution(
             workerId = workerId,
             afterStartKeepAliveFor = Duration.ofSeconds(3)
         )

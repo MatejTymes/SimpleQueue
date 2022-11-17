@@ -39,7 +39,7 @@ class CancellationSupportingTaskDao(
                 submitAsPaused = true
             ),
 
-            fetchNextExecutionOptions = FetchNextExecutionOptions(
+            pickNextExecutionOptions = PickNextExecutionOptions(
                 keepAliveFor = FIVE_MINUTES
             ),
 
@@ -69,25 +69,25 @@ class CancellationSupportingTaskDao(
         return taskId
     }
 
-    fun fetchNextTaskExecution(
+    fun pickNextTaskExecution(
         workerId: WorkerId
     ): TaskToProcess? {
-        val result = scheduler.fetchNextAvailableExecution(workerId)
+        val result = scheduler.pickNextAvailableExecution(workerId)
             ?.let { summary ->
                 val taskData = summary.underlyingTask.data()
 
                 TaskToProcess(
                     taskId = summary.underlyingTask.taskId,
-                    executionId = summary.fetchedExecution.executionId,
+                    executionId = summary.pickedExecution.executionId,
                     request = taskData.getString("request"),
                     group = taskData.getString("group")
                 )
             }
 
         if (result != null) {
-            printTimedString("fetched Execution ${result.executionId} - ${result.request}/${result.group}")
+            printTimedString("picked Execution ${result.executionId} - ${result.request}/${result.group}")
         } else {
-            printTimedString("did NOT fetch any Execution")
+            printTimedString("did NOT pick any Execution")
         }
 
         return result
@@ -155,20 +155,20 @@ object SubmitPausedTasksAsAGroup {
         dao.submitPausedTask("D", "group1")
         dao.submitPausedTask("E", "group2")
 
-        dao.fetchNextTaskExecution(workerId) // fetches nothing
+        dao.pickNextTaskExecution(workerId) // pickes nothing
 
 
         dao.cancelTasks("group1")
 
-        dao.fetchNextTaskExecution(workerId) // fetches nothing
+        dao.pickNextTaskExecution(workerId) // pickes nothing
 
 
         dao.unPauseTasks("group2")
 
-        dao.fetchNextTaskExecution(workerId) // fetches B/group2
-        dao.fetchNextTaskExecution(workerId) // fetches E/group2
+        dao.pickNextTaskExecution(workerId) // pickes B/group2
+        dao.pickNextTaskExecution(workerId) // pickes E/group2
 
-        dao.fetchNextTaskExecution(workerId) // fetches nothing
+        dao.pickNextTaskExecution(workerId) // pickes nothing
 
 
         displayTinyTasksSummary(coll, setOf(
