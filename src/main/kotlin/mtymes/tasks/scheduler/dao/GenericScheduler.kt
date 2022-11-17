@@ -427,6 +427,17 @@ class GenericScheduler(
     }
 
     fun markKillableExecutionsAsDead(
+        customConstraints: Document? = null,
+        deadTaskUpdateProvider: (ExecutionSummary) -> DeadTaskUpdate
+    ): Int {
+        return scheduler.markKillableExecutionsAsDead(
+            coll = collection,
+            customConstraints = customConstraints,
+            deadTaskUpdateProvider = deadTaskUpdateProvider
+        )
+    }
+
+    fun markKillableExecutionsAsDead(
         options: MarkKillableExecutionsAsDeadOptions,
         customConstraints: Document? = null,
         additionalTaskData: Document? = null,
@@ -451,17 +462,6 @@ class GenericScheduler(
             customConstraints = customConstraints,
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
-        )
-    }
-
-    fun markKillableExecutionsAsDead(
-        customConstraints: Document? = null,
-        deadTaskUpdateProvider: (ExecutionSummary) -> DeadTaskUpdate
-    ): Int {
-        return scheduler.markKillableExecutionsAsDead(
-            coll = collection,
-            customConstraints = customConstraints,
-            deadTaskUpdateProvider = deadTaskUpdateProvider
         )
     }
 

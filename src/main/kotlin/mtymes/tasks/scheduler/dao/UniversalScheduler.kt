@@ -622,80 +622,6 @@ class UniversalScheduler(
         )
     }
 
-    // todo: mtymes - reuse the second markKillableExecutionsAsDead function
-    fun markKillableExecutionsAsDead(
-        coll: MongoCollection<Document>,
-        options: MarkKillableExecutionsAsDeadOptions,
-        customConstraints: Document? = null,
-        additionalTaskData: Document? = null,
-        additionalExecutionData: Document? = null
-    ): Int {
-        val deadTasks: List<Document> = coll.find(
-            docBuilder()
-                .putAll(customConstraints)
-                .putAll(
-                    STATUS to doc("\$in", listOf(TaskStatus.running, TaskStatus.suspended)),
-                    LAST_EXECUTION + "." + STATUS to doc("\$in", ExecutionStatus.NON_FINAL_STATUSES),
-                    LAST_EXECUTION + "." + KILLABLE_AFTER to (doc("\$lt" to clock.now())),
-                )
-                .build()
-        ).toList()
-
-        var countOfKilledExecutions = 0
-        for (deadTask: Document in deadTasks) {
-            try {
-                val currentTaskStatus = TaskStatus.valueOf(deadTask.getString(STATUS))
-                val lastExecutionDoc = deadTask.getDocument(LAST_EXECUTION)
-                val lastExecutionId = ExecutionId(lastExecutionDoc.getString(EXECUTION_ID))
-                val executionAttemptsLeft = deadTask.getInteger(EXECUTION_ATTEMPTS_LEFT)
-
-                val toTaskStatus = if (executionAttemptsLeft > 0)
-                    TaskStatus.available
-                else
-                    TaskStatus.dead
-
-                val now = clock.now()
-
-                val summary = updateLastExecution(
-                    coll = coll,
-                    executionId = lastExecutionId,
-                    fromTaskStatus = currentTaskStatus,
-                    fromExecutionStatuses = ExecutionStatus.NON_FINAL_STATUSES,
-                    toTaskStatus = toTaskStatus,
-                    toExecutionStatus = ExecutionStatus.dead,
-                    now = now,
-                    customTaskUpdates = docBuilder()
-                        .putIf(toTaskStatus == TaskStatus.available) {
-                            IS_PICKABLE to true
-                        }
-                        .putIf(toTaskStatus == TaskStatus.available && options.retryDelay != null) {
-                            CAN_BE_EXECUTED_AS_OF to now.plus(options.retryDelay!!)
-                        }
-                        .putIf(options.newTTL != null) {
-                            DELETABLE_AFTER to now.plus(options.newTTL!!)
-                        }
-                        .build(),
-                    customExecutionUpdates = doc(
-                        FINISHED_AT to now,
-                        WAS_RETRYABLE_FAIL to true
-                    ),
-                    additionalTaskData = additionalTaskData,
-                    additionalExecutionData = additionalExecutionData
-                )
-                if (summary != null) {
-                    countOfKilledExecutions++
-                }
-            } catch (e: Exception) {
-                runAndIgnoreExceptions {
-                    val executionId = ExecutionId(deadTask.getDocument(LAST_EXECUTION).getString(EXECUTION_ID))
-                    logger.error("Failed to mark Execution '${executionId}' as '${ExecutionStatus.suspended}'", e)
-                }
-            }
-        }
-
-        return countOfKilledExecutions
-    }
-
     fun markKillableExecutionsAsDead(
         coll: MongoCollection<Document>,
         customConstraints: Document? = null,
@@ -777,6 +703,29 @@ class UniversalScheduler(
         }
 
         return countOfKilledExecutions
+    }
+
+    fun markKillableExecutionsAsDead(
+        coll: MongoCollection<Document>,
+        options: MarkKillableExecutionsAsDeadOptions,
+        customConstraints: Document? = null,
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
+    ): Int {
+        val deadTaskUpdate = DeadTaskUpdate(
+            additionalTaskData = additionalTaskData,
+            additionalExecutionData = additionalExecutionData,
+            retryDelay = options.retryDelay,
+            newTTL = options.newTTL
+        )
+
+        return markKillableExecutionsAsDead(
+            coll = coll,
+            customConstraints = customConstraints,
+            deadTaskUpdateProvider = {
+                deadTaskUpdate
+            }
+        )
     }
 
     fun registerHeartBeat(
