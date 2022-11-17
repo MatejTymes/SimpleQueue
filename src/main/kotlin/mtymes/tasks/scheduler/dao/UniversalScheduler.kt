@@ -26,14 +26,11 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
-// todo: mtymes - double check the SUSPENDED attempts left count
-// todo: mtymes - add IS_UNFINISHED/IS_PICKABLE flag that will unify suspended and available status
 // todo: mtymes - cancel task even when it has a running execution
-// todo: mtymes - is it possible to wait for dependencies somehow ??
-// todo: mtymes - provide proper throws annotations
-// todo: mtymes - don't increment EXECUTION_ATTEMPTS_LEFT on suspension
 // todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
 // todo: mtymes - add ability to have unlimited amount of executions
+// todo: mtymes - is it possible to wait for dependencies somehow ??
+// todo: mtymes - provide proper throws annotations
 class UniversalScheduler(
     val clock: Clock = UTCClock
 ) {
@@ -60,11 +57,9 @@ class UniversalScheduler(
         const val CREATED_AT = "createdAt"
         const val DELETABLE_AFTER = "deletableAfter"
 
-//        const val MAX_EXECUTIONS_COUNT = "maxExecutionsCount" // todo: mtymes - remove this value
         const val EXECUTION_ATTEMPTS_LEFT = "execAttemptsLeft"
         const val EXECUTIONS_COUNT = "executionsCount"
 
-        // todo: mtymes - start using this when fetching tasks
         const val IS_PICKABLE = "isPickable"
         // todo: mtymes - remove when execution started and move onto the execution as COULD_BE_EXECUTED_AS_OF
         const val CAN_BE_EXECUTED_AS_OF = "canBeExecutedAsOf"
@@ -209,7 +204,6 @@ class UniversalScheduler(
                 DATA to data,
                 DELETABLE_AFTER to now.plus(options.ttl),
 
-//                MAX_EXECUTIONS_COUNT to options.maxAttemptsCount,
                 EXECUTION_ATTEMPTS_LEFT to options.maxAttemptsCount,
                 EXECUTIONS_COUNT to 0,
                 RETAIN_ONLY_LAST_EXECUTION to if (options.retainOnlyLastExecution) true else Optional.empty<Boolean>(),
@@ -250,8 +244,7 @@ class UniversalScheduler(
                     .putAll(
                         IS_PICKABLE to true,
                         STATUS to doc("\$in", listOf(TaskStatus.available, TaskStatus.suspended)),
-                        CAN_BE_EXECUTED_AS_OF to doc("\$lte", now),
-                        EXECUTION_ATTEMPTS_LEFT to doc("\$gte", 1)
+                        CAN_BE_EXECUTED_AS_OF to doc("\$lte", now)
                     )
                     .build()
             ).sort(
@@ -628,8 +621,7 @@ class UniversalScheduler(
             customTaskUpdates = docBuilder()
                 .putAll(
                     IS_PICKABLE to true,
-                    CAN_BE_EXECUTED_AS_OF to now.plus(options.suspendFor),
-                    EXECUTION_ATTEMPTS_LEFT to doc("\$sum" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 1))
+                    CAN_BE_EXECUTED_AS_OF to now.plus(options.suspendFor)
                 )
                 .putIf(options.newTTL != null) {
                     DELETABLE_AFTER to now.plus(options.newTTL!!)
@@ -668,15 +660,13 @@ class UniversalScheduler(
             try {
                 val currentTaskStatus = TaskStatus.valueOf(deadTask.getString(STATUS))
                 val lastExecutionDoc = deadTask.getDocument(LAST_EXECUTION)
-//                val currentExecutionStatus = ExecutionStatus.valueOf(lastExecutionDoc.getString(STATUS))
                 val lastExecutionId = ExecutionId(lastExecutionDoc.getString(EXECUTION_ID))
                 val executionAttemptsLeft = deadTask.getInteger(EXECUTION_ATTEMPTS_LEFT)
 
-                val toTaskStatus = if (currentTaskStatus == TaskStatus.suspended) {
-                    if (executionAttemptsLeft > 1) TaskStatus.available else TaskStatus.dead
-                } else {
-                    if (executionAttemptsLeft > 0) TaskStatus.available else TaskStatus.dead
-                }
+                val toTaskStatus = if (executionAttemptsLeft > 0)
+                    TaskStatus.available
+                else
+                    TaskStatus.dead
 
                 val now = clock.now()
 
@@ -692,14 +682,11 @@ class UniversalScheduler(
                         .putIf(toTaskStatus == TaskStatus.available) {
                             IS_PICKABLE to true
                         }
-                        .putIf(options.retryDelay != null) {
+                        .putIf(toTaskStatus == TaskStatus.available && options.retryDelay != null) {
                             CAN_BE_EXECUTED_AS_OF to now.plus(options.retryDelay!!)
                         }
                         .putIf(options.newTTL != null) {
                             DELETABLE_AFTER to now.plus(options.newTTL!!)
-                        }
-                        .putIf(currentTaskStatus == TaskStatus.suspended) {
-                            EXECUTION_ATTEMPTS_LEFT to executionAttemptsLeft - 1
                         }
                         .build(),
                     customExecutionUpdates = doc(
@@ -748,14 +735,8 @@ class UniversalScheduler(
 
                 val currentTaskStatus = task.status
                 val lastExecutionId = lastExecution.executionId
-                val executionAttemptsLeft = task.executionAttemptsLeft()
 
-                // todo: mtymes - is this correct
-                val shouldBecomeAvailable = if (currentTaskStatus == TaskStatus.suspended) {
-                    executionAttemptsLeft > 1
-                } else {
-                    executionAttemptsLeft > 0
-                }
+                val shouldBecomeAvailable = task.executionAttemptsLeft() > 0
 
                 val toTaskStatus = if (shouldBecomeAvailable) {
                     TaskStatus.available
@@ -789,9 +770,6 @@ class UniversalScheduler(
                         }
                         .putIf(deadTaskUpdate.newTTL != null) {
                             DELETABLE_AFTER to now.plus(deadTaskUpdate.newTTL)
-                        }
-                        .putIf(currentTaskStatus == TaskStatus.suspended) {
-                            EXECUTION_ATTEMPTS_LEFT to executionAttemptsLeft - 1
                         }
                         .build(),
                     customExecutionUpdates = doc(
@@ -1038,7 +1016,6 @@ class UniversalScheduler(
                 IS_PICKABLE to true,
                 STATUS to TaskStatus.available,
                 CAN_BE_EXECUTED_AS_OF to doc("\$lte", now),
-                EXECUTION_ATTEMPTS_LEFT to doc("\$gte", 1)
             )
             .build()
 
@@ -1130,10 +1107,9 @@ class UniversalScheduler(
                     TASK_ID to taskId,
                     IS_PICKABLE to true,
                     STATUS to TaskStatus.suspended,
-                    LAST_EXECUTION + "." + EXECUTION_ID to lastExpectedExecutionId,
-                    LAST_EXECUTION + "." + STATUS to ExecutionStatus.suspended,
+                    LAST_EXECUTION + "." + EXECUTION_ID to lastExpectedExecutionId, // todo: mtymes - do we need this one ???
+                    LAST_EXECUTION + "." + STATUS to ExecutionStatus.suspended, // todo: mtymes - do we need this one ???
                     CAN_BE_EXECUTED_AS_OF to doc("\$lte", now),
-                    EXECUTION_ATTEMPTS_LEFT to doc("\$gte", 1)
                 )
                 .build(),
             doc(
@@ -1159,9 +1135,6 @@ class UniversalScheduler(
 //                "\$unset" to doc(
 //                    CAN_BE_EXECUTED_AS_OF to 1
 //                ),
-                "\$inc" to doc(
-                    EXECUTION_ATTEMPTS_LEFT to -1
-                )
             ),
             FindOneAndUpdateOptions()
                 .returnDocument(ReturnDocument.AFTER)

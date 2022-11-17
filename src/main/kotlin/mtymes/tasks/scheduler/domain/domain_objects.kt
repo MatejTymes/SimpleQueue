@@ -134,10 +134,6 @@ data class Task(
         return taskDocument.getZonedDateTime(DELETABLE_AFTER)
     }
 
-//    fun maxExecutionsCount(): Int {
-//        return taskDocument.getInteger(MAX_EXECUTIONS_COUNT)
-//    }
-
     fun executionAttemptsLeft(): Int {
         var attemptsLeft = taskDocument.getInteger(EXECUTION_ATTEMPTS_LEFT)
         if (status == TaskStatus.suspended) {

@@ -132,7 +132,6 @@ object CancelTask {
         dao.pickNextTaskExecution(workerId)
 
         displayTinyTasksSummary(coll, setOf(
-//            MAX_EXECUTIONS_COUNT,
             EXECUTION_ATTEMPTS_LEFT,
             EXECUTIONS_COUNT
         ))
@@ -158,7 +157,6 @@ object CancelExecution {
         dao.pickNextTaskExecution(workerId)
 
         displayTinyTasksSummary(coll, setOf(
-//            MAX_EXECUTIONS_COUNT,
             EXECUTION_ATTEMPTS_LEFT,
             EXECUTIONS_COUNT
         ))
@@ -188,7 +186,6 @@ object FailToCancelRunningTask {
 
 
         displayTinyTasksSummary(coll, setOf(
-//            MAX_EXECUTIONS_COUNT,
             EXECUTION_ATTEMPTS_LEFT,
             EXECUTIONS_COUNT
         ))

@@ -141,7 +141,6 @@ object DelayedStart {
         )
 
         displayTinyTasksSummary(coll, setOf(
-//            MAX_EXECUTIONS_COUNT,
             EXECUTION_ATTEMPTS_LEFT,
             EXECUTIONS_COUNT,
             CAN_BE_EXECUTED_AS_OF
@@ -156,7 +155,6 @@ object DelayedStart {
         dao.pickNextTaskExecution(workerId)
 
         displayTinyTasksSummary(coll, setOf(
-//            MAX_EXECUTIONS_COUNT,
             EXECUTION_ATTEMPTS_LEFT,
             EXECUTIONS_COUNT,
             CAN_BE_EXECUTED_AS_OF
@@ -183,7 +181,6 @@ object TaskSuspension {
         )
 
         displayTinyTasksSummary(coll, setOf(
-//            MAX_EXECUTIONS_COUNT,
             EXECUTION_ATTEMPTS_LEFT,
             EXECUTIONS_COUNT,
             CAN_BE_EXECUTED_AS_OF,
@@ -203,7 +200,6 @@ object TaskSuspension {
         )!!.executionId
 
         displayTinyTasksSummary(coll, setOf(
-//            MAX_EXECUTIONS_COUNT,
             EXECUTION_ATTEMPTS_LEFT,
             EXECUTIONS_COUNT,
             CAN_BE_EXECUTED_AS_OF,
@@ -216,7 +212,6 @@ object TaskSuspension {
         )
 
         displayTinyTasksSummary(coll, setOf(
-//            MAX_EXECUTIONS_COUNT,
             EXECUTION_ATTEMPTS_LEFT,
             EXECUTIONS_COUNT,
             CAN_BE_EXECUTED_AS_OF,

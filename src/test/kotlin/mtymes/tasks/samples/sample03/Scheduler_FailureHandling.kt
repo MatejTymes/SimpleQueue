@@ -213,7 +213,6 @@ object WorkerFailing {
 
         displayTinyTasksSummary(
             coll, setOf(
-//                MAX_EXECUTIONS_COUNT,
                 EXECUTION_ATTEMPTS_LEFT,
                 EXECUTIONS_COUNT,
                 PREVIOUS_EXECUTIONS + "." + STARTED_AT,
@@ -251,7 +250,6 @@ object WorkerFailingButRetainingOnlyLastExecution {
 
         displayTinyTasksSummary(
             coll, setOf(
-//                MAX_EXECUTIONS_COUNT,
                 EXECUTION_ATTEMPTS_LEFT,
                 EXECUTIONS_COUNT,
                 PREVIOUS_EXECUTIONS + "." + STARTED_AT,
@@ -285,7 +283,6 @@ object FailThenSucceed {
 
         displayTinyTasksSummary(
             coll, setOf(
-//                MAX_EXECUTIONS_COUNT,
                 EXECUTION_ATTEMPTS_LEFT,
                 EXECUTIONS_COUNT
             )
@@ -298,7 +295,6 @@ object FailThenSucceed {
 
         displayTinyTasksSummary(
             coll, setOf(
-//                MAX_EXECUTIONS_COUNT,
                 EXECUTION_ATTEMPTS_LEFT,
                 EXECUTIONS_COUNT
             )
@@ -330,7 +326,6 @@ object UnrecoverableFailure {
 
         displayTinyTasksSummary(
             coll, setOf(
-//                MAX_EXECUTIONS_COUNT,
                 EXECUTION_ATTEMPTS_LEFT,
                 EXECUTIONS_COUNT
             )
@@ -365,7 +360,6 @@ object DelayedRetryAfterFailure {
 
         displayTinyTasksSummary(
             coll, setOf(
-//                MAX_EXECUTIONS_COUNT,
                 EXECUTION_ATTEMPTS_LEFT,
                 EXECUTIONS_COUNT,
                 CAN_BE_EXECUTED_AS_OF,
@@ -383,7 +377,6 @@ object DelayedRetryAfterFailure {
 
         displayTinyTasksSummary(
             coll, setOf(
-//                MAX_EXECUTIONS_COUNT,
                 EXECUTION_ATTEMPTS_LEFT,
                 EXECUTIONS_COUNT,
                 CAN_BE_EXECUTED_AS_OF,
