@@ -112,17 +112,8 @@ class UniversalScheduler(
         }
 
         private fun Document.toPickedExecutionSummary(
-            expectedLastExecutionId: ExecutionId,
             wasSuspended: Boolean
         ): PickedExecutionSummary {
-            val lastExecutionId = ExecutionId(getDocument(LAST_EXECUTION).getString(EXECUTION_ID))
-
-            if (expectedLastExecutionId != lastExecutionId) {
-                throw NotLastExecutionException(
-                    "No idea how this happened but our started Execution '${expectedLastExecutionId}' was superseded by Execution '${lastExecutionId}'"
-                )
-            }
-
             val task = this.toTask()
 
             return PickedExecutionSummary(
@@ -276,15 +267,10 @@ class UniversalScheduler(
                         return execution
                     }
                 } else if (taskStatus == TaskStatus.suspended) {
-                    val lastExecutionId = ExecutionId(
-                        possibleTaskToPick.getDocument(LAST_EXECUTION).getString(EXECUTION_ID)
-                    )
-
                     val execution = resumeSuspendedExecution(
                         coll = coll,
                         workerId = workerId,
                         taskId = taskId,
-                        lastExpectedExecutionId = lastExecutionId,
                         keepAliveFor = options.keepAliveFor,
                         additionalConstraints = additionalConstraints,
                         newTTL = options.newTTL
@@ -1081,7 +1067,6 @@ class UniversalScheduler(
         )
 
         return modifiedTask?.toPickedExecutionSummary(
-            expectedLastExecutionId = executionId,
             wasSuspended = false
         )
     }
@@ -1090,7 +1075,6 @@ class UniversalScheduler(
         coll: MongoCollection<Document>,
         workerId: WorkerId,
         taskId: TaskId,
-        lastExpectedExecutionId: ExecutionId,
         keepAliveFor: Duration,
         additionalConstraints: Document?,
         newTTL: Duration?
@@ -1107,8 +1091,6 @@ class UniversalScheduler(
                     TASK_ID to taskId,
                     IS_PICKABLE to true,
                     STATUS to TaskStatus.suspended,
-                    LAST_EXECUTION + "." + EXECUTION_ID to lastExpectedExecutionId, // todo: mtymes - do we need this one ???
-                    LAST_EXECUTION + "." + STATUS to ExecutionStatus.suspended, // todo: mtymes - do we need this one ???
                     CAN_BE_EXECUTED_AS_OF to doc("\$lte", now),
                 )
                 .build(),
@@ -1141,7 +1123,6 @@ class UniversalScheduler(
         )
 
         return modifiedTask?.toPickedExecutionSummary(
-            expectedLastExecutionId = lastExpectedExecutionId,
             wasSuspended = true
         )
     }
