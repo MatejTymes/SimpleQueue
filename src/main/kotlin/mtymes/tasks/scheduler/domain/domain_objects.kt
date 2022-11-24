@@ -43,6 +43,10 @@ class TaskId(value: String) : Microtype<String>(value) {
 }
 
 class ExecutionId(value: UUID) : Microtype<UUID>(value) {
+    companion object {
+        fun uniqueExecutionId() = ExecutionId(UUID.randomUUID())
+    }
+
     constructor(value: String) : this(UUID.fromString(value))
 }
 
