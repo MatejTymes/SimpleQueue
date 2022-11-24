@@ -136,6 +136,7 @@ class UniversalScheduler(
     ) : ToTaskStatus
 
 
+    // todo: mtymes - add customConstraints
     fun findTask(
         coll: MongoCollection<Document>,
         taskId: TaskId
@@ -147,6 +148,7 @@ class UniversalScheduler(
         )?.toTask()
     }
 
+    // todo: mtymes - add customConstraints
     fun findExecution(
         coll: MongoCollection<Document>,
         executionId: ExecutionId
@@ -996,8 +998,7 @@ class UniversalScheduler(
                         EXECUTION_ID to executionId,
                         STARTED_AT to now,
                         WORKER_ID to workerId,
-                        // todo: mtymes - WTF is this not allowed in the aggregation mode ???
-//                        DATA to emptyDoc(),
+                        DATA to doc("\$const" to emptyDoc()),
                         STATUS to ExecutionStatus.running,
                         STATUS_UPDATED_AT to now,
                         KILLABLE_AFTER to keepAliveUntil,
