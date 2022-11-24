@@ -136,30 +136,36 @@ class UniversalScheduler(
     ) : ToTaskStatus
 
 
-    // todo: mtymes - add customConstraints
     fun findTask(
         coll: MongoCollection<Document>,
-        taskId: TaskId
+        taskId: TaskId,
+        customConstraints: Document? = null
     ): Task? {
         return coll.findOne(
-            doc(
-                TASK_ID to taskId
-            )
+            docBuilder()
+                .putAll(customConstraints)
+                .put(
+                    TASK_ID to taskId
+                )
+                .build()
         )?.toTask()
     }
 
-    // todo: mtymes - add customConstraints
     fun findExecution(
         coll: MongoCollection<Document>,
-        executionId: ExecutionId
+        executionId: ExecutionId,
+        customConstraints: Document? = null
     ): ExecutionSummary? {
         return coll.findOne(
-            doc(
-                "\$or" to listOf(
-                    doc(LAST_EXECUTION + "." + EXECUTION_ID to executionId),
-                    doc(PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to executionId)
+            docBuilder()
+                .putAll(customConstraints)
+                .put(
+                    "\$or" to listOf(
+                        doc(LAST_EXECUTION + "." + EXECUTION_ID to executionId),
+                        doc(PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to executionId)
+                    )
                 )
-            )
+                .build()
         )?.toExecutionSummary(
             executionId = executionId
         )

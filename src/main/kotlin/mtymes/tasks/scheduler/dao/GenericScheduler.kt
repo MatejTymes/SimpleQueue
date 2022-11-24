@@ -51,20 +51,24 @@ class GenericScheduler(
 ) {
 
     fun findTask(
-        taskId: TaskId
+        taskId: TaskId,
+        customConstraints: Document? = null
     ): Task? {
         return scheduler.findTask(
             coll = collection,
-            taskId = taskId
+            taskId = taskId,
+            customConstraints = customConstraints
         )
     }
 
     fun findExecution(
-        executionId: ExecutionId
+        executionId: ExecutionId,
+        customConstraints: Document? = null
     ): ExecutionSummary? {
         return scheduler.findExecution(
             coll = collection,
-            executionId = executionId
+            executionId = executionId,
+            customConstraints = customConstraints
         )
     }
 
