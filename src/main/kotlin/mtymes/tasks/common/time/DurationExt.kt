@@ -18,9 +18,4 @@ object DurationExt {
     fun Int.weeks(): Duration = Duration.ofDays(this.toLong() * 7)
     fun Int.year(): Duration = Duration.ofDays(this.toLong() * 365)
     fun Int.years(): Duration = Duration.ofDays(this.toLong() * 365)
-
-//    fun Duration.toHumanReadableString() {
-//        val numberOfDays = this.toDays()
-//        val numberOfYears = numberOfDays / 365
-//    }
 }
