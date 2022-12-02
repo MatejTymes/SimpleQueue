@@ -1,5 +1,8 @@
 package mtymes.tasks.test.mongo
 
+import mtymes.tasks.beta.common.domain.AValue
+import mtymes.tasks.beta.common.domain.DefinedValue
+import mtymes.tasks.beta.common.domain.UndefinedValue
 import org.bson.Document
 import org.hamcrest.Description
 import org.hamcrest.TypeSafeDiagnosingMatcher
@@ -7,40 +10,6 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 
-sealed interface AValue<T> {
-    fun isDefined(): Boolean
-    fun isUndefined(): Boolean = !isDefined()
-    fun isEqualTo(otherValue: T?): Boolean
-    fun value(): T?
-    fun valueOrDefault(default: T?): T?
-}
-
-object UndefinedValue : AValue<Any?> {
-    override fun isDefined(): Boolean = false
-    override fun value(): Any? {
-        throw IllegalStateException("This value is UNDEFINED")
-    }
-
-    override fun isEqualTo(otherValue: Any?): Boolean = false
-    override fun valueOrDefault(default: Any?): Any? = default
-}
-
-data class DefinedValue<T>(
-    val value: T?
-) : AValue<T> {
-    override fun isDefined(): Boolean = true
-    override fun value(): T? {
-        return value
-    }
-
-    override fun isEqualTo(otherValue: T?): Boolean {
-        return value == otherValue
-    }
-
-    override fun valueOrDefault(default: T?): T? {
-        return value
-    }
-}
 
 interface IgnoreTheseMismatches {
     fun ignoreThisMismatch(fieldPath: String, actualValue: AValue<Any?>, expectedValue: AValue<Any?>): Boolean
@@ -148,8 +117,8 @@ class DocumentMatcher(
                 return
             }
 
-            val expected = expectedValue.valueOrDefault(null)
-            val actual = actualValue.valueOrDefault(null)
+            val expected = expectedValue.definedValueOrDefault(null)
+            val actual = actualValue.definedValueOrDefault(null)
             if (expected is Document && actual is Document) {
                 findMismatches(
                     expectedDocument = expected,
