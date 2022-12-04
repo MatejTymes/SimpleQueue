@@ -100,6 +100,7 @@ object DefaultMongoWriterRegisty : MongoWriterRegistry {
         .registerWriter(java.lang.Double::class.java, PassTroughWriter)
         .registerWriter(java.lang.Byte::class.java, PassTroughWriter)
         .registerWriter(java.lang.Character::class.java, PassTroughWriter)
+        .registerWriter(Date::class.java, PassTroughWriter)
 
     override fun findWriterFor(value: Any?): MongoWriter<in Any> {
         return wrappedRegistry.findWriterFor(value)
