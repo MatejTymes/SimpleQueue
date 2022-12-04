@@ -2,7 +2,10 @@ package mtymes.tasks.beta.common.mongo.mappers
 
 import javafixes.collection.LinkedArrayQueue
 import javafixes.`object`.Microtype
-import org.bson.Document
+import mtymes.tasks.beta.common.mongo.DocumentBuilder
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZonedDateTime
 import java.util.*
 import java.util.UUID.randomUUID
 import java.util.concurrent.TimeUnit
@@ -18,7 +21,7 @@ class ClassBasedMongoWriterRegistry(
     private val defaultWriter: MongoWriter<in Any>?
 ) : MongoWriterRegistry {
 
-    fun <T> registerWriter(supportedClass: Class<T>, writer: MongoWriter<T>): ClassBasedMongoWriterRegistry {
+    fun <T> registerWriter(supportedClass: Class<T>, writer: MongoWriter<in T>): ClassBasedMongoWriterRegistry {
         return ClassBasedMongoWriterRegistry(
             writers + (supportedClass to writer as MongoWriter<in Any>),
             defaultWriter
@@ -77,13 +80,26 @@ class ClassBasedMongoWriterRegistry(
 object DefaultMongoWriterRegisty : MongoWriterRegistry {
 
     private val wrappedRegistry = ClassBasedMongoWriterRegistry(emptyMap(), null)
-        .registerDefaultWriter(AnyWriter)
-        .registerWriter(Enum::class.java, EnumWriter)
-        .registerWriter(UUID::class.java, UUIDWriter)
-        .registerWriter(Optional::class.java, OptionalWriter)
-        .registerWriter(Microtype::class.java, MicrotypeWriter)
+        .registerDefaultWriter(PassTroughWriter)
         .registerWriter(Map::class.java, MapWriter)
         .registerWriter(Collection::class.java, CollectionWriter)
+        .registerWriter(Enum::class.java, EnumWriter)
+        .registerWriter(Optional::class.java, OptionalWriter)
+        .registerWriter(UUID::class.java, UUIDWriter)
+        .registerWriter(ZonedDateTime::class.java, ZonedDateTimeWriter)
+        .registerWriter(LocalDateTime::class.java, LocalDateTimeWriter)
+        .registerWriter(LocalDate::class.java, LocalDateWriter)
+        .registerWriter(Microtype::class.java, MicrotypeWriter)
+        // not actually needed to be defined (as the default is the PassThroughWriter) but decreases the class traversing time
+        .registerWriter(java.lang.Boolean::class.java, PassTroughWriter)
+        .registerWriter(java.lang.String::class.java, PassTroughWriter)
+        .registerWriter(java.lang.Integer::class.java, PassTroughWriter)
+        .registerWriter(java.lang.Long::class.java, PassTroughWriter)
+        .registerWriter(java.lang.Short::class.java, PassTroughWriter)
+        .registerWriter(java.lang.Float::class.java, PassTroughWriter)
+        .registerWriter(java.lang.Double::class.java, PassTroughWriter)
+        .registerWriter(java.lang.Byte::class.java, PassTroughWriter)
+        .registerWriter(java.lang.Character::class.java, PassTroughWriter)
 
     override fun findWriterFor(value: Any?): MongoWriter<in Any> {
         return wrappedRegistry.findWriterFor(value)
@@ -94,18 +110,15 @@ object DefaultMongoWriterRegisty : MongoWriterRegistry {
 fun main() {
     val registry: MongoWriterRegistry = DefaultMongoWriterRegisty
 
-    val doc = Document()
-    val docInserter = DocumentInserter(doc)
+    val docBuilder = DocumentBuilder(registry)
 
-    val values = listOf(
-        Optional.empty<String>(), 1, "Hello", TimeUnit.MILLISECONDS)
+    docBuilder.putAll(
+        "int" to 5,
+        "list" to listOf(Optional.empty<String>(), 1, "Hello", TimeUnit.MILLISECONDS),
+        "uuid" to randomUUID()
+    )
 
-    docInserter.setFieldName("list")
-    registry.findWriterFor(values).writeValue(values, docInserter, registry)
+    val doc = docBuilder.build()
 
-    docInserter.setFieldName("uuid")
-    val uuid = randomUUID()
-    registry.findWriterFor(uuid).writeValue(uuid, docInserter, registry)
-
-    println(doc)
+    println("doc = ${doc}")
 }

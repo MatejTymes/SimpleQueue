@@ -1,7 +1,11 @@
 package mtymes.tasks.beta.common.mongo.mappers
 
 import javafixes.`object`.Microtype
+import mtymes.tasks.common.time.DateUtil.toDate
 import org.bson.Document
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZonedDateTime
 import java.util.*
 
 
@@ -19,7 +23,7 @@ object UnsupportedWriter : MongoWriter<Any> {
 }
 
 
-object AnyWriter : MongoWriter<Any> {
+object PassTroughWriter : MongoWriter<Any> {
 
     override fun writeValue(value: Any?, valueInserter: ValueInserter, writerRegistry: MongoWriterRegistry) {
         valueInserter.insertValue(value)
@@ -70,6 +74,42 @@ object MicrotypeWriter : MongoWriter<Microtype<*>> {
 
             writerRegistry.findWriterFor(underlyingValue)
                 .writeValue(underlyingValue, valueInserter, writerRegistry)
+        }
+    }
+}
+
+
+object ZonedDateTimeWriter : MongoWriter<ZonedDateTime> {
+
+    override fun writeValue(value: ZonedDateTime?, valueInserter: ValueInserter, writerRegistry: MongoWriterRegistry) {
+        if (value == null) {
+            valueInserter.insertValue(null)
+        } else {
+            valueInserter.insertValue(toDate(value))
+        }
+    }
+}
+
+
+object LocalDateTimeWriter : MongoWriter<LocalDateTime> {
+
+    override fun writeValue(value: LocalDateTime?, valueInserter: ValueInserter, writerRegistry: MongoWriterRegistry) {
+        if (value == null) {
+            valueInserter.insertValue(null)
+        } else {
+            valueInserter.insertValue(toDate(value))
+        }
+    }
+}
+
+
+object LocalDateWriter : MongoWriter<LocalDate> {
+
+    override fun writeValue(value: LocalDate?, valueInserter: ValueInserter, writerRegistry: MongoWriterRegistry) {
+        if (value == null) {
+            valueInserter.insertValue(null)
+        } else {
+            valueInserter.insertValue(toDate(value))
         }
     }
 }
