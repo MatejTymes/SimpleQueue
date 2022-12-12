@@ -43,7 +43,7 @@ class ClassBasedMongoWriterRegistry(
             var classToProcess: Class<*>? = value::class.java
 
             var interfacesToProcess: LinkedArrayQueue<Class<*>>? = null
-            mainLoop@while (classToProcess != null) {
+            mainLoop@ while (classToProcess != null) {
 
                 writer = writers.get(classToProcess)
                 if (writer != null) {
@@ -90,7 +90,8 @@ object DefaultMongoWriterRegisty : MongoWriterRegistry {
         .registerWriter(LocalDateTime::class.java, LocalDateTimeWriter)
         .registerWriter(LocalDate::class.java, LocalDateWriter)
         .registerWriter(Microtype::class.java, MicrotypeWriter)
-        // not actually needed to be defined (as the default is the PassThroughWriter) but decreases the class traversing time
+
+        // not actually needed to be defined (as the default is the PassThroughWriter) but decreases the class hierarchy traversing time
         .registerWriter(java.lang.Boolean::class.java, PassTroughWriter)
         .registerWriter(java.lang.String::class.java, PassTroughWriter)
         .registerWriter(java.lang.Integer::class.java, PassTroughWriter)
@@ -101,6 +102,10 @@ object DefaultMongoWriterRegisty : MongoWriterRegistry {
         .registerWriter(java.lang.Byte::class.java, PassTroughWriter)
         .registerWriter(java.lang.Character::class.java, PassTroughWriter)
         .registerWriter(Date::class.java, PassTroughWriter)
+
+        // not actually needed to be defined (as the default Collection is already handled by CollectionWriter) but decreases the class hierarchy traversing time
+        .registerWriter(List::class.java, CollectionWriter)
+        .registerWriter(Set::class.java, CollectionWriter)
 
     override fun findWriterFor(value: Any?): MongoWriter<in Any> {
         return wrappedRegistry.findWriterFor(value)

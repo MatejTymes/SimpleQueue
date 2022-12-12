@@ -1,6 +1,6 @@
 buildscript {
     // todo: mtymes - update to latest gradle and kotlin version
-    ext.kotlin_version = '1.5.31'
+    ext.kotlin_version = '1.7.21'
     repositories {
         mavenCentral()
         jcenter()
@@ -19,19 +19,15 @@ repositories {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
-    compile "org.slf4j:slf4j-api:1.7.36"
-    compile("ch.qos.logback:logback-classic:1.2.11")
+    implementation "org.slf4j:slf4j-api:1.7.36"
+    implementation "ch.qos.logback:logback-classic:1.2.11"
 
-    compile 'org.mongodb:mongo-java-driver:3.12.11'
-    compile 'com.github.matejtymes:javafixes:1.3.7.1'
+    implementation 'org.mongodb:mongo-java-driver:3.12.11'
+    implementation 'com.github.matejtymes:javafixes:1.3.7.1'
 
 
-    testCompile 'junit:junit:4.11'
-    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+    testImplementation 'junit:junit:4.11'
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
 }
-
-//task wrapper(type: Wrapper) {
-//    gradleVersion = "6.1.1"
-//}
