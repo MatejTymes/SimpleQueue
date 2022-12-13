@@ -18,6 +18,8 @@ import mtymes.tasks.common.mongo.MongoCollectionExt.insert
 import mtymes.tasks.common.time.Clock
 import mtymes.tasks.common.time.UTCClock
 import mtymes.tasks.scheduler.domain.*
+import mtymes.tasks.scheduler.domain.StatusToPick.OnlyAvailable
+import mtymes.tasks.scheduler.domain.StatusToPick.OnlySuspended
 import mtymes.tasks.scheduler.exception.*
 import org.bson.Document
 import org.slf4j.Logger
@@ -232,7 +234,19 @@ class UniversalScheduler(
     ): PickedExecutionSummary? {
         val usedSortOrder = sortOrder ?: doc(CAN_BE_EXECUTED_AS_OF to 1)
 
-        if (options.pickSuspendedTasksAsWell) {
+        if (options.statusToPick == OnlyAvailable) {
+            val execution = startNewExecution(
+                coll = coll,
+                workerId = workerId,
+                taskId = Optional.empty(),
+                keepAliveFor = options.keepAliveFor,
+                additionalConstraints = additionalConstraints,
+                sortOrder = usedSortOrder,
+                newTTL = options.newTTL
+            )
+
+            return execution
+        } else {
             val now = clock.now()
 
             val possibleTasksToPick = coll.find(
@@ -242,7 +256,12 @@ class UniversalScheduler(
                     }
                     .putAll(
                         IS_PICKABLE to true,
-                        STATUS to doc("\$in", listOf(TaskStatus.available, TaskStatus.suspended)),
+                        STATUS to if (options.statusToPick == OnlySuspended) {
+                            TaskStatus.suspended
+                        } else {
+                            doc("\$in", listOf(TaskStatus.available, TaskStatus.suspended))
+
+                        },
                         CAN_BE_EXECUTED_AS_OF to doc("\$lte", now)
                     )
                     .build()
@@ -293,18 +312,6 @@ class UniversalScheduler(
             // todo: mtymes - if got some tasks, but all were already picked (concurrently by other thread), then maybe try again
 
             return null
-        } else {
-            val execution = startNewExecution(
-                coll = coll,
-                workerId = workerId,
-                taskId = Optional.empty(),
-                keepAliveFor = options.keepAliveFor,
-                additionalConstraints = additionalConstraints,
-                sortOrder = usedSortOrder,
-                newTTL = options.newTTL
-            )
-
-            return execution
         }
     }
 

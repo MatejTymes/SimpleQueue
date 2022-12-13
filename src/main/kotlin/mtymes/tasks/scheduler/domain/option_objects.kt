@@ -25,10 +25,15 @@ data class SubmitTaskOptions(
     }
 }
 
+enum class StatusToPick {
+    OnlyAvailable,
+    OnlySuspended,
+    SuspendedAndAvailable
+}
+
 data class PickNextExecutionOptions(
     val keepAliveFor: Duration,
-    // todo: mtymes - change into enum with values: ONLY_NON_SUSPENDED, ONLY_SUSPENDED, SUSPENDED_AND_NON_SUSPENDED
-    val pickSuspendedTasksAsWell: Boolean = false,
+    val statusToPick: StatusToPick = StatusToPick.OnlyAvailable,
     val newTTL: Duration? = null
 ) {
     init {

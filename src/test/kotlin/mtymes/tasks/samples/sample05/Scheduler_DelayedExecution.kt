@@ -11,10 +11,9 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTIONS_COUNT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.SUSPENSION_COUNT
-import mtymes.tasks.scheduler.domain.ExecutionId
-import mtymes.tasks.scheduler.domain.MarkAsSuspendedOptions
-import mtymes.tasks.scheduler.domain.PickNextExecutionOptions
-import mtymes.tasks.scheduler.domain.SubmitTaskOptions
+import mtymes.tasks.scheduler.domain.*
+import mtymes.tasks.scheduler.domain.StatusToPick.OnlyAvailable
+import mtymes.tasks.scheduler.domain.StatusToPick.SuspendedAndAvailable
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
 import org.bson.Document
@@ -42,7 +41,7 @@ class SuspendingTaskDao(
 
             pickNextExecutionOptions = PickNextExecutionOptions(
                 keepAliveFor = Durations.FIVE_MINUTES,
-                pickSuspendedTasksAsWell = true
+                statusToPick = SuspendedAndAvailable
             ),
 
             markAsSuspendedOptions = MarkAsSuspendedOptions(
@@ -67,12 +66,12 @@ class SuspendingTaskDao(
 
     fun pickNextTaskExecution(
         workerId: WorkerId,
-        pickSuspendedTasksAsWell: Boolean = scheduler.defaults.pickNextExecutionOptions!!.pickSuspendedTasksAsWell
+        statusToPick: StatusToPick = scheduler.defaults.pickNextExecutionOptions!!.statusToPick
     ): TaskToProcess? {
         val result = scheduler.pickNextAvailableExecution(
             workerId = workerId,
             options = scheduler.defaults.pickNextExecutionOptions!!.copy(
-                pickSuspendedTasksAsWell = pickSuspendedTasksAsWell
+                statusToPick = statusToPick
             )
         )?.let { summary ->
             TaskToProcess(
@@ -84,7 +83,7 @@ class SuspendingTaskDao(
         if (result != null) {
             printTimedString("picked Execution ${result.executionId}")
         } else {
-            printTimedString("did NOT pick any Execution" + if(!pickSuspendedTasksAsWell) " (picking only NON-SUSPENDED tasks)" else "")
+            printTimedString("did NOT pick any Execution" + if(statusToPick == OnlyAvailable) " (picking only NON-SUSPENDED tasks)" else "")
         }
 
         return result
@@ -190,13 +189,13 @@ object TaskSuspension {
         // pick non-suspendable only
         dao.pickNextTaskExecution(
             workerId = workerId,
-            pickSuspendedTasksAsWell = false
+            statusToPick = OnlyAvailable
         )
 
         // pick suspendable as well
         val anotherExecutionId = dao.pickNextTaskExecution(
             workerId = workerId,
-            pickSuspendedTasksAsWell = true
+            statusToPick = SuspendedAndAvailable
         )!!.executionId
 
         displayTinyTasksSummary(coll, setOf(
