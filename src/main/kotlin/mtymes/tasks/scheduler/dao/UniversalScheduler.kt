@@ -13,7 +13,7 @@ import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
 import mtymes.tasks.common.mongo.DocumentExt.areDefined
 import mtymes.tasks.common.mongo.DocumentExt.getDocument
 import mtymes.tasks.common.mongo.DocumentExt.isDefined
-import mtymes.tasks.common.mongo.MongoCollectionExt.findOne
+import mtymes.tasks.common.mongo.MongoCollectionExt.findTheOnlyOne
 import mtymes.tasks.common.mongo.MongoCollectionExt.insert
 import mtymes.tasks.common.time.Clock
 import mtymes.tasks.common.time.UTCClock
@@ -141,7 +141,7 @@ class UniversalScheduler(
         taskId: TaskId,
         customConstraints: Document? = null
     ): Task? {
-        return coll.findOne(
+        return coll.findTheOnlyOne(
             docBuilder()
                 .putAll(customConstraints)
                 .put(
@@ -156,7 +156,7 @@ class UniversalScheduler(
         executionId: ExecutionId,
         customConstraints: Document? = null
     ): ExecutionSummary? {
-        return coll.findOne(
+        return coll.findTheOnlyOne(
             docBuilder()
                 .putAll(customConstraints)
                 .put(
@@ -803,8 +803,8 @@ class UniversalScheduler(
             return HeartBeatApplied
         }
 
-        val task = coll.findOne(doc(LAST_EXECUTION + "." + EXECUTION_ID to executionId))?.toTask()
-            ?: coll.findOne(doc(PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to executionId))?.toTask()
+        val task = coll.findTheOnlyOne(doc(LAST_EXECUTION + "." + EXECUTION_ID to executionId))?.toTask()
+            ?: coll.findTheOnlyOne(doc(PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to executionId))?.toTask()
 
         if (task == null) {
             return NoExecutionFoundToApplyHeartBeatTo
@@ -1127,7 +1127,7 @@ class UniversalScheduler(
         if (modifiedTask != null) {
             return modifiedTask.toTask()
         } else {
-            val task: Document? = coll.findOne(
+            val task: Document? = coll.findTheOnlyOne(
                 doc(TASK_ID to taskId)
             )
 
@@ -1287,12 +1287,12 @@ class UniversalScheduler(
                 executionId = executionId
             )
         } else {
-            val task: Document? = coll.findOne(
+            val task: Document? = coll.findTheOnlyOne(
                 doc(LAST_EXECUTION + "." + EXECUTION_ID to executionId)
             )
 
             if (task == null) {
-                val taskWithPreviousExecution = coll.findOne(
+                val taskWithPreviousExecution = coll.findTheOnlyOne(
                     doc(PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to executionId)
                 )
                 if (taskWithPreviousExecution != null) {

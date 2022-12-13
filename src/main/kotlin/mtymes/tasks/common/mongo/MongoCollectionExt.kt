@@ -23,8 +23,19 @@ object MongoCollectionExt {
         }
     }
 
-    // todo: mtymes - should we fail if has more than one ???
-    fun <T> MongoCollection<T>.findOne(filter: Bson): T? = find(filter).first()
+    fun <T> MongoCollection<T>.findTheOnlyOne(query: Bson): T? {
+        val iterator = find(query).limit(2).iterator()
+
+        val result: T? = if (iterator.hasNext()) iterator.next() else null
+
+        if (iterator.hasNext()) {
+            throw IllegalStateException("Found more than one result for query: ${query}")
+        }
+
+        return result
+    }
+
+    fun <T> MongoCollection<T>.findFirst(query: Bson): T? = find(query).first()
 
     fun <T> MongoCollection<T>.upsert(query: Bson, update: Bson): UpdateResult {
         try {
