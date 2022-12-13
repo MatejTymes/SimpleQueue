@@ -27,8 +27,8 @@ data class SubmitTaskOptions(
 
 enum class StatusToPick {
     OnlyAvailable,
-    OnlySuspended,
-    SuspendedAndAvailable
+    OnlySuspended, // less performant than OnlyAvailable // todo: mtymes - make this more performant
+    SuspendedAndAvailable // less performant than OnlyAvailable
 }
 
 data class PickNextExecutionOptions(
