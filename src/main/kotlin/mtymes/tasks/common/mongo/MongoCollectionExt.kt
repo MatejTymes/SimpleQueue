@@ -23,7 +23,7 @@ object MongoCollectionExt {
         }
     }
 
-    fun <T> MongoCollection<T>.findTheOnlyOne(query: Bson): T? {
+    fun <T> MongoCollection<T>.findMaxOne(query: Bson): T? {
         val iterator = find(query).limit(2).iterator()
 
         val result: T? = if (iterator.hasNext()) iterator.next() else null
