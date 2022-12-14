@@ -244,7 +244,17 @@ class UniversalScheduler(
                 sortOrder = usedSortOrder,
                 newTTL = options.newTTL
             )
-
+            return execution
+        } else if (options.statusToPick == OnlySuspended) {
+            val execution = resumeSuspendedExecution(
+                coll = coll,
+                workerId = workerId,
+                taskId = Optional.empty(),
+                keepAliveFor = options.keepAliveFor,
+                additionalConstraints = additionalConstraints,
+                sortOrder = usedSortOrder,
+                newTTL = options.newTTL
+            )
             return execution
         } else {
             val now = clock.now()
@@ -297,9 +307,10 @@ class UniversalScheduler(
                     val execution = resumeSuspendedExecution(
                         coll = coll,
                         workerId = workerId,
-                        taskId = taskId,
+                        taskId = Optional.of(taskId),
                         keepAliveFor = options.keepAliveFor,
                         additionalConstraints = additionalConstraints,
+                        sortOrder = usedSortOrder,
                         newTTL = options.newTTL
                     )
 
@@ -1037,9 +1048,10 @@ class UniversalScheduler(
     private fun resumeSuspendedExecution(
         coll: MongoCollection<Document>,
         workerId: WorkerId,
-        taskId: TaskId,
+        taskId: Optional<TaskId>,
         keepAliveFor: Duration,
         additionalConstraints: Document?,
+        sortOrder: Document,
         newTTL: Duration?
     ): PickedExecutionSummary? {
         val now = clock.now()
@@ -1083,6 +1095,7 @@ class UniversalScheduler(
             ),
             FindOneAndUpdateOptions()
                 .returnDocument(ReturnDocument.AFTER)
+                .sort(sortOrder)
         )
 
         return modifiedTask?.toPickedExecutionSummary(
