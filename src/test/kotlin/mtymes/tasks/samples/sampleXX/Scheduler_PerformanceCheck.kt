@@ -2,6 +2,7 @@ package mtymes.tasks.samples.sampleXX
 
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.IndexOptions
+import javafixes.collection.LinkedArrayQueue
 import javafixes.concurrency.Runner
 import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.mongo.DocBuilder
@@ -130,7 +131,7 @@ object InsertionAndPickingPerformance {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val itemCount = 1_000_000
+        val itemCount = 350_000
 
         println("Insertion And Picking:")
 
@@ -201,16 +202,19 @@ object InsertionAndPickingPerformance {
                                 val result = dao.pickNextTaskExecution(workerId)
                                 val duration = System.currentTimeMillis() - startTime
 
-                                pickCount.addAndGet(1)
-                                pickTotalDuration.addAndGet(duration)
-                                if (pickMaxDuration.get() < duration) {
-                                    pickMaxDuration.set(duration)
-                                }
+                                if (result == null) {
+                                    break
+                                } else {
+                                    pickCount.addAndGet(1)
+                                    pickTotalDuration.addAndGet(duration)
+                                    if (pickMaxDuration.get() < duration) {
+                                        pickMaxDuration.set(duration)
+                                    }
 
-                                if (result != null) {
                                     pickingCounter.incrementAndGet()
                                 }
-                            } while (pickingCounter.get() < itemCount)
+//                            } while (pickingCounter.get() < itemCount)
+                            } while (true)
                         }
                     }
 
@@ -220,7 +224,11 @@ object InsertionAndPickingPerformance {
 
                     println("- taskCount = ${coll.countDocuments()}")
                     println("- totalInsertDuration = ${insertTotalDuration.get()}")
-                    println("- avgInsertDuration = ${insertTotalDuration.get().toDouble() / insertCount.get().toDouble()}")
+                    println(
+                        "- avgInsertDuration = ${
+                            insertTotalDuration.get().toDouble() / insertCount.get().toDouble()
+                        }"
+                    )
                     println("- maxInsertDuration = ${insertMaxDuration.get()}")
 
                     println("- pickCount = ${pickCount.get()}")
