@@ -13,6 +13,8 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_A
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DELETABLE_AFTER
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ID
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.IS_PICKABLE
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS
 import mtymes.tasks.scheduler.domain.*
@@ -243,13 +245,13 @@ private fun createDefaultIndexes(coll: MongoCollection<Document>) {
         ),
         IndexOptions().partialFilterExpression(
             doc(
-                STATUS to TaskStatus.available,
-                EXECUTION_ATTEMPTS_LEFT to doc("\$gte", 1)
+                IS_PICKABLE to true,
+                STATUS to TaskStatus.available
             )
         )
     )
     coll.createIndex(
-        doc(PREVIOUS_EXECUTIONS + "." + EXECUTION_ID to 1)
+        doc(LAST_EXECUTION + "." + EXECUTION_ID to 1)
     )
     coll.createIndex(
         doc(DELETABLE_AFTER to 1),
