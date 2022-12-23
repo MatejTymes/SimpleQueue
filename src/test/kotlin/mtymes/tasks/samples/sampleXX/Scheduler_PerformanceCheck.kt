@@ -4,6 +4,7 @@ import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.IndexOptions
 import javafixes.collection.LinkedArrayQueue
 import javafixes.concurrency.Runner
+import mtymes.tasks.common.collection.QueueExt.pollingIterator
 import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.mongo.DocBuilder
 import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
@@ -12,15 +13,15 @@ import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_AS_OF
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DELETABLE_AFTER
-import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ID
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.IS_PICKABLE
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
-import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STATUS
 import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import org.bson.Document
+import java.util.*
+import java.util.Collections.sort
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -67,7 +68,7 @@ object InsertionOnlyPerformance {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val itemCount = 100_000
+        val itemCount = 500_000
 
         println("Insertion Only:")
 
@@ -131,7 +132,7 @@ object InsertionAndPickingPerformance {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val itemCount = 350_000
+        val itemCount = 500_000
 
         println("Insertion And Picking:")
 
@@ -140,8 +141,13 @@ object InsertionAndPickingPerformance {
             10
         )) {
             for (pickingThreadCount in listOf(
-//                1, 2, 3, 5,
-                10
+//                1,
+//                2,
+//                3,
+//                5,
+//                10,
+//                15,
+                20
             )) {
                 println("\n")
                 println("itemCount = ${itemCount}")
@@ -156,9 +162,8 @@ object InsertionAndPickingPerformance {
                 createDefaultIndexes(coll)
 
 
-                var insertCount = AtomicLong(0L)
-                var insertTotalDuration = AtomicLong(0L)
-                var insertMaxDuration = AtomicLong(-1L)
+                val insertDurations = mutableListOf<Queue<Long>>()
+                val pickDurations = mutableListOf<Queue<Long>>()
 
                 val insertionRunner = Runner(insertionThreadCount)
                 val pickingRunner = Runner(pickingThreadCount)
@@ -166,6 +171,9 @@ object InsertionAndPickingPerformance {
                     val insertionCounter = AtomicInteger(1)
 
                     for (threadNo in 1..insertionThreadCount) {
+                        val durationsQueue = LinkedArrayQueue<Long>(256)
+                        insertDurations.add(durationsQueue)
+
                         insertionRunner.run { shutDownInfo ->
                             while (true) {
                                 val number = insertionCounter.getAndIncrement()
@@ -179,23 +187,17 @@ object InsertionAndPickingPerformance {
                                 dao.submitTask(body)
                                 val duration = System.currentTimeMillis() - startTime
 
-                                insertCount.addAndGet(1)
-                                insertTotalDuration.addAndGet(duration)
-                                if (insertMaxDuration.get() < duration) {
-                                    insertMaxDuration.set(duration)
-                                }
+                                durationsQueue.add(duration)
                             }
                         }
                     }
 
-                    val pickingCounter = AtomicInteger(0)
                     val workerId = WorkerId("SomeWorker")
 
-                    var pickCount = AtomicLong(0L)
-                    var pickTotalDuration = AtomicLong(0L)
-                    var pickMaxDuration = AtomicLong(-1L)
-
                     for (threadNo in 1..insertionThreadCount) {
+                        val durationsQueue = LinkedArrayQueue<Long>(256)
+                        pickDurations.add(durationsQueue)
+
                         pickingRunner.run { shutDownInfo ->
                             do {
                                 val startTime = System.currentTimeMillis()
@@ -205,15 +207,8 @@ object InsertionAndPickingPerformance {
                                 if (result == null) {
                                     break
                                 } else {
-                                    pickCount.addAndGet(1)
-                                    pickTotalDuration.addAndGet(duration)
-                                    if (pickMaxDuration.get() < duration) {
-                                        pickMaxDuration.set(duration)
-                                    }
-
-                                    pickingCounter.incrementAndGet()
+                                    durationsQueue.add(duration)
                                 }
-//                            } while (pickingCounter.get() < itemCount)
                             } while (true)
                         }
                     }
@@ -222,19 +217,30 @@ object InsertionAndPickingPerformance {
                     insertionRunner.waitTillDone()
                     pickingRunner.waitTillDone()
 
-                    println("- taskCount = ${coll.countDocuments()}")
-                    println("- totalInsertDuration = ${insertTotalDuration.get()}")
-                    println(
-                        "- avgInsertDuration = ${
-                            insertTotalDuration.get().toDouble() / insertCount.get().toDouble()
-                        }"
-                    )
-                    println("- maxInsertDuration = ${insertMaxDuration.get()}")
 
-                    println("- pickCount = ${pickCount.get()}")
-                    println("- totalPickDuration = ${pickTotalDuration.get()}")
-                    println("- avgPickDuration = ${pickTotalDuration.get().toDouble() / pickCount.get().toDouble()}")
-                    println("- maxPickDuration = ${pickMaxDuration.get()}")
+                    println("- taskCount = ${coll.countDocuments()}")
+                    println()
+
+
+                    val allInsertDurations = ArrayList<Long>(
+                        insertDurations.sumOf { it.size }
+                    )
+                    insertDurations.forEach {
+                        it.pollingIterator().forEach { allInsertDurations.add(it) }
+                    }
+                    println("INSERTION durations in ms")
+                    showDurations(allInsertDurations)
+
+
+                    val allPickDurations = ArrayList<Long>(
+                        pickDurations.sumOf { it.size }
+                    )
+                    pickDurations.forEach {
+                        it.pollingIterator().forEach { allPickDurations.add(it) }
+                    }
+                    sort(allPickDurations)
+                    println("PICK durations in ms")
+                    showDurations(allPickDurations)
 
                 } finally {
                     insertionRunner.shutdownNow()
@@ -243,6 +249,23 @@ object InsertionAndPickingPerformance {
             }
         }
     }
+}
+
+private fun showDurations(allDurations: MutableList<Long>) {
+    sort(allDurations)
+
+    val totalDuration = allDurations.sum()
+    val durationsCount = allDurations.size
+
+    println("- total = ${totalDuration}")
+    println("- avg = ${totalDuration.toDouble() / durationsCount.toDouble()}")
+    println("- mean = ${allDurations.get(durationsCount / 2)}")
+    println("- 90 = ${allDurations.get(durationsCount * 90 / 100)}")
+    println("- 95 = ${allDurations.get(durationsCount * 95 / 100)}")
+    println("- 99 = ${allDurations.get(durationsCount * 99 / 100)}")
+    println("- 99.9 = ${allDurations.get(durationsCount * 999 / 1000)}")
+    println("- max = ${allDurations.last()}")
+    println()
 }
 
 
