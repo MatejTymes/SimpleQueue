@@ -1,13 +1,12 @@
 package mtymes.tasks.playground
 
 import com.mongodb.MongoClient
-import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
-import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
+import mtymes.tasks.common.mongo.builder.WithCoreDocumentBuilder
 import mtymes.tasks.test.task.TaskViewer.displayTasksSummary
 import java.util.UUID.randomUUID
 
 
-object ComplexUpdate01 {
+object ComplexUpdate01 : WithCoreDocumentBuilder {
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -67,10 +66,14 @@ object ComplexUpdate01 {
                                 "in" to doc(
                                     "\$cond" to listOf(
                                         doc("\$eq" to listOf("\$\$m.id", eId2)),
-                                        doc("\$mergeObjects" to listOf("\$\$m", doc(
-                                            "status" to "failed",
-                                            "finishedAt" to "now"
-                                        ))),
+                                        doc(
+                                            "\$mergeObjects" to listOf(
+                                                "\$\$m", doc(
+                                                    "status" to "failed",
+                                                    "finishedAt" to "now"
+                                                )
+                                            )
+                                        ),
                                         "\$\$m"
                                     )
                                 )

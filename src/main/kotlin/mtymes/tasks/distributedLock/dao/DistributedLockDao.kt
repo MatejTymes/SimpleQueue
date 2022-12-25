@@ -4,9 +4,8 @@ import com.mongodb.client.MongoCollection
 import mtymes.tasks.common.check.ValidityChecks.expectNonNegativeDuration
 import mtymes.tasks.common.check.ValidityChecks.expectPositiveDuration
 import mtymes.tasks.common.domain.WorkerId
-import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
-import mtymes.tasks.common.mongo.DocBuilder.Companion.docBuilder
 import mtymes.tasks.common.mongo.MongoCollectionExt.insert
+import mtymes.tasks.common.mongo.builder.WithCoreDocumentBuilder
 import mtymes.tasks.common.time.Clock
 import mtymes.tasks.common.time.UTCClock
 import mtymes.tasks.distributedLock.domain.LockId
@@ -16,7 +15,7 @@ import java.time.Duration
 class DistributedLockDao(
     val coll: MongoCollection<Document>,
     val clock: Clock = UTCClock
-) {
+) : WithCoreDocumentBuilder {
 
     companion object {
 

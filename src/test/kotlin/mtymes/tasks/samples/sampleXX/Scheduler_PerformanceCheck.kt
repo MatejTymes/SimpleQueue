@@ -6,9 +6,9 @@ import javafixes.collection.LinkedArrayQueue
 import javafixes.concurrency.Runner
 import mtymes.tasks.common.collection.QueueExt.pollingIterator
 import mtymes.tasks.common.domain.WorkerId
-import mtymes.tasks.common.mongo.DocBuilder
-import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
+import mtymes.tasks.common.mongo.builder.WithCoreDocumentBuilder
 import mtymes.tasks.common.time.Durations
+import mtymes.tasks.samples.sampleXX.IndexCreation.createDefaultIndexes
 import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_AS_OF
@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 class SimpleTaskDao(
     tasksCollection: MongoCollection<Document>
-) {
+) : WithCoreDocumentBuilder {
     private val scheduler = GenericScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(
@@ -48,7 +48,7 @@ class SimpleTaskDao(
         request: String
     ): TaskId {
         return scheduler.submitTask(
-            DocBuilder.doc(
+            doc(
                 "request" to request
             )
         )
@@ -269,25 +269,28 @@ private fun showDurations(allDurations: MutableList<Long>) {
 }
 
 
-private fun createDefaultIndexes(coll: MongoCollection<Document>) {
-    coll.createIndex(
-        doc(
-            CAN_BE_EXECUTED_AS_OF to 1
-        ),
-        IndexOptions().partialFilterExpression(
+object IndexCreation : WithCoreDocumentBuilder {
+
+    fun createDefaultIndexes(coll: MongoCollection<Document>) {
+        coll.createIndex(
             doc(
-                IS_PICKABLE to true,
-                STATUS to TaskStatus.available
+                CAN_BE_EXECUTED_AS_OF to 1
+            ),
+            IndexOptions().partialFilterExpression(
+                doc(
+                    IS_PICKABLE to true,
+                    STATUS to TaskStatus.available
+                )
             )
         )
-    )
-    coll.createIndex(
-        doc(LAST_EXECUTION + "." + EXECUTION_ID to 1)
-    )
-    coll.createIndex(
-        doc(DELETABLE_AFTER to 1),
-        IndexOptions().expireAfter(
-            0L, TimeUnit.SECONDS
+        coll.createIndex(
+            doc(LAST_EXECUTION + "." + EXECUTION_ID to 1)
         )
-    )
+        coll.createIndex(
+            doc(DELETABLE_AFTER to 1),
+            IndexOptions().expireAfter(
+                0L, TimeUnit.SECONDS
+            )
+        )
+    }
 }

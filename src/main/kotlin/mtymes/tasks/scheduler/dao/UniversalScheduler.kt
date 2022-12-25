@@ -7,14 +7,12 @@ import mtymes.tasks.common.check.ValidityChecks.expectAtLeastOneItem
 import mtymes.tasks.common.check.ValidityChecks.expectNonEmptyDocument
 import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.exception.ExceptionUtil.runAndIgnoreExceptions
-import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
-import mtymes.tasks.common.mongo.DocBuilder.Companion.docBuilder
-import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
 import mtymes.tasks.common.mongo.DocumentExt.areDefined
 import mtymes.tasks.common.mongo.DocumentExt.getDocument
 import mtymes.tasks.common.mongo.DocumentExt.isDefined
 import mtymes.tasks.common.mongo.MongoCollectionExt.findMaxOne
 import mtymes.tasks.common.mongo.MongoCollectionExt.insert
+import mtymes.tasks.common.mongo.builder.WithCoreDocumentBuilder
 import mtymes.tasks.common.time.Clock
 import mtymes.tasks.common.time.UTCClock
 import mtymes.tasks.scheduler.domain.*
@@ -35,7 +33,7 @@ import java.util.*
 // todo: mtymes - provide proper throws annotations
 class UniversalScheduler(
     val clock: Clock = UTCClock
-) {
+) : WithCoreDocumentBuilder {
 
     companion object {
 

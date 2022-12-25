@@ -2,12 +2,12 @@ package mtymes.tasks.scheduler.domain
 
 import javafixes.`object`.Microtype
 import mtymes.tasks.common.domain.WorkerId
-import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
 import mtymes.tasks.common.mongo.DocumentExt.getDocument
 import mtymes.tasks.common.mongo.DocumentExt.getNullableDocument
 import mtymes.tasks.common.mongo.DocumentExt.getNullableListOfDocuments
 import mtymes.tasks.common.mongo.DocumentExt.getNullableZonedDateTime
 import mtymes.tasks.common.mongo.DocumentExt.getZonedDateTime
+import mtymes.tasks.common.mongo.DocumentUtil.emptyDoc
 import mtymes.tasks.scheduler.dao.UniversalScheduler
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_AS_OF
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CREATED_AT

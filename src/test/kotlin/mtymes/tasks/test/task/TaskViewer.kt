@@ -1,7 +1,7 @@
 package mtymes.tasks.test.task
 
 import com.mongodb.client.MongoCollection
-import mtymes.tasks.common.mongo.DocBuilder.Companion.emptyDoc
+import mtymes.tasks.common.mongo.DocumentUtil.emptyDoc
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.DATA
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ID
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION

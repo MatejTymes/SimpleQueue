@@ -2,7 +2,7 @@ package mtymes.tasks.samples.sample02
 
 import com.mongodb.client.MongoCollection
 import mtymes.tasks.common.domain.WorkerId
-import mtymes.tasks.common.mongo.DocBuilder.Companion.doc
+import mtymes.tasks.common.mongo.builder.WithCoreDocumentBuilder
 import mtymes.tasks.common.time.Durations.FIVE_MINUTES
 import mtymes.tasks.common.time.Durations.SEVEN_DAYS
 import mtymes.tasks.scheduler.dao.GenericScheduler
@@ -29,7 +29,7 @@ data class TaskToProcess(
 
 class SimpleTaskDao(
     tasksCollection: MongoCollection<Document>
-) {
+) : WithCoreDocumentBuilder {
     val scheduler = GenericScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(
