@@ -29,8 +29,6 @@ object CoreMongoWriters {
             Optional::class.java to OptionalWriter,
             UUID::class.java to UUIDWriter,
             ZonedDateTime::class.java to ZonedDateTimeWriter,
-            LocalDateTime::class.java to LocalDateTimeWriter,
-            LocalDate::class.java to LocalDateWriter,
             Microtype::class.java to MicrotypeWriter,
 
             // not actually needed to be defined (as the default is the PassThroughWriter, but decreases the class hierarchy traversing time
@@ -43,7 +41,7 @@ object CoreMongoWriters {
             java.lang.Double::class.java to PassTroughWriter,
             java.lang.Byte::class.java to PassTroughWriter,
             java.lang.Character::class.java to PassTroughWriter,
-            Date::class.java to PassTroughWriter,
+            java.util.Date::class.java to PassTroughWriter,
 
             // not actually needed to be defined (as the default Collection is already handled by CollectionWriter, but decreases the class hierarchy traversing time
             List::class.java to CollectionWriter,
@@ -129,28 +127,30 @@ object ZonedDateTimeWriter : MongoWriter<ZonedDateTime> {
 }
 
 
-object LocalDateTimeWriter : MongoWriter<LocalDateTime> {
+// todo: mtymes - remove - not used by default
+//object LocalDateTimeWriter : MongoWriter<LocalDateTime> {
+//
+//    override fun writeValue(value: LocalDateTime?, valueInserter: ValueInserter, writerRegistry: MongoWriterRegistry) {
+//        if (value == null) {
+//            valueInserter.insertValue(null)
+//        } else {
+//            valueInserter.insertValue(toDate(value))
+//        }
+//    }
+//}
 
-    override fun writeValue(value: LocalDateTime?, valueInserter: ValueInserter, writerRegistry: MongoWriterRegistry) {
-        if (value == null) {
-            valueInserter.insertValue(null)
-        } else {
-            valueInserter.insertValue(toDate(value))
-        }
-    }
-}
 
-
-object LocalDateWriter : MongoWriter<LocalDate> {
-
-    override fun writeValue(value: LocalDate?, valueInserter: ValueInserter, writerRegistry: MongoWriterRegistry) {
-        if (value == null) {
-            valueInserter.insertValue(null)
-        } else {
-            valueInserter.insertValue(toDate(value))
-        }
-    }
-}
+// todo: mtymes - remove - not used by default
+//object LocalDateWriter : MongoWriter<LocalDate> {
+//
+//    override fun writeValue(value: LocalDate?, valueInserter: ValueInserter, writerRegistry: MongoWriterRegistry) {
+//        if (value == null) {
+//            valueInserter.insertValue(null)
+//        } else {
+//            valueInserter.insertValue(toDate(value))
+//        }
+//    }
+//}
 
 
 object MapWriter : MongoWriter<Map<*, *>> {
