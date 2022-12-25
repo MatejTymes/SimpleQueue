@@ -1,7 +1,5 @@
-package mtymes.tasks.beta.common.mongo
+package mtymes.tasks.common.mongo.builder
 
-import mtymes.tasks.beta.common.mongo.mappers.MapValueInserter
-import mtymes.tasks.beta.common.mongo.mappers.MongoWriterRegistry
 import org.bson.Document
 
 class DocumentBuilder(

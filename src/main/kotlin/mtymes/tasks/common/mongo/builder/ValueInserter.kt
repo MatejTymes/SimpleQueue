@@ -1,4 +1,4 @@
-package mtymes.tasks.beta.common.mongo.mappers
+package mtymes.tasks.common.mongo.builder
 
 import org.bson.Document
 
@@ -14,8 +14,7 @@ data class MapValueInserter(
 ) : ValueInserter {
 
     override fun insertValue(value: Any?) {
-        val fieldToUse = fieldName
-            ?: throw IllegalStateException("fieldName must be defined first")
+        val fieldToUse = fieldName ?: throw IllegalStateException("fieldName must be defined first")
         map.put(fieldToUse, value)
     }
 
@@ -31,12 +30,11 @@ data class DocumentInserter(
 ) : ValueInserter {
 
     override fun insertValue(value: Any?) {
-        val fieldToUse = fieldName
-            ?: throw IllegalStateException("fieldName must be defined first")
+        val fieldToUse = fieldName ?: throw IllegalStateException("fieldName must be defined first")
         document.append(fieldToUse, value)
     }
 
-    fun setFieldName(newFieldName: String) {
+    fun changeFieldName(newFieldName: String) {
         fieldName = newFieldName
     }
 }
