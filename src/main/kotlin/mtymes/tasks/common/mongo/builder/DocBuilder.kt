@@ -3,7 +3,7 @@ package mtymes.tasks.common.mongo.builder
 import org.bson.Document
 
 // todo: mtymes - rename to DocBuilder
-class DocumentBuilder(
+class DocBuilder(
     private val registry: MongoWriterRegistry
 ) {
 
@@ -13,29 +13,29 @@ class DocumentBuilder(
         return Document(values)
     }
 
-    fun put(key: String, value: Any?): DocumentBuilder {
+    fun put(key: String, value: Any?): DocBuilder {
         registry
             .findWriterFor(value)
             .writeValue(value, MapValueInserter(values, key), registry)
         return this
     }
 
-    fun put(keyValue: Pair<String, Any?>): DocumentBuilder {
+    fun put(keyValue: Pair<String, Any?>): DocBuilder {
         return put(keyValue.first, keyValue.second)
     }
 
-    fun putIf(condition: Boolean, key: String, value: Any?): DocumentBuilder {
+    fun putIf(condition: Boolean, key: String, value: Any?): DocBuilder {
         if (condition) {
             put(key, value)
         }
         return this
     }
 
-    fun putIf(condition: Boolean, keyValue: Pair<String, Any?>): DocumentBuilder {
+    fun putIf(condition: Boolean, keyValue: Pair<String, Any?>): DocBuilder {
         return putIf(condition, keyValue.first, keyValue.second)
     }
 
-    fun putIf(condition: Boolean, keyValueGenerator: () -> Pair<String, Any?>): DocumentBuilder {
+    fun putIf(condition: Boolean, keyValueGenerator: () -> Pair<String, Any?>): DocBuilder {
         if (condition) {
             val (key, value) = keyValueGenerator.invoke()
             put(key, value)
@@ -43,7 +43,7 @@ class DocumentBuilder(
         return this
     }
 
-    fun putAll(vararg pairs: Pair<String, Any?>): DocumentBuilder {
+    fun putAll(vararg pairs: Pair<String, Any?>): DocBuilder {
         val valueInserter = MapValueInserter(values)
         for ((key, value) in pairs) {
             valueInserter.changeFieldName(key)
@@ -54,7 +54,7 @@ class DocumentBuilder(
         return this
     }
 
-    fun putAll(valuesMap: Map<String, Any?>?): DocumentBuilder {
+    fun putAll(valuesMap: Map<String, Any?>?): DocBuilder {
         if (valuesMap != null) {
             val valueInserter = MapValueInserter(values)
             for ((key, value) in valuesMap) {
@@ -67,7 +67,7 @@ class DocumentBuilder(
         return this
     }
 
-    fun putAllIf(condition: Boolean, valuesGenerator: () -> Map<String, Any?>): DocumentBuilder {
+    fun putAllIf(condition: Boolean, valuesGenerator: () -> Map<String, Any?>): DocBuilder {
         if (condition) {
             putAll(valuesGenerator.invoke())
         }

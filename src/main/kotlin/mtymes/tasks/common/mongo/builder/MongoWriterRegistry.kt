@@ -99,7 +99,7 @@ object CoreMongoWriterRegistry : MongoWriterRegistry {
 //fun main() {
 //    val registry: MongoWriterRegistry = CoreMongoWriterRegistry
 //
-//    val docBuilder = DocumentBuilder(registry)
+//    val docBuilder = DocBuilder(registry)
 //
 //    docBuilder.putAll(
 //        "int" to 5,

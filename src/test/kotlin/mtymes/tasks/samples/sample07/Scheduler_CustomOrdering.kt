@@ -2,7 +2,7 @@ package mtymes.tasks.samples.sample07
 
 import com.mongodb.client.MongoCollection
 import mtymes.tasks.common.domain.WorkerId
-import mtymes.tasks.common.mongo.builder.WithCoreDocumentBuilder
+import mtymes.tasks.common.mongo.builder.WithCoreDocBuilder
 import mtymes.tasks.common.time.Durations
 import mtymes.tasks.scheduler.dao.GenericScheduler
 import mtymes.tasks.scheduler.dao.SchedulerDefaults
@@ -26,7 +26,7 @@ data class TaskToProcess(
 
 class PriorityOrderedTasksDao(
     tasksCollection: MongoCollection<Document>
-) : WithCoreDocumentBuilder {
+) : WithCoreDocBuilder {
     val scheduler = GenericScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(

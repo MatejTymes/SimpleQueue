@@ -6,7 +6,7 @@ import javafixes.collection.LinkedArrayQueue
 import javafixes.concurrency.Runner
 import mtymes.tasks.common.collection.QueueExt.pollingIterator
 import mtymes.tasks.common.domain.WorkerId
-import mtymes.tasks.common.mongo.builder.WithCoreDocumentBuilder
+import mtymes.tasks.common.mongo.builder.WithCoreDocBuilder
 import mtymes.tasks.common.time.Durations
 import mtymes.tasks.samples.sampleXX.IndexCreation.createDefaultIndexes
 import mtymes.tasks.scheduler.dao.GenericScheduler
@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 class SimpleTaskDao(
     tasksCollection: MongoCollection<Document>
-) : WithCoreDocumentBuilder {
+) : WithCoreDocBuilder {
     private val scheduler = GenericScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(
@@ -269,7 +269,7 @@ private fun showDurations(allDurations: MutableList<Long>) {
 }
 
 
-object IndexCreation : WithCoreDocumentBuilder {
+object IndexCreation : WithCoreDocBuilder {
 
     fun createDefaultIndexes(coll: MongoCollection<Document>) {
         coll.createIndex(

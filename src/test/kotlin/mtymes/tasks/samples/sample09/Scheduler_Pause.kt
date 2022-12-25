@@ -2,7 +2,7 @@ package mtymes.tasks.samples.sample09
 
 import com.mongodb.client.MongoCollection
 import mtymes.tasks.common.domain.WorkerId
-import mtymes.tasks.common.mongo.builder.WithCoreDocumentBuilder
+import mtymes.tasks.common.mongo.builder.WithCoreDocBuilder
 import mtymes.tasks.common.time.Durations.FIVE_MINUTES
 import mtymes.tasks.common.time.Durations.SEVEN_DAYS
 import mtymes.tasks.common.time.Durations.TWO_HOURS
@@ -28,7 +28,7 @@ data class TaskToProcess(
 
 class CancellationSupportingTaskDao(
     tasksCollection: MongoCollection<Document>
-) : WithCoreDocumentBuilder {
+) : WithCoreDocBuilder {
     val scheduler = GenericScheduler(
         collection = tasksCollection,
         defaults = SchedulerDefaults(

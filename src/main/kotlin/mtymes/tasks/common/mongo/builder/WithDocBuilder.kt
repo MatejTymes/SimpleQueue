@@ -3,15 +3,15 @@ package mtymes.tasks.common.mongo.builder
 import org.bson.Document
 
 
-interface WithDocumentBuilder {
+interface WithDocBuilder {
 
     fun mongoWriterRegistry(): MongoWriterRegistry
 
-    fun docBuilder(): DocumentBuilder = DocumentBuilder(mongoWriterRegistry())
+    fun docBuilder(): DocBuilder = DocBuilder(mongoWriterRegistry())
 
-    fun docBuilder(vararg pairs: Pair<String, Any?>): DocumentBuilder = docBuilder().putAll(*pairs)
+    fun docBuilder(vararg pairs: Pair<String, Any?>): DocBuilder = docBuilder().putAll(*pairs)
 
-    fun docBuilder(valuesMap: Map<String, Any?>): DocumentBuilder = docBuilder().putAll(valuesMap)
+    fun docBuilder(valuesMap: Map<String, Any?>): DocBuilder = docBuilder().putAll(valuesMap)
 
     fun emptyDoc(): Document = docBuilder().build()
 
@@ -23,6 +23,6 @@ interface WithDocumentBuilder {
 }
 
 
-interface WithCoreDocumentBuilder : WithDocumentBuilder {
+interface WithCoreDocBuilder : WithDocBuilder {
     override fun mongoWriterRegistry(): MongoWriterRegistry = CoreMongoWriterRegistry
 }
