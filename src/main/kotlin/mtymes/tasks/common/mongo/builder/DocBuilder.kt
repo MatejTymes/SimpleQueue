@@ -2,7 +2,6 @@ package mtymes.tasks.common.mongo.builder
 
 import org.bson.Document
 
-// todo: mtymes - rename to DocBuilder
 class DocBuilder(
     private val registry: MongoWriterRegistry
 ) {
