@@ -3,8 +3,6 @@ package mtymes.tasks.common.mongo.builder
 import javafixes.`object`.Microtype
 import mtymes.tasks.common.time.DateUtil.toDate
 import org.bson.Document
-import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -125,32 +123,6 @@ object ZonedDateTimeWriter : MongoWriter<ZonedDateTime> {
         }
     }
 }
-
-
-// todo: mtymes - remove - not used by default
-//object LocalDateTimeWriter : MongoWriter<LocalDateTime> {
-//
-//    override fun writeValue(value: LocalDateTime?, valueInserter: ValueInserter, writerRegistry: MongoWriterRegistry) {
-//        if (value == null) {
-//            valueInserter.insertValue(null)
-//        } else {
-//            valueInserter.insertValue(toDate(value))
-//        }
-//    }
-//}
-
-
-// todo: mtymes - remove - not used by default
-//object LocalDateWriter : MongoWriter<LocalDate> {
-//
-//    override fun writeValue(value: LocalDate?, valueInserter: ValueInserter, writerRegistry: MongoWriterRegistry) {
-//        if (value == null) {
-//            valueInserter.insertValue(null)
-//        } else {
-//            valueInserter.insertValue(toDate(value))
-//        }
-//    }
-//}
 
 
 object MapWriter : MongoWriter<Map<*, *>> {
