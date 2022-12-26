@@ -8,6 +8,19 @@ interface MongoWriterRegistry {
 }
 
 
+object CoreMongoWriterRegistry : MongoWriterRegistry {
+
+    private val wrappedRegistry = ClassBasedMongoWriterRegistry(
+        CoreMongoWriters.mongoWriters(),
+        CoreMongoWriters.defaultMongoWriter()
+    )
+
+    override fun <T> findWriterFor(value: T?): MongoWriter<in T> {
+        return wrappedRegistry.findWriterFor(value)
+    }
+}
+
+
 class ClassBasedMongoWriterRegistry(
     private val writers: Map<Class<*>, MongoWriter<*>>,
     private val defaultWriter: MongoWriter<in Any>?
@@ -80,18 +93,6 @@ class ClassBasedMongoWriterRegistry(
         }
 
         return (writer ?: UnsupportedWriter) as MongoWriter<in T>
-    }
-}
-
-object CoreMongoWriterRegistry : MongoWriterRegistry {
-
-    private val wrappedRegistry = ClassBasedMongoWriterRegistry(
-        CoreMongoWriters.mongoWriters(),
-        CoreMongoWriters.defaultMongoWriter()
-    )
-
-    override fun <T> findWriterFor(value: T?): MongoWriter<in T> {
-        return wrappedRegistry.findWriterFor(value)
     }
 }
 
