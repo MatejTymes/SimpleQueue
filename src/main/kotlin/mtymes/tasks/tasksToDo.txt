@@ -1,3 +1,0 @@
-[ ] - add distributed lock and scheduled worker that runs on one machine only at a time
-[ ] - release as a library
-[ ] - put extensions into XyzExt objects

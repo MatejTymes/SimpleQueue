@@ -26,8 +26,9 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
+// todo: mtymes - maybe create java version
+// todo: mtymes - define mechanism to add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
 // todo: mtymes - cancel task even when it has a running execution
-// todo: mtymes - add indexes - should be done by users of this class (e.g.: ttl index, unique executionId index, ...)
 // todo: mtymes - add ability to have unlimited amount of executions
 // todo: mtymes - is it possible to wait for dependencies somehow ??
 // todo: mtymes - provide proper throws annotations
