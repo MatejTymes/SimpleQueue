@@ -31,10 +31,10 @@ class HumbleSweatShop : SweatShop {
         val workerId: WorkerId,
         val worker: Worker<T>,
         val runner: Runner,
-        val taskInProgress: AtomicReference<T> = AtomicReference(null),
+        val workInProgress: AtomicReference<T> = AtomicReference(null),
 
         val shutDownMode: AtomicReference<ShutDownMode> = AtomicReference(null),
-        val waitForNextTaskCountDownLatch: CountDownLatch = CountDownLatch(1),
+        val waitForNextWorkCountDownLatch: CountDownLatch = CountDownLatch(1),
 
         val hasHeartBeatSupport: Boolean,
         val lastHeartBeaterId: AtomicReference<UUID> = AtomicReference(null),
@@ -53,8 +53,8 @@ class HumbleSweatShop : SweatShop {
                 val currentMode = shutDownMode.get()
                 if (currentMode == null || currentMode.priority < modeToApply.priority) {
                     shutDownMode.set(modeToApply)
-                    if (modeToApply.priority >= ShutDownMode.OnceCurrentTaskIsFinished.priority) {
-                        waitForNextTaskCountDownLatch.countDown()
+                    if (modeToApply.priority >= ShutDownMode.OnceCurrentWorkIsFinished.priority) {
+                        waitForNextWorkCountDownLatch.countDown()
                     }
                     runAndIgnoreExceptions {
                         logger.info("[${logId}]: Applied ShutDownMode '${modeToApply}'")
@@ -70,9 +70,9 @@ class HumbleSweatShop : SweatShop {
             return outcome
         }
 
-        fun canWorkOnNextTask(): Boolean {
+        fun canWorkOnNextWork(): Boolean {
             val currentShutDownMode = shutDownMode.get()
-            return currentShutDownMode == null || currentShutDownMode.priority < ShutDownMode.OnceCurrentTaskIsFinished.priority
+            return currentShutDownMode == null || currentShutDownMode.priority < ShutDownMode.OnceCurrentWorkIsFinished.priority
         }
 
         fun endIfNoWorkFound(): Boolean {
@@ -83,10 +83,10 @@ class HumbleSweatShop : SweatShop {
             return shutDownMode.get()?.isGraceful ?: false
         }
 
-        fun sleepIfWillAskForNextTask(
+        fun sleepIfWillAskForNextWork(
             sleepDuration: Duration
         ) {
-            waitForNextTaskCountDownLatch.await(sleepDuration.toMillis(), TimeUnit.MILLISECONDS)
+            waitForNextWorkCountDownLatch.await(sleepDuration.toMillis(), TimeUnit.MILLISECONDS)
         }
     }
 
@@ -165,7 +165,7 @@ class HumbleSweatShop : SweatShop {
                 WorkerSummary(
                     workerId = context.workerId,
                     worker = context.worker,
-                    isWorking = context.taskInProgress.get() != null,
+                    isWorking = context.workInProgress.get() != null,
                     hasNeverEndingStreamOfWork = context.hasNeverEndingStreamOfWork,
                     whenShouldStop = context.shutDownMode.get()
                 )
@@ -282,52 +282,52 @@ class HumbleSweatShop : SweatShop {
         }
 
         try {
-            var taskNotFoundNTimesInARow = 0L
-            while (!shutdownInfo.wasShutdownTriggered() && workContext.canWorkOnNextTask()) {
+            var workNotFoundNTimesInARow = 0L
+            while (!shutdownInfo.wasShutdownTriggered() && workContext.canWorkOnNextWork()) {
 
                 try {
 
-                    // PICK TASK
+                    // PICK WORK
 
-                    var task: T? = null
+                    var work: T? = null
                     try {
-                        task = worker.pickNextTaskToProcess(workerId)
+                        work = worker.pickAvailableWork(workerId)
                     } catch (e: InterruptedException) {
                         throw e
                     } catch (e: Exception) {
                         runAndIgnoreExceptions {
-                            logger.error("[${logId}]: Failed to pick next task", e)
+                            logger.error("[${logId}]: Failed while picking available work", e)
                         }
                     }
 
 
-                    // PROCESS TASK
+                    // PROCESS WORK
 
-                    workContext.taskInProgress.set(task)
+                    workContext.workInProgress.set(work)
 
-                    if (task == null) {
-                        taskNotFoundNTimesInARow += 1
+                    if (work == null) {
+                        workNotFoundNTimesInARow += 1
 
 
                         if (workContext.endIfNoWorkFound()) {
                             runAndIgnoreExceptions {
-                                logger.debug("[${logId}]: Stopping worker as NO available task was found")
+                                logger.debug("[${logId}]: Stopping worker as NO available work was found")
                             }
                             break
                         } else {
                             runAndIgnoreExceptions {
-                                logger.debug("[${logId}]: NO available task was found")
+                                logger.debug("[${logId}]: NO available work was found")
                             }
                         }
                     } else {
-                        taskNotFoundNTimesInARow = 0
+                        workNotFoundNTimesInARow = 0
 
                         runAndIgnoreExceptions {
-                            val taskString: String? = taskToLoggableString(worker, task, workerId)
-                            if (isBlank(taskString)) {
-                                logger.info("[${logId}]: Going to process next available task")
+                            val workString: String? = workToLoggableString(worker, work, workerId)
+                            if (isBlank(workString)) {
+                                logger.info("[${logId}]: Going to process next available work")
                             } else {
-                                logger.info("[${logId}]: Going to process next available task '${taskString}'")
+                                logger.info("[${logId}]: Going to process next available work '${workString}'")
                             }
                         }
 
@@ -336,39 +336,39 @@ class HumbleSweatShop : SweatShop {
                                 startHeartBeater(
                                     workContext = workContext,
                                     worker = worker,
-                                    task = task,
+                                    work = work,
                                     logId = logId
                                 )
                             }
 
-                            worker.executeTask(
-                                task = task,
+                            worker.processWork(
+                                work = work,
                                 workerId = workerId
                             )
 
                             runAndIgnoreExceptions {
-                                val taskString: String? = taskToLoggableString(worker, task, workerId)
-                                if (isBlank(taskString)) {
-                                    logger.info("[${logId}]: Finished processing task")
+                                val workString: String? = workToLoggableString(worker, work, workerId)
+                                if (isBlank(workString)) {
+                                    logger.info("[${logId}]: Finished processing work")
                                 } else {
-                                    logger.info("[${logId}]: Finished processing task '${taskString}'")
+                                    logger.info("[${logId}]: Finished processing work '${workString}'")
                                 }
                             }
                         } catch (e: InterruptedException) {
                             throw e
                         } catch (e: Exception) {
                             runAndIgnoreExceptions {
-                                val taskString: String? = taskToLoggableString(worker, task, workerId)
-                                if (isBlank(taskString)) {
-                                    logger.warn("[${logId}]: Failed to execute task", e)
+                                val workString: String? = workToLoggableString(worker, work, workerId)
+                                if (isBlank(workString)) {
+                                    logger.warn("[${logId}]: Failed to execute work", e)
                                 } else {
-                                    logger.warn("[${logId}]: Failed to execute task '${taskString}'", e)
+                                    logger.warn("[${logId}]: Failed to execute work '${workString}'", e)
                                 }
                             }
 
                             try {
-                                worker.handleExecutionFailure(
-                                    task = task,
+                                worker.handleWorkFailure(
+                                    work = work,
                                     workerId = workerId,
                                     exception = e
                                 )
@@ -376,16 +376,16 @@ class HumbleSweatShop : SweatShop {
                                 throw e
                             } catch (e: Exception) {
                                 runAndIgnoreExceptions {
-                                    val taskString: String? = taskToLoggableString(worker, task, workerId)
-                                    if (isBlank(taskString)) {
-                                        logger.error("[${logId}]: Failed to handle failure of task", e)
+                                    val workString: String? = workToLoggableString(worker, work, workerId)
+                                    if (isBlank(workString)) {
+                                        logger.error("[${logId}]: Failed to handle failure of work", e)
                                     } else {
-                                        logger.error("[${logId}]: Failed to handle failure of task '${taskString}'", e)
+                                        logger.error("[${logId}]: Failed to handle failure of work '${workString}'", e)
                                     }
                                 }
                             }
                         } finally {
-                            workContext.taskInProgress.set(null)
+                            workContext.workInProgress.set(null)
 
                             if (workContext.hasHeartBeatSupport) {
                                 stopAndRemoveHeartBeater(workContext)
@@ -394,29 +394,29 @@ class HumbleSweatShop : SweatShop {
                     }
 
 
-                    // SLEEP DELAY BEFORE PICKING NEXT TASK
+                    // SLEEP DELAY BEFORE PICKING NEXT WORK
 
                     // default to 1 minute if fails to get the sleep duration
                     var sleepDuration: Duration = ONE_MINUTE
                     try {
-                        if (task != null) {
-                            sleepDuration = worker.sleepDurationIfTaskWasProcessed(
+                        if (work != null) {
+                            sleepDuration = worker.sleepDurationIfWorkWasProcessed(
                                 workerId
                             )
                         } else {
-                            sleepDuration = worker.sleepDurationIfNoTaskWasAvailable(
-                                taskNotFoundNTimesInARow,
+                            sleepDuration = worker.sleepDurationIfNoWorkWasAvailable(
+                                workNotFoundNTimesInARow,
                                 workerId
                             )
                         }
                     } catch (e: Exception) {
                         runAndIgnoreExceptions {
-                            logger.error("${logId}]: Failed to evaluate sleep duration before picking next task", e)
+                            logger.error("${logId}]: Failed to evaluate sleep duration before picking next work", e)
                         }
                     }
                     // don't use Thread.sleep(..) as it would wait for the whole duration in case of graceful shutdown
                     // (graceful shutdown = no InterruptedException)
-                    workContext.sleepIfWillAskForNextTask(sleepDuration)
+                    workContext.sleepIfWillAskForNextWork(sleepDuration)
 
                 } catch (e: InterruptedException) {
                     runAndIgnoreExceptions {
@@ -468,7 +468,7 @@ class HumbleSweatShop : SweatShop {
     private fun <T> startHeartBeater(
         workContext: WorkContext<T>,
         worker: Worker<T>,
-        task: T,
+        work: T,
         logId: String
     ) {
         val workerId = workContext.workerId
@@ -477,8 +477,8 @@ class HumbleSweatShop : SweatShop {
         workContext.lastHeartBeaterId.set(heartBeaterId)
 
         val heartBeatingWorker = worker as HeartBeatingWorker<T>
-        // we should fail and don't start task processing if we're unable to get the heart beat interval
-        val heartBeatInterval = heartBeatingWorker.heartBeatInterval(task, workerId)
+        // we should fail and don't start work processing if we're unable to get the heart beat interval
+        val heartBeatInterval = heartBeatingWorker.heartBeatInterval(work, workerId)
         val heartBeater: Future<Void> = workContext.runner.run { shutdownInfo ->
             while (
                 !shutdownInfo.wasShutdownTriggered() &&
@@ -488,7 +488,7 @@ class HumbleSweatShop : SweatShop {
                     Thread.sleep(heartBeatInterval.toMillis())
 
                     heartBeatingWorker.updateHeartBeat(
-                        task = task,
+                        work = work,
                         workerId = workerId
                     )
                 } catch (e: InterruptedException) {
@@ -502,11 +502,11 @@ class HumbleSweatShop : SweatShop {
                     break
                 } catch (e: Exception) {
                     runAndIgnoreExceptions {
-                        val taskString: String? = taskToLoggableString(worker, task, workerId)
-                        if (isBlank(taskString)) {
-                            logger.error("[${logId}]: Failed to update heart beat for task", e)
+                        val workString: String? = workToLoggableString(worker, work, workerId)
+                        if (isBlank(workString)) {
+                            logger.error("[${logId}]: Failed to update heart beat for work", e)
                         } else {
-                            logger.error("[${logId}]: Failed to update heart beat for task '${taskString}'", e)
+                            logger.error("[${logId}]: Failed to update heart beat for work '${workString}'", e)
                         }
                     }
                 }
@@ -525,20 +525,20 @@ class HumbleSweatShop : SweatShop {
         workContext.lastHeartBeater.set(null)
     }
 
-    private fun <T> taskToLoggableString(
+    private fun <T> workToLoggableString(
         worker: Worker<T>,
-        task: T,
+        work: T,
         workerId: WorkerId
     ): String? {
-        var taskString: String? = null
+        var workString: String? = null
         try {
-            taskString = worker.taskToLoggableString(
-                task,
+            workString = worker.workToLoggableString(
+                work,
                 workerId
             )
         } catch (e: Exception) {
             // ignore
         }
-        return taskString
+        return workString
     }
 }

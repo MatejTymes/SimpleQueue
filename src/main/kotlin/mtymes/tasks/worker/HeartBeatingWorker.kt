@@ -4,15 +4,15 @@ import mtymes.tasks.common.domain.WorkerId
 import java.time.Duration
 
 
-interface HeartBeatingWorker<Task> : Worker<Task> {
+interface HeartBeatingWorker<Work> : Worker<Work> {
 
     fun heartBeatInterval(
-        task: Task,
+        work: Work,
         workerId: WorkerId
     ): Duration
 
     fun updateHeartBeat(
-        task: Task,
+        work: Work,
         workerId: WorkerId
     )
 }

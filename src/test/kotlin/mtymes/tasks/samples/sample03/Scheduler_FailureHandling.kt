@@ -169,23 +169,23 @@ class BrokenWorker(
     val dao: FailureSupportingTaskDao
 ) : Worker<TaskToProcess> {
 
-    override fun pickNextTaskToProcess(workerId: WorkerId): TaskToProcess? {
+    override fun pickAvailableWork(workerId: WorkerId): TaskToProcess? {
         return dao.pickNextTaskExecution(workerId)
     }
 
-    override fun executeTask(task: TaskToProcess, workerId: WorkerId) {
+    override fun processWork(work: TaskToProcess, workerId: WorkerId) {
         // some complex logic
         Thread.sleep(1_000)
 
         throw IllegalStateException("Oh no! We failed!!!")
     }
 
-    override fun handleExecutionFailure(task: TaskToProcess, workerId: WorkerId, exception: Exception) {
-        dao.markAsFailed(task.executionId, exception)
+    override fun handleWorkFailure(work: TaskToProcess, workerId: WorkerId, exception: Exception) {
+        dao.markAsFailed(work.executionId, exception)
     }
 
-    override fun taskToLoggableString(task: TaskToProcess, workerId: WorkerId): String {
-        return task.request
+    override fun workToLoggableString(work: TaskToProcess, workerId: WorkerId): String {
+        return work.request
     }
 }
 

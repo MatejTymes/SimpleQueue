@@ -13,13 +13,13 @@ class LazyWorker : Worker<String> {
 
     private val tasksToProcess = CopyOnWriteArrayList(listOf("A", "B", "C"))
 
-    override fun pickNextTaskToProcess(
+    override fun pickAvailableWork(
         workerId: WorkerId
     ): String? {
         return tasksToProcess.removeFirstOrNull()
     }
 
-    override fun executeTask(task: String, workerId: WorkerId) {
+    override fun processWork(work: String, workerId: WorkerId) {
         // i'm lazy and just pretending i do something
         Thread.sleep(1_000)
     }
@@ -195,7 +195,7 @@ object InterruptWorkerGracefullyOnTaskFinish {
 
             sweatShop.stopWorker(
                 workerId = workerId,
-                shutDownMode = OnceCurrentTaskIsFinished
+                shutDownMode = OnceCurrentWorkIsFinished
             )
 
             sweatShop.workerSummaries().forEach { summary ->
@@ -256,11 +256,11 @@ object InterruptWorkerGracefullyOnceNoMoreWork {
 
 
 object CloseableWorker : Worker<String> {
-    override fun pickNextTaskToProcess(workerId: WorkerId): String? {
+    override fun pickAvailableWork(workerId: WorkerId): String? {
         return randomUUID().toString()
     }
 
-    override fun executeTask(task: String, workerId: WorkerId) {
+    override fun processWork(work: String, workerId: WorkerId) {
         println("Starting task")
         Thread.sleep(10_000)
     }
@@ -294,7 +294,7 @@ object CloseTheWorker {
 
             Thread.sleep(2500)
             sweatShop.close(
-                shutDownMode = OnceCurrentTaskIsFinished,
+                shutDownMode = OnceCurrentWorkIsFinished,
                 waitTillDone = true
             )
         }
@@ -308,7 +308,7 @@ object CloseTheWorker {
 
             Thread.sleep(2500)
             sweatShop.close(
-                shutDownMode = OnceCurrentTaskIsFinished,
+                shutDownMode = OnceCurrentWorkIsFinished,
                 waitTillDone = false
             )
         }
@@ -328,7 +328,7 @@ object CloseTheWorker {
 
             Thread.sleep(2500)
             sweatShop.close(
-                shutDownMode = OnceCurrentTaskIsFinished,
+                shutDownMode = OnceCurrentWorkIsFinished,
                 waitTillDone = false
             )
 

@@ -18,11 +18,11 @@ enum class ShutDownMode(
     val isGraceful: Boolean
 ) {
     Immediately(3, false),
-    OnceCurrentTaskIsFinished(2, true),
+    OnceCurrentWorkIsFinished(2, true),
     OnceNoMoreWork(1, true) {
         override fun modeToUseIf(hasNeverEndingStreamOfWork: Boolean): ShutDownMode {
             return if (hasNeverEndingStreamOfWork) {
-                OnceCurrentTaskIsFinished
+                OnceCurrentWorkIsFinished
             } else {
                 this
             }

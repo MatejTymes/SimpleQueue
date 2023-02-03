@@ -90,17 +90,17 @@ open class SimpleWorker(
     val dao: SimpleTaskDao
 ) : Worker<TaskToProcess> {
 
-    override fun pickNextTaskToProcess(
+    override fun pickAvailableWork(
         workerId: WorkerId
     ): TaskToProcess? {
         return dao.pickNextTaskExecution(workerId)
     }
 
-    override fun executeTask(task: TaskToProcess, workerId: WorkerId) {
+    override fun processWork(work: TaskToProcess, workerId: WorkerId) {
         // i'm lazy and just pretending i do something
         Thread.sleep(1_000)
 
-        dao.markAsSucceeded(task.executionId)
+        dao.markAsSucceeded(work.executionId)
     }
 }
 
@@ -135,8 +135,8 @@ class ReadableSimpleWorker(
     dao: SimpleTaskDao
 ) : SimpleWorker(dao) {
 
-    override fun taskToLoggableString(task: TaskToProcess, workerId: WorkerId): String {
-        return task.request
+    override fun workToLoggableString(work: TaskToProcess, workerId: WorkerId): String {
+        return work.request
     }
 }
 

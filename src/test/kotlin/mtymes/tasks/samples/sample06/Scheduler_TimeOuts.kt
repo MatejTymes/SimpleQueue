@@ -262,13 +262,13 @@ class LazyHeartBeatingWorker(
     val coll: MongoCollection<Document>
 ) : HeartBeatingWorker<TaskToProcess> {
 
-    override fun heartBeatInterval(task: TaskToProcess, workerId: WorkerId): Duration {
+    override fun heartBeatInterval(work: TaskToProcess, workerId: WorkerId): Duration {
         return Duration.ofSeconds(2)
     }
 
-    override fun updateHeartBeat(task: TaskToProcess, workerId: WorkerId) {
+    override fun updateHeartBeat(work: TaskToProcess, workerId: WorkerId) {
         dao.registerHeartBeat(
-            executionId = task.executionId,
+            executionId = work.executionId,
             keepAliveFor = Duration.ofSeconds(3)
         )
 
@@ -280,22 +280,22 @@ class LazyHeartBeatingWorker(
         ))
     }
 
-    override fun pickNextTaskToProcess(workerId: WorkerId): TaskToProcess? {
+    override fun pickAvailableWork(workerId: WorkerId): TaskToProcess? {
         return dao.pickNextTaskExecution(
             workerId = workerId,
             afterStartKeepAliveFor = Duration.ofSeconds(3)
         )
     }
 
-    override fun executeTask(task: TaskToProcess, workerId: WorkerId) {
+    override fun processWork(work: TaskToProcess, workerId: WorkerId) {
         // some complex sleeping
         Thread.sleep(7_000)
 
-        dao.markAsSucceeded(task.executionId)
+        dao.markAsSucceeded(work.executionId)
     }
 
-    override fun taskToLoggableString(task: TaskToProcess, workerId: WorkerId): String {
-        return task.request
+    override fun workToLoggableString(work: TaskToProcess, workerId: WorkerId): String {
+        return work.request
     }
 }
 

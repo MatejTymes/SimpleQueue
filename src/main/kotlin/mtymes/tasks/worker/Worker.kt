@@ -12,19 +12,19 @@ import java.io.IOException
 import java.time.Duration
 
 
-interface Worker<Task> : Closeable {
+interface Worker<Work> : Closeable {
 
-    fun pickNextTaskToProcess(
+    fun pickAvailableWork(
         workerId: WorkerId
-    ): Task?
+    ): Work?
 
-    fun executeTask(
-        task: Task,
+    fun processWork(
+        work: Work,
         workerId: WorkerId
     )
 
-    fun handleExecutionFailure(
-        task: Task,
+    fun handleWorkFailure(
+        work: Work,
         workerId: WorkerId,
         exception: Exception
     ) {
@@ -35,18 +35,18 @@ interface Worker<Task> : Closeable {
         return "${ this::class.simpleName?.let{ it + ":" } ?: "" }${ workerId }"
     }
 
-    fun taskToLoggableString(
-        task: Task,
+    fun workToLoggableString(
+        work: Work,
         workerId: WorkerId
     ): String {
-        return task.toString()
+        return work.toString()
     }
 
-    fun sleepDurationIfNoTaskWasAvailable(
-        taskNotFoundNTimesInARow: Long,
+    fun sleepDurationIfNoWorkWasAvailable(
+        workNotFoundNTimesInARow: Long,
         workerId: WorkerId
     ): Duration {
-        return when(taskNotFoundNTimesInARow) {
+        return when(workNotFoundNTimesInARow) {
             1L -> ONE_SECOND
             2L -> THREE_SECONDS
             3L -> TEN_SECONDS
@@ -55,7 +55,7 @@ interface Worker<Task> : Closeable {
         }
     }
 
-    fun sleepDurationIfTaskWasProcessed(
+    fun sleepDurationIfWorkWasProcessed(
         workerId: WorkerId
     ): Duration {
         return ONE_MILLISECOND
