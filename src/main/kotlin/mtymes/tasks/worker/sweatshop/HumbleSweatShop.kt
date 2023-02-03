@@ -360,9 +360,9 @@ class HumbleSweatShop : SweatShop {
                             runAndIgnoreExceptions {
                                 val workString: String? = workToLoggableString(worker, work, workerId)
                                 if (isBlank(workString)) {
-                                    logger.warn("[${logId}]: Failed to execute work", e)
+                                    logger.warn("[${logId}]: Failed to process work", e)
                                 } else {
-                                    logger.warn("[${logId}]: Failed to execute work '${workString}'", e)
+                                    logger.warn("[${logId}]: Failed to process work '${workString}'", e)
                                 }
                             }
 
