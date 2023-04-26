@@ -21,6 +21,7 @@ object CoreMongoWriters {
 
     fun mongoWriters(): Map<Class<*>, MongoWriter<*>> {
         return mapOf(
+            Document::class.java to PassTroughWriter,
             Map::class.java to MapWriter,
             Collection::class.java to CollectionWriter,
             Enum::class.java to EnumWriter,
