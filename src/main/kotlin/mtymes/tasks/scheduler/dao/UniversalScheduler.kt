@@ -16,8 +16,7 @@ import mtymes.tasks.common.mongo.builder.WithCoreDocBuilder
 import mtymes.tasks.common.time.Clock
 import mtymes.tasks.common.time.UTCClock
 import mtymes.tasks.scheduler.domain.*
-import mtymes.tasks.scheduler.domain.StatusToPick.OnlyAvailable
-import mtymes.tasks.scheduler.domain.StatusToPick.OnlySuspended
+import mtymes.tasks.scheduler.domain.StatusToPick.*
 import mtymes.tasks.scheduler.exception.*
 import org.bson.Document
 import org.slf4j.Logger
@@ -62,7 +61,7 @@ class UniversalScheduler(
         const val EXECUTIONS_COUNT = "executionsCount"
 
         const val IS_PICKABLE = "isPickable"
-        // todo: mtymes - remove when execution started and move onto the execution as COULD_BE_EXECUTED_AS_OF
+        // todo: mtymes - remove when execution started and move onto the execution as WAS_EXECUTABLE_AS_OF
         const val CAN_BE_EXECUTED_AS_OF = "canBeExecutedAsOf"
 
 
@@ -233,95 +232,94 @@ class UniversalScheduler(
     ): PickedExecutionSummary? {
         val usedSortOrder = sortOrder ?: doc(CAN_BE_EXECUTED_AS_OF to 1)
 
-        if (options.statusToPick == OnlyAvailable) {
-            val execution = startNewExecution(
-                coll = coll,
-                workerId = workerId,
-                taskId = Optional.empty(),
-                keepAliveFor = options.keepAliveFor,
-                additionalConstraints = additionalConstraints,
-                sortOrder = usedSortOrder,
-                newTTL = options.newTTL
-            )
-            return execution
-        } else if (options.statusToPick == OnlySuspended) {
-            val execution = resumeSuspendedExecution(
-                coll = coll,
-                workerId = workerId,
-                taskId = Optional.empty(),
-                keepAliveFor = options.keepAliveFor,
-                additionalConstraints = additionalConstraints,
-                sortOrder = usedSortOrder,
-                newTTL = options.newTTL
-            )
-            return execution
-        } else {
-            val now = clock.now()
-
-            val possibleTasksToPick = coll.find(
-                docBuilder()
-                    .putAllIf(additionalConstraints.areDefined()) {
-                        additionalConstraints!!
-                    }
-                    .putAll(
-                        IS_PICKABLE to true,
-                        STATUS to if (options.statusToPick == OnlySuspended) {
-                            TaskStatus.suspended
-                        } else {
-                            doc("\$in", listOf(TaskStatus.available, TaskStatus.suspended))
-
-                        },
-                        CAN_BE_EXECUTED_AS_OF to doc("\$lte", now)
-                    )
-                    .build()
-            ).sort(
-                usedSortOrder
-            ).projection(
-                doc(
-                    TASK_ID to 1,
-                    STATUS to 1,
-                    LAST_EXECUTION + "." + EXECUTION_ID to 1
+        when (options.statusToPick) {
+            OnlyAvailable -> {
+                val execution = startNewExecution(
+                    coll = coll,
+                    workerId = workerId,
+                    taskId = Optional.empty(),
+                    keepAliveFor = options.keepAliveFor,
+                    additionalConstraints = additionalConstraints,
+                    sortOrder = usedSortOrder,
+                    newTTL = options.newTTL
                 )
-            ).limit(5)
+                return execution
+            }
+            OnlySuspended -> {
+                val execution = resumeSuspendedExecution(
+                    coll = coll,
+                    workerId = workerId,
+                    taskId = Optional.empty(),
+                    keepAliveFor = options.keepAliveFor,
+                    additionalConstraints = additionalConstraints,
+                    sortOrder = usedSortOrder,
+                    newTTL = options.newTTL
+                )
+                return execution
+            }
+            SuspendedAndAvailable -> {
+                val now = clock.now()
 
-            for (possibleTaskToPick in possibleTasksToPick) {
-                val taskId = TaskId(possibleTaskToPick.getString(TASK_ID))
-                val taskStatus = TaskStatus.valueOf(possibleTaskToPick.getString(STATUS))
-
-                if (taskStatus == TaskStatus.available) {
-                    val execution = startNewExecution(
-                        coll = coll,
-                        workerId = workerId,
-                        taskId = Optional.of(taskId),
-                        keepAliveFor = options.keepAliveFor,
-                        additionalConstraints = additionalConstraints,
-                        sortOrder = usedSortOrder,
-                        newTTL = options.newTTL
+                val possibleTasksToPick = coll.find(
+                    docBuilder()
+                        .putAllIf(additionalConstraints.areDefined()) {
+                            additionalConstraints!!
+                        }
+                        .putAll(
+                            IS_PICKABLE to true,
+                            STATUS to doc("\$in", listOf(TaskStatus.available, TaskStatus.suspended)),
+                            CAN_BE_EXECUTED_AS_OF to doc("\$lte", now)
+                        )
+                        .build()
+                ).sort(
+                    usedSortOrder
+                ).projection(
+                    doc(
+                        TASK_ID to 1,
+                        STATUS to 1,
+                        LAST_EXECUTION + "." + EXECUTION_ID to 1
                     )
+                ).limit(5)
 
-                    if (execution != null) {
-                        return execution
-                    }
-                } else if (taskStatus == TaskStatus.suspended) {
-                    val execution = resumeSuspendedExecution(
-                        coll = coll,
-                        workerId = workerId,
-                        taskId = Optional.of(taskId),
-                        keepAliveFor = options.keepAliveFor,
-                        additionalConstraints = additionalConstraints,
-                        sortOrder = usedSortOrder,
-                        newTTL = options.newTTL
-                    )
+                for (possibleTaskToPick in possibleTasksToPick) {
+                    val taskId = TaskId(possibleTaskToPick.getString(TASK_ID))
+                    val taskStatus = TaskStatus.valueOf(possibleTaskToPick.getString(STATUS))
 
-                    if (execution != null) {
-                        return execution
+                    if (taskStatus == TaskStatus.available) {
+                        val execution = startNewExecution(
+                            coll = coll,
+                            workerId = workerId,
+                            taskId = Optional.of(taskId),
+                            keepAliveFor = options.keepAliveFor,
+                            additionalConstraints = additionalConstraints,
+                            sortOrder = usedSortOrder,
+                            newTTL = options.newTTL
+                        )
+
+                        if (execution != null) {
+                            return execution
+                        }
+                    } else if (taskStatus == TaskStatus.suspended) {
+                        val execution = resumeSuspendedExecution(
+                            coll = coll,
+                            workerId = workerId,
+                            taskId = Optional.of(taskId),
+                            keepAliveFor = options.keepAliveFor,
+                            additionalConstraints = additionalConstraints,
+                            sortOrder = usedSortOrder,
+                            newTTL = options.newTTL
+                        )
+
+                        if (execution != null) {
+                            return execution
+                        }
                     }
                 }
+
+                // todo: mtymes - if got some tasks, but all were already picked (concurrently by other thread), then maybe try again
+
+                return null
             }
-
-            // todo: mtymes - if got some tasks, but all were already picked (concurrently by other thread), then maybe try again
-
-            return null
         }
     }
 
@@ -485,6 +483,7 @@ class UniversalScheduler(
         )
     }
 
+    // todo: mtymes - can we cancel a suspended task as well ???
     fun markAsCancelled(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,

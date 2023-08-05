@@ -53,10 +53,10 @@ class ExecutionId(value: UUID) : Microtype<UUID>(value) {
 enum class TaskStatus(
     val isFinalStatus: Boolean = false
 ) {
-    available,
-    paused,
-    running,
-    suspended,
+    available, // -> paused, running, cancelled, paused // is initial state
+    paused, // -> cancelled, available // is initial state
+    running, // -> succeeded, available, failed, cancelled, suspended, dead
+    suspended, // -> running, dead
     cancelled(true),
     succeeded(true),
     failed(true),
