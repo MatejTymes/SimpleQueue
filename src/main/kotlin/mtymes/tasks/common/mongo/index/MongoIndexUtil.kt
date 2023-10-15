@@ -6,9 +6,61 @@ import mtymes.tasks.common.mongo.index.IndexOperation.Companion.addIndexOp
 import mtymes.tasks.common.mongo.index.IndexOperation.Companion.keepIndexOp
 import mtymes.tasks.common.mongo.index.IndexOperation.Companion.removeIndexOp
 import org.bson.Document
+import org.slf4j.LoggerFactory
 import java.util.function.BiFunction
 
 object MongoIndexUtil {
+
+    private val LOG = LoggerFactory.getLogger(this.javaClass)
+
+    fun printIndexDifferences(
+        collectionName: String,
+        envNameA: String,
+        envNameB: String,
+        indexesA: List<IndexDefinition>,
+        indexesB: List<IndexDefinition>
+    ) {
+        val shared = linkedSetOf<IndexDefinition>()
+        val onlyInA = linkedSetOf<IndexDefinition>()
+        val onlyInB = linkedSetOf<IndexDefinition>()
+
+        for (indexA in indexesA) {
+            if (!indexesB.contains(indexA)) {
+                onlyInA.add(indexA)
+            } else {
+                shared.add(indexA)
+            }
+        }
+        for (indexB in indexesB) {
+            if (!indexesA.contains(indexB)) {
+                onlyInB.add(indexB)
+            } else {
+                // we should ignore this, right ???
+                shared.add(indexB)
+            }
+        }
+
+        println("${ collectionName }:")
+        if (shared.isNotEmpty()) {
+            println("- shared")
+            for (index in shared) {
+                println("  - ${ index }")
+            }
+        }
+        if (onlyInA.isNotEmpty()) {
+            println("- only in ${ envNameA }")
+            for (index in onlyInA) {
+                println("  - ${ index }")
+            }
+        }
+        if (onlyInB.isNotEmpty()) {
+            println("- only in ${ envNameB }")
+            for (index in onlyInB) {
+                println("  - ${ index }")
+            }
+        }
+        println()
+    }
 
     fun listAllIndexes(
         collection: MongoCollection<Document>,
@@ -114,7 +166,58 @@ object MongoIndexUtil {
         collection: MongoCollection<Document>,
         operations: List<IndexOperation>
     ) {
-        TODO("implement")
+        val collectionName = collection.namespace.collectionName
+
+        LOG.info("Applying index operations to collection: $collectionName")
+        for (operation in operations) {
+            val index = operation.index
+            val actionType = operation.action
+            when (actionType) {
+                IndexAction.ADD -> {
+                    LOG.info("- creating: ${collectionName}.${index}")
+                    collection.createIndex(
+                        index.keysDocument(),
+                        index.indexOptions()
+                    )
+                }
+
+                IndexAction.REMOVE -> {
+                    LOG.info("- removing: ${collectionName}.${index}")
+                    collection.dropIndex(
+                        index.keysDocument()
+                    )
+                }
+
+                IndexAction.KEEP -> {
+                    LOG.info("- keeping: ${collectionName}.${index}")
+                }
+            }
+        }
+    }
+
+    fun ensureOnlyDefinedIndexesArePresent(
+        collection: MongoCollection<Document>,
+        expectedIndexes: List<IndexDefinition>
+    ) {
+        val operations = listOperationsToGetToExpectedState(collection, expectedIndexes)
+        applyIndexOperations(collection, operations)
+    }
+
+    fun addNonConflictingExpectedIndexes(
+        collection: MongoCollection<Document>,
+        expectedIndexes: List<IndexDefinition>
+    ) {
+        val allOperations = listOperationsToGetToExpectedState(collection, expectedIndexes)
+
+        val nonDestructiveOperations = mutableListOf<IndexOperation>()
+        for (operation in allOperations) {
+            if (operation.action.isDestructive) {
+                break
+            }
+            nonDestructiveOperations.add(operation)
+        }
+
+        applyIndexOperations(collection, nonDestructiveOperations)
     }
 
     private fun findIndexes(
