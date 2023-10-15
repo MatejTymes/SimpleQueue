@@ -1,13 +1,13 @@
 package mtymes.tasks.playground
 
 import com.mongodb.MongoClient
-import mtymes.tasks.common.mongo.builder.WithCoreDocBuilder
+import mtymes.tasks.common.mongo.builder.WithBaseDocBuilder
 import mtymes.tasks.test.task.TaskViewer.displayTasksSummary
 import org.bson.Document
 import java.util.UUID.randomUUID
 
 
-object ComplexUpdate02 : WithCoreDocBuilder {
+object ComplexUpdate02 : WithBaseDocBuilder {
 
     @JvmStatic
     fun main(args: Array<String>) {

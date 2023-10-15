@@ -8,11 +8,11 @@ interface MongoWriterRegistry {
 }
 
 
-object CoreMongoWriterRegistry : MongoWriterRegistry {
+object BaseMongoWriterRegistry : MongoWriterRegistry {
 
     private val wrappedRegistry = ClassBasedMongoWriterRegistry(
-        CoreMongoWriters.mongoWriters(),
-        CoreMongoWriters.defaultMongoWriter()
+        BaseMongoWriters.mongoWriters(),
+        BaseMongoWriters.defaultMongoWriter()
     )
 
     override fun <T> findWriterFor(value: T?): MongoWriter<in T> {

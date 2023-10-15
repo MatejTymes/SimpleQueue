@@ -23,8 +23,8 @@ interface WithDocBuilder {
 }
 
 
-interface WithCoreDocBuilder : WithDocBuilder {
-    override fun mongoWriterRegistry(): MongoWriterRegistry = CoreMongoWriterRegistry
+interface WithBaseDocBuilder : WithDocBuilder {
+    override fun mongoWriterRegistry(): MongoWriterRegistry = BaseMongoWriterRegistry
 }
 
-object DefaultDocBuilder : WithCoreDocBuilder
+object BaseDocBuilder : WithBaseDocBuilder

@@ -1,7 +1,7 @@
 package mtymes.tasks.common.mongo.index
 
 import com.mongodb.client.model.IndexOptions
-import mtymes.tasks.common.mongo.builder.DefaultDocBuilder.docBuilder
+import mtymes.tasks.common.mongo.builder.BaseDocBuilder.docBuilder
 import org.bson.Document
 import java.util.*
 import java.util.concurrent.TimeUnit

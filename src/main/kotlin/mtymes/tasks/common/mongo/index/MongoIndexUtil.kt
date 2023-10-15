@@ -40,23 +40,25 @@ object MongoIndexUtil {
             }
         }
 
-        println("${ collectionName }:")
+        // todo: mtymes - use shorter toStrings in here
+
+        println("${collectionName}:")
         if (shared.isNotEmpty()) {
             println("- shared")
             for (index in shared) {
-                println("  - ${ index }")
+                println("  - ${index}")
             }
         }
         if (onlyInA.isNotEmpty()) {
-            println("- only in ${ envNameA }")
+            println("- only in ${envNameA}")
             for (index in onlyInA) {
-                println("  - ${ index }")
+                println("  - ${index}")
             }
         }
         if (onlyInB.isNotEmpty()) {
-            println("- only in ${ envNameB }")
+            println("- only in ${envNameB}")
             for (index in onlyInB) {
-                println("  - ${ index }")
+                println("  - ${index}")
             }
         }
         println()

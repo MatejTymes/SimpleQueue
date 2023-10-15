@@ -13,7 +13,7 @@ interface MongoWriter<T> {
 }
 
 
-object CoreMongoWriters {
+object BaseMongoWriters {
 
     fun defaultMongoWriter(): MongoWriter<Any>? {
         return PassTroughWriter

@@ -12,7 +12,7 @@ import mtymes.tasks.common.mongo.DocumentExt.getDocument
 import mtymes.tasks.common.mongo.DocumentExt.isDefined
 import mtymes.tasks.common.mongo.MongoCollectionExt.findMaxOne
 import mtymes.tasks.common.mongo.MongoCollectionExt.insert
-import mtymes.tasks.common.mongo.builder.WithCoreDocBuilder
+import mtymes.tasks.common.mongo.builder.WithBaseDocBuilder
 import mtymes.tasks.common.time.Clock
 import mtymes.tasks.common.time.UTCClock
 import mtymes.tasks.scheduler.domain.*
@@ -33,7 +33,7 @@ import java.util.*
 // todo: mtymes - provide proper throws annotations
 class UniversalScheduler(
     val clock: Clock = UTCClock
-) : WithCoreDocBuilder {
+) : WithBaseDocBuilder {
 
     companion object {
 
