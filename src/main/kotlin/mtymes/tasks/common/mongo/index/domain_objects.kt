@@ -27,6 +27,12 @@ data class IndexKey(
     val order: IndexOrder
 ) {
     constructor(name: String, order: Int) : this(name, IndexOrder.fromInt(order))
+
+    fun toShortString(): String {
+        return "\"$name\": $order)"
+    }
+
+
 }
 
 data class IndexDefinition(
@@ -73,6 +79,17 @@ data class IndexDefinition(
             indexOptions = indexOptions.partialFilterExpression(partialFilterExpression)
         }
         return indexOptions
+    }
+
+    fun toShortString(): String {
+        return "Index { " +
+                "keys = ${keys.joinToString(prefix = "[", postfix = "]", transform = { it.toShortString() })}" +
+                (if (background == null) "" else ", background = $background") +
+                (if (unique == null) "" else ", unique = $unique") +
+                (if (sparse == null) "" else ", sparse = $sparse") +
+                (if (expireAfterSeconds == null) "" else ", expireAfterSeconds = $expireAfterSeconds") +
+                (if (partialFilterExpression == null) "" else ", partialFilterExpression = $partialFilterExpression") +
+                " }"
     }
 
     // todo: mtymes - can be turned into lazy value (while not being included in the equals and hashCode)?

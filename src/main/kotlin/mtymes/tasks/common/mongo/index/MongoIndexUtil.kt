@@ -46,19 +46,19 @@ object MongoIndexUtil {
         if (shared.isNotEmpty()) {
             println("- shared")
             for (index in shared) {
-                println("  - ${index}")
+                println("  - ${index.toShortString()}")
             }
         }
         if (onlyInA.isNotEmpty()) {
             println("- only in ${envNameA}")
             for (index in onlyInA) {
-                println("  - ${index}")
+                println("  - ${index.toShortString()}")
             }
         }
         if (onlyInB.isNotEmpty()) {
             println("- only in ${envNameB}")
             for (index in onlyInB) {
-                println("  - ${index}")
+                println("  - ${index.toShortString()}")
             }
         }
         println()
@@ -103,6 +103,13 @@ object MongoIndexUtil {
     ): List<IndexOperation> {
         val currentIndexes = listAllIndexes(collection, true)
 
+        return listOperationsToGetToExpectedState(expectedIndexes, currentIndexes)
+    }
+
+    fun listOperationsToGetToExpectedState(
+        expectedIndexes: List<IndexDefinition>,
+        currentIndexes: List<IndexDefinition>
+    ): MutableList<IndexOperation> {
         val indexesToAdd = mutableListOf<IndexDefinition>()
         val indexesToRemove = mutableListOf<IndexDefinition>()
         val indexesToKeep = mutableListOf<IndexDefinition>()
