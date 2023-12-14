@@ -44,7 +44,7 @@ data class IndexKey(
     }
 
     fun toShortString(): String {
-        return "\"$name\": ${order.toShortString()})"
+        return "\"$name\": ${order.toShortString()}"
     }
 }
 
