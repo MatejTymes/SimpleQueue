@@ -6,19 +6,23 @@ import org.bson.Document
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-enum class IndexOrder {
+enum class IndexOrder(val value: Int) {
 
-    ASCENDING,
-    DESCENDING;
+    ASCENDING(1),
+    DESCENDING(-1);
 
     companion object {
         fun fromInt(value: Int): IndexOrder {
             return when (value) {
-                1 -> ASCENDING
-                -1 -> DESCENDING
-                else -> throw IllegalArgumentException("Value can be only 1 or -1, but was $value instead")
+                ASCENDING.value -> ASCENDING
+                DESCENDING.value -> DESCENDING
+                else -> throw IllegalArgumentException("Value can be only ${ASCENDING.value} or ${DESCENDING.value}, but was $value instead")
             }
         }
+    }
+
+    fun toShortString(): String {
+        return "${value}"
     }
 }
 
@@ -29,7 +33,7 @@ data class IndexKey(
     constructor(name: String, order: Int) : this(name, IndexOrder.fromInt(order))
 
     fun toShortString(): String {
-        return "\"$name\": $order)"
+        return "\"$name\": ${order.toShortString()})"
     }
 
 
