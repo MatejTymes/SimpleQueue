@@ -6,8 +6,9 @@ import org.bson.Document
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-enum class IndexOrder(val value: Int) {
-
+enum class IndexOrder(
+    val value: Int
+) {
     ASCENDING(1),
     DESCENDING(-1);
 
@@ -35,8 +36,6 @@ data class IndexKey(
     fun toShortString(): String {
         return "\"$name\": ${order.toShortString()})"
     }
-
-
 }
 
 data class IndexDefinition(
@@ -105,7 +104,6 @@ data class IndexDefinition(
 enum class IndexAction(
     val isDestructive: Boolean
 ) {
-
     ADD(false),
     REMOVE(true),
     KEEP(false)
