@@ -33,6 +33,16 @@ data class IndexKey(
 ) {
     constructor(name: String, order: Int) : this(name, IndexOrder.fromInt(order))
 
+    companion object {
+        fun key(name: String, order: Int): IndexKey {
+            return IndexKey(name, order)
+        }
+
+        fun key(name: String, order: IndexOrder): IndexKey {
+            return IndexKey(name, order)
+        }
+    }
+
     fun toShortString(): String {
         return "\"$name\": ${order.toShortString()})"
     }
@@ -47,6 +57,32 @@ data class IndexDefinition(
     val expireAfterSeconds: Long? = null,
     val partialFilterExpression: Document? = null
 ) {
+
+    companion object {
+        fun index(vararg keys: IndexKey): IndexDefinition {
+            return IndexDefinition(keys.toList())
+        }
+    }
+
+    fun background(background: Boolean?): IndexDefinition {
+        return IndexDefinition(keys, background, unique, sparse, expireAfterSeconds, partialFilterExpression)
+    }
+
+    fun unique(unique: Boolean?): IndexDefinition {
+        return IndexDefinition(keys, background, unique, sparse, expireAfterSeconds, partialFilterExpression)
+    }
+
+    fun sparse(sparse: Boolean?): IndexDefinition {
+        return IndexDefinition(keys, background, unique, sparse, expireAfterSeconds, partialFilterExpression)
+    }
+
+    fun expireAfterSeconds(expireAfterSeconds: Long?): IndexDefinition {
+        return IndexDefinition(keys, background, unique, sparse, expireAfterSeconds, partialFilterExpression)
+    }
+
+    fun partialFilterExpression(partialFilterExpression: Document?): IndexDefinition {
+        return IndexDefinition(keys, background, unique, sparse, expireAfterSeconds, partialFilterExpression)
+    }
 
     fun is_IDIndex(): Boolean {
         return keys.size == 1 && "_id" == keys[0].name

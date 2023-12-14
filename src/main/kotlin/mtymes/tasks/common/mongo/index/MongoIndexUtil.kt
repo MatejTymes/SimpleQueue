@@ -40,8 +40,6 @@ object MongoIndexUtil {
             }
         }
 
-        // todo: mtymes - use shorter toStrings in here
-
         println("${collectionName}:")
         if (shared.isNotEmpty()) {
             println("- shared")
