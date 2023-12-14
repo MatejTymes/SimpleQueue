@@ -122,12 +122,12 @@ data class IndexDefinition(
 
     fun toShortString(): String {
         return "Index { " +
-                "keys = ${keys.joinToString(prefix = "[", postfix = "]", transform = { it.toShortString() })}" +
+                "keys = ${keys.joinToString(prefix = "{", postfix = "}", transform = { it.toShortString() })}" +
                 (if (background == null) "" else ", background = $background") +
                 (if (unique == null) "" else ", unique = $unique") +
                 (if (sparse == null) "" else ", sparse = $sparse") +
                 (if (expireAfterSeconds == null) "" else ", expireAfterSeconds = $expireAfterSeconds") +
-                (if (partialFilterExpression == null) "" else ", partialFilterExpression = $partialFilterExpression") +
+                (if (partialFilterExpression == null) "" else ", partialFilterExpression = ${partialFilterExpression.toJson()}") +
                 " }"
     }
 
