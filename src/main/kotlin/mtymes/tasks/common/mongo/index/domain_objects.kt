@@ -95,7 +95,7 @@ data class IndexDefinition(
     fun keysDocument(): Document {
         val docBuilder = docBuilder()
         for (key in keys) {
-            docBuilder.put(key.name, key.order)
+            docBuilder.put(key.name, key.order.value)
         }
         return docBuilder.build()
     }
