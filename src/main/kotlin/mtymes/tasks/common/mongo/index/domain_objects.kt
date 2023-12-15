@@ -41,6 +41,14 @@ data class IndexKey(
         fun key(name: String, order: IndexOrder): IndexKey {
             return IndexKey(name, order)
         }
+
+        fun key(nameAndOrder: Pair<String, Int>): IndexKey {
+            return IndexKey(nameAndOrder.first, nameAndOrder.second)
+        }
+
+        fun key(nameAndOrder: Pair<String, IndexOrder>): IndexKey {
+            return IndexKey(nameAndOrder.first, nameAndOrder.second)
+        }
     }
 
     fun toShortString(): String {
