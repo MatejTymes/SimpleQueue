@@ -42,10 +42,12 @@ data class IndexKey(
             return IndexKey(name, order)
         }
 
+        @JvmName("intKey")
         fun key(nameAndOrder: Pair<String, Int>): IndexKey {
             return IndexKey(nameAndOrder.first, nameAndOrder.second)
         }
 
+        @JvmName("indexOrderKey")
         fun key(nameAndOrder: Pair<String, IndexOrder>): IndexKey {
             return IndexKey(nameAndOrder.first, nameAndOrder.second)
         }
