@@ -26,7 +26,6 @@ import java.time.ZonedDateTime
 import java.util.*
 
 // todo: mtymes - maybe create java version
-// todo: mtymes - cancel task even when it has a running execution
 // todo: mtymes - add ability to have unlimited amount of executions
 // todo: mtymes - is it possible to wait for dependencies somehow ??
 // todo: mtymes - provide proper throws annotations
@@ -334,7 +333,7 @@ class UniversalScheduler(
         return updateLastExecution(
             coll = coll,
             executionId = executionId,
-            fromTaskStatus = TaskStatus.running,
+            fromTaskStatuses = listOf(TaskStatus.running),
             fromExecutionStatuses = listOf(ExecutionStatus.running),
             toTaskStatus = TaskStatus.succeeded,
             toExecutionStatus = ExecutionStatus.succeeded,
@@ -362,7 +361,7 @@ class UniversalScheduler(
         return updateLastExecution(
             coll = coll,
             executionId = executionId,
-            fromTaskStatus = TaskStatus.running,
+            fromTaskStatuses = listOf(TaskStatus.running),
             fromExecutionStatuses = listOf(ExecutionStatus.running),
             toTaskStatus = ToAvailabilityBasedTaskStatus(
                 statusIfAttemptsAvailable = TaskStatus.available,
@@ -414,7 +413,7 @@ class UniversalScheduler(
         return updateLastExecution(
             coll = coll,
             executionId = executionId,
-            fromTaskStatus = TaskStatus.running,
+            fromTaskStatuses = listOf(TaskStatus.running),
             fromExecutionStatuses = listOf(ExecutionStatus.running),
             toTaskStatus = ToSingleTaskStatus(TaskStatus.failed),
             toExecutionStatus = ExecutionStatus.failed,
@@ -482,7 +481,6 @@ class UniversalScheduler(
         )
     }
 
-    // todo: mtymes - can we cancel a suspended task as well ???
     fun markAsCancelled(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
@@ -495,7 +493,7 @@ class UniversalScheduler(
         return updateLastExecution(
             coll = coll,
             executionId = executionId,
-            fromTaskStatus = TaskStatus.running,
+            fromTaskStatuses = listOf(TaskStatus.running, TaskStatus.suspended),
             fromExecutionStatuses = ExecutionStatus.NON_FINAL_STATUSES,
             toTaskStatus = TaskStatus.cancelled,
             toExecutionStatus = ExecutionStatus.cancelled,
@@ -622,7 +620,7 @@ class UniversalScheduler(
         return updateLastExecution(
             coll = coll,
             executionId = executionId,
-            fromTaskStatus = TaskStatus.running,
+            fromTaskStatuses = listOf(TaskStatus.running),
             fromExecutionStatuses = listOf(ExecutionStatus.running),
             toTaskStatus = TaskStatus.suspended,
             toExecutionStatus = ExecutionStatus.suspended,
@@ -662,6 +660,8 @@ class UniversalScheduler(
                 .build()
         ).toList()
 
+        val toExecutionStatus = ExecutionStatus.dead
+
         var countOfKilledExecutions = 0
         for (deadTask: Document in deadTasks) {
             try {
@@ -691,10 +691,10 @@ class UniversalScheduler(
                 val summary = updateLastExecution(
                     coll = coll,
                     executionId = lastExecutionId,
-                    fromTaskStatus = currentTaskStatus,
+                    fromTaskStatuses = listOf(currentTaskStatus),
                     fromExecutionStatuses = listOf(lastExecution.status),
                     toTaskStatus = toTaskStatus,
-                    toExecutionStatus = ExecutionStatus.dead,
+                    toExecutionStatus = toExecutionStatus,
                     now = now,
                     customTaskUpdates = docBuilder()
                         .putIf(shouldBecomeAvailable) {
@@ -720,7 +720,7 @@ class UniversalScheduler(
             } catch (e: Exception) {
                 runAndIgnoreExceptions {
                     val executionId = ExecutionId(deadTask.getDocument(LAST_EXECUTION).getString(EXECUTION_ID))
-                    logger.error("Failed to mark Execution '${executionId}' as '${ExecutionStatus.suspended}'", e)
+                    logger.error("Failed to mark Execution '${executionId}' as '${toExecutionStatus}'", e)
                 }
             }
         }
@@ -1229,7 +1229,7 @@ class UniversalScheduler(
     private fun updateLastExecution(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        fromTaskStatus: TaskStatus,
+        fromTaskStatuses: List<TaskStatus>,
         fromExecutionStatuses: List<ExecutionStatus>,
         toTaskStatus: ToTaskStatus,
         toExecutionStatus: ExecutionStatus,
@@ -1239,10 +1239,15 @@ class UniversalScheduler(
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): ExecutionSummary? {
+        expectAtLeastOneItem("fromTaskStatuses", fromTaskStatuses)
         expectAtLeastOneItem("fromExecutionStatuses", fromExecutionStatuses)
 
         val query = doc(
-            STATUS to fromTaskStatus,
+            STATUS to if (fromTaskStatuses.size == 1) {
+                fromTaskStatuses[0]
+            } else {
+                doc("\$in" to fromTaskStatuses)
+            },
             LAST_EXECUTION + "." + EXECUTION_ID to executionId,
             LAST_EXECUTION + "." + STATUS to if (fromExecutionStatuses.size == 1) {
                 fromExecutionStatuses[0]
@@ -1343,7 +1348,7 @@ class UniversalScheduler(
                     else toTaskStatus.statusIfNOAttemptsAvailable
             }
 
-            if (!fromExecutionStatuses.contains(currentExecutionStatus) || currentTaskStatus != fromTaskStatus) {
+            if (!fromExecutionStatuses.contains(currentExecutionStatus) || !fromTaskStatuses.contains(currentTaskStatus)) {
                 if (currentExecutionStatus == toExecutionStatus && currentTaskStatus == expectedToTaskStatus) {
                     // already applied
                     throw TaskAndExecutionStatusAlreadyAppliedException(
@@ -1360,7 +1365,7 @@ class UniversalScheduler(
 
                     throw UnexpectedStatusException(
                         "Failed to mark Task '${taskId}' as '${expectedToTaskStatus}' and Execution '${executionId}' as '${toExecutionStatus}'" +
-                                " as expected '${fromTaskStatus}' Task and '${expectedExecutionStatusString}' Execution but got '${currentTaskStatus}' Task and '${currentExecutionStatus}' Execution instead"
+                                " as expected '${fromTaskStatuses}' Task and '${expectedExecutionStatusString}' Execution but got '${currentTaskStatus}' Task and '${currentExecutionStatus}' Execution instead"
                     )
                 }
             }
@@ -1374,7 +1379,7 @@ class UniversalScheduler(
     private fun updateLastExecution(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
-        fromTaskStatus: TaskStatus,
+        fromTaskStatuses: List<TaskStatus>,
         fromExecutionStatuses: List<ExecutionStatus>,
         toTaskStatus: TaskStatus,
         toExecutionStatus: ExecutionStatus,
@@ -1387,7 +1392,7 @@ class UniversalScheduler(
         return updateLastExecution(
             coll = coll,
             executionId = executionId,
-            fromTaskStatus = fromTaskStatus,
+            fromTaskStatuses = fromTaskStatuses,
             fromExecutionStatuses = fromExecutionStatuses,
             toTaskStatus = ToSingleTaskStatus(toTaskStatus),
             toExecutionStatus = toExecutionStatus,
