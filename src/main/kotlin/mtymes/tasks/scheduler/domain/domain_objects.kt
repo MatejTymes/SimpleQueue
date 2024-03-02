@@ -65,7 +65,7 @@ enum class TaskStatus(
 
     companion object {
         val NON_FINAL_STATUSES = TaskStatus.values().filter { !it.isFinalStatus }.toList()
-        val FINAL_STATUSES = TaskStatus.values().filter { !it.isFinalStatus }.toList()
+        val FINAL_STATUSES = TaskStatus.values().filter { it.isFinalStatus }.toList()
     }
 }
 
@@ -82,7 +82,7 @@ enum class ExecutionStatus(
 
     companion object {
         val NON_FINAL_STATUSES = ExecutionStatus.values().filter { !it.isFinalStatus }.toList()
-        val FINAL_STATUSES = ExecutionStatus.values().filter { !it.isFinalStatus }.toList()
+        val FINAL_STATUSES = ExecutionStatus.values().filter { it.isFinalStatus }.toList()
     }
 }
 
