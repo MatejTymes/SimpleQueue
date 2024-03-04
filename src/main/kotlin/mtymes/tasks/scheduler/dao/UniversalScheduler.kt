@@ -27,7 +27,7 @@ import java.util.*
 
 // todo: mtymes - maybe create java version
 // todo: mtymes - add ability to have unlimited amount of executions
-// todo: mtymes - is it possible to wait for dependencies somehow ??
+// todo: mtymes - is it possible to wait for dependency tasks to finish somehow ??
 // todo: mtymes - provide proper throws annotations
 class UniversalScheduler(
     val clock: Clock = UTCClock
