@@ -25,6 +25,7 @@ import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
+// todo: mtymes - unify the API approach for failure, either: a) throw exceptions b) return null c) provide response object containing info about outcome
 // todo: mtymes - maybe create java version
 // todo: mtymes - add ability to have unlimited amount of executions
 // todo: mtymes - is it possible to wait for dependency tasks to finish somehow ??
@@ -181,7 +182,10 @@ class UniversalScheduler(
     }
 
 
-    @Throws(IllegalStateException::class)
+    @Throws(
+        IllegalArgumentException::class,
+        IllegalStateException::class
+    )
     fun submitTask(
         coll: MongoCollection<Document>,
         data: Document,
@@ -321,13 +325,21 @@ class UniversalScheduler(
         }
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsSucceeded(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         options: MarkAsSucceededOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         val now = clock.now()
 
         return updateLastExecution(
@@ -349,13 +361,21 @@ class UniversalScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsFailedButCanRetry(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         options: MarkAsFailedButCanRetryOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         val now = clock.now()
 
         return updateLastExecution(
@@ -401,13 +421,21 @@ class UniversalScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsFailedButCanNOTRetry(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         options: MarkAsFailedButCanNOTRetryOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         val now = clock.now()
 
         return updateLastExecution(
@@ -430,12 +458,19 @@ class UniversalScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        ExecutionNotFoundException::class,
+        TaskStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markTaskAsCancelled(
         coll: MongoCollection<Document>,
         taskId: TaskId,
         options: MarkTaskAsCancelledOptions,
         additionalTaskData: Document? = null
-    ): Task? {
+    ): Task {
         val now = clock.now()
 
         val fromTaskStatuses = listOf(TaskStatus.available, TaskStatus.paused)
@@ -454,6 +489,9 @@ class UniversalScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun markTasksAsCancelled(
         coll: MongoCollection<Document>,
         options: MarkTasksAsCancelledOptions,
@@ -481,13 +519,21 @@ class UniversalScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsCancelled(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         options: MarkAsCancelledOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         val now = clock.now()
 
         return updateLastExecution(
@@ -512,12 +558,19 @@ class UniversalScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        ExecutionNotFoundException::class,
+        TaskStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markTaskAsPaused(
         coll: MongoCollection<Document>,
         taskId: TaskId,
         options: MarkTaskAsPausedOptions,
         additionalTaskData: Document? = null
-    ): Task? {
+    ): Task {
         val now = clock.now()
 
         val fromTaskStatuses = listOf(TaskStatus.available)
@@ -536,6 +589,9 @@ class UniversalScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun markTasksAsPaused(
         coll: MongoCollection<Document>,
         options: MarkTasksAsPausedOptions,
@@ -560,12 +616,19 @@ class UniversalScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        ExecutionNotFoundException::class,
+        TaskStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markTaskAsUnPaused(
         coll: MongoCollection<Document>,
         taskId: TaskId,
         options: MarkTaskAsUnPausedOptions,
         additionalTaskData: Document? = null
-    ): Task? {
+    ): Task {
         val now = clock.now()
 
         val fromTaskStatuses = listOf(TaskStatus.paused)
@@ -584,6 +647,9 @@ class UniversalScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun markTasksAsUnPaused(
         coll: MongoCollection<Document>,
         options: MarkTasksAsUnPausedOptions,
@@ -608,13 +674,21 @@ class UniversalScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsSuspended(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
         options: MarkAsSuspendedOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         val now = clock.now()
 
         return updateLastExecution(
@@ -834,6 +908,10 @@ class UniversalScheduler(
         )
     }
 
+    // todo: mtymes - this is inconsistent with all the other methods (returns null instead of throwing an exception)
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun updateTaskData(
         coll: MongoCollection<Document>,
         taskId: TaskId,
@@ -872,6 +950,10 @@ class UniversalScheduler(
         return result?.toTask()
     }
 
+    // todo: mtymes - this is inconsistent with all the other methods (returns null instead of throwing an exception)
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun updateExecutionData(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
@@ -1100,7 +1182,13 @@ class UniversalScheduler(
         )
     }
 
-    // todo: mtymes - change return type from Task? -> Task and declare thrown Exceptions on the method
+    @Throws(
+        IllegalArgumentException::class,
+        ExecutionNotFoundException::class,
+        TaskStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     private fun updateTask(
         coll: MongoCollection<Document>,
         taskId: TaskId,
@@ -1109,7 +1197,7 @@ class UniversalScheduler(
         now: ZonedDateTime,
         customTaskUpdates: Document? = null,
         additionalTaskData: Document?
-    ): Task? {
+    ): Task {
         expectAtLeastOneItem("fromTaskStatuses", fromTaskStatuses)
 
         val modifiedTask = coll.findOneAndUpdate(
@@ -1183,6 +1271,9 @@ class UniversalScheduler(
         }
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     private fun updateTasks(
         coll: MongoCollection<Document>,
         customConstraints: Document,
@@ -1225,7 +1316,14 @@ class UniversalScheduler(
         return result.modifiedCount
     }
 
-    // todo: mtymes - change return type from ExecutionSummary? -> ExecutionSummary and declare thrown Exceptions on the method
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     private fun updateLastExecution(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
@@ -1238,7 +1336,7 @@ class UniversalScheduler(
         customExecutionUpdates: Document? = null,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         expectAtLeastOneItem("fromTaskStatuses", fromTaskStatuses)
         expectAtLeastOneItem("fromExecutionStatuses", fromExecutionStatuses)
 
@@ -1376,6 +1474,14 @@ class UniversalScheduler(
         }
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     private fun updateLastExecution(
         coll: MongoCollection<Document>,
         executionId: ExecutionId,
@@ -1388,7 +1494,7 @@ class UniversalScheduler(
         customExecutionUpdates: Document,
         additionalTaskData: Document?,
         additionalExecutionData: Document?
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         return updateLastExecution(
             coll = coll,
             executionId = executionId,

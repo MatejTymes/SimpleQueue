@@ -29,6 +29,9 @@ class DistributedLockDao(
         const val DELETABLE_AFTER = "deletableAfter"
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun tryToAcquireALock(
         lockId: LockId,
         workerId: WorkerId,
@@ -81,6 +84,9 @@ class DistributedLockDao(
         }
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun prolongLockDuration(
         lockId: LockId,
         workerId: WorkerId,
@@ -113,6 +119,9 @@ class DistributedLockDao(
         return result.modifiedCount == 1L
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun releaseLock(
         lockId: LockId,
         workerId: WorkerId,

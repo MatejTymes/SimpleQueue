@@ -4,9 +4,11 @@ import com.mongodb.client.MongoCollection
 import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.UNIVERSAL_SCHEDULER
 import mtymes.tasks.scheduler.domain.*
+import mtymes.tasks.scheduler.exception.*
 import org.bson.Document
 
 
+// todo: mtymes - unify the API approach for failure, either: a) throw exceptions b) return null c) provide response object containing info about outcome
 data class SchedulerDefaults(
 
     val submitTaskOptions: SubmitTaskOptions? = null,
@@ -83,6 +85,10 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        IllegalStateException::class
+    )
     fun submitTask(
         customData: Document,
         options: SubmitTaskOptions
@@ -94,6 +100,10 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        IllegalStateException::class
+    )
     fun submitTask(
         customData: Document
     ): TaskId {
@@ -137,12 +147,20 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsSucceeded(
         executionId: ExecutionId,
         options: MarkAsSucceededOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         return scheduler.markAsSucceeded(
             coll = collection,
             executionId = executionId,
@@ -152,11 +170,19 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsSucceeded(
         executionId: ExecutionId,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         return markAsSucceeded(
             executionId = executionId,
             options = defaults.markAsSucceededOptions ?: MarkAsSucceededOptions.DEFAULT,
@@ -165,12 +191,20 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsFailedButCanRetry(
         executionId: ExecutionId,
         options: MarkAsFailedButCanRetryOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         return scheduler.markAsFailedButCanRetry(
             coll = collection,
             executionId = executionId,
@@ -180,11 +214,19 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsFailedButCanRetry(
         executionId: ExecutionId,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         return markAsFailedButCanRetry(
             executionId = executionId,
             options = defaults.markAsFailedButCanRetryOptions ?: MarkAsFailedButCanRetryOptions.DEFAULT,
@@ -193,12 +235,20 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsFailedButCanNOTRetry(
         executionId: ExecutionId,
         options: MarkAsFailedButCanNOTRetryOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         return scheduler.markAsFailedButCanNOTRetry(
             coll = collection,
             executionId = executionId,
@@ -208,11 +258,19 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsFailedButCanNOTRetry(
         executionId: ExecutionId,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         return markAsFailedButCanNOTRetry(
             executionId = executionId,
             options = defaults.markAsFailedButCanNOTRetryOptions ?: MarkAsFailedButCanNOTRetryOptions.DEFAULT,
@@ -221,11 +279,18 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        ExecutionNotFoundException::class,
+        TaskStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markTaskAsCancelled(
         taskId: TaskId,
         options: MarkTaskAsCancelledOptions,
         additionalTaskData: Document? = null
-    ): Task? {
+    ): Task {
         return scheduler.markTaskAsCancelled(
             coll = collection,
             taskId = taskId,
@@ -234,10 +299,17 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        ExecutionNotFoundException::class,
+        TaskStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markTaskAsCancelled(
         taskId: TaskId,
         additionalTaskData: Document? = null
-    ): Task? {
+    ): Task {
         return markTaskAsCancelled(
             taskId = taskId,
             options = defaults.markTaskAsCancelledOptions ?: MarkTaskAsCancelledOptions.DEFAULT,
@@ -245,6 +317,9 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun markTasksAsCancelled(
         options: MarkTasksAsCancelledOptions,
         customConstraints: Document,
@@ -259,6 +334,9 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun markTasksAsCancelled(
         customConstraints: Document,
         additionalTaskData: Document? = null
@@ -270,12 +348,20 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsCancelled(
         executionId: ExecutionId,
         options: MarkAsCancelledOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         return scheduler.markAsCancelled(
             coll = collection,
             options = options,
@@ -285,11 +371,19 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsCancelled(
         executionId: ExecutionId,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         return markAsCancelled(
             options = defaults.markAsCancelledOptions ?: MarkAsCancelledOptions.DEFAULT,
             executionId = executionId,
@@ -298,11 +392,18 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        ExecutionNotFoundException::class,
+        TaskStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markTaskAsPaused(
         taskId: TaskId,
         options: MarkTaskAsPausedOptions,
         additionalTaskData: Document? = null
-    ): Task? {
+    ): Task {
         return scheduler.markTaskAsPaused(
             coll = collection,
             taskId = taskId,
@@ -311,10 +412,17 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        ExecutionNotFoundException::class,
+        TaskStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markTaskAsPaused(
         taskId: TaskId,
         additionalTaskData: Document? = null
-    ): Task? {
+    ): Task {
         return scheduler.markTaskAsPaused(
             coll = collection,
             taskId = taskId,
@@ -323,11 +431,13 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun markTasksAsPaused(
         options: MarkTasksAsPausedOptions,
         customConstraints: Document,
         additionalTaskData: Document? = null
-
     ): Long {
         return scheduler.markTasksAsPaused(
             coll = collection,
@@ -337,10 +447,12 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun markTasksAsPaused(
         customConstraints: Document,
         additionalTaskData: Document? = null
-
     ): Long {
         return scheduler.markTasksAsPaused(
             coll = collection,
@@ -350,11 +462,18 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        ExecutionNotFoundException::class,
+        TaskStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markTaskAsUnPaused(
         taskId: TaskId,
         options: MarkTaskAsUnPausedOptions,
         additionalTaskData: Document? = null
-    ): Task? {
+    ): Task {
         return scheduler.markTaskAsUnPaused(
             coll = collection,
             taskId = taskId,
@@ -363,10 +482,17 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        ExecutionNotFoundException::class,
+        TaskStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markTaskAsUnPaused(
         taskId: TaskId,
         additionalTaskData: Document? = null
-    ): Task? {
+    ): Task {
         return markTaskAsUnPaused(
             taskId = taskId,
             options = defaults.markTaskAsUnPausedOptions ?: MarkTaskAsUnPausedOptions.DEFAULT,
@@ -374,6 +500,9 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun markTasksAsUnPaused(
         options: MarkTasksAsUnPausedOptions,
         customConstraints: Document,
@@ -387,6 +516,9 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun markTasksAsUnPaused(
         customConstraints: Document,
         additionalTaskData: Document? = null
@@ -399,12 +531,20 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsSuspended(
         executionId: ExecutionId,
         options: MarkAsSuspendedOptions,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         return scheduler.markAsSuspended(
             coll = collection,
             executionId = executionId,
@@ -414,11 +554,19 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class,
+        NotLastExecutionException::class,
+        ExecutionNotFoundException::class,
+        TaskAndExecutionStatusAlreadyAppliedException::class,
+        UnexpectedStatusException::class,
+        UnknownFailureReasonException::class
+    )
     fun markAsSuspended(
         executionId: ExecutionId,
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
-    ): ExecutionSummary? {
+    ): ExecutionSummary {
         return markAsSuspended(
             executionId = executionId,
             options = defaultOptions(

@@ -5,6 +5,9 @@ import java.time.Duration
 
 object ValidityChecks {
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun expectAtLeastOne(fieldPath: String, value: Int) {
         if (value < 1) {
             throw IllegalArgumentException(
@@ -13,6 +16,9 @@ object ValidityChecks {
         }
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun expectPositiveDuration(fieldPath: String, value: Duration) {
         if (value.isNegative || value.isZero) {
             throw IllegalArgumentException(
@@ -21,6 +27,9 @@ object ValidityChecks {
         }
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun expectNullOrPositiveDuration(fieldPath: String, value: Duration?) {
         if (value != null && (value.isNegative || value.isZero)) {
             throw IllegalArgumentException(
@@ -29,6 +38,9 @@ object ValidityChecks {
         }
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun expectNonNegativeDuration(fieldPath: String, value: Duration) {
         if (value.isNegative) {
             throw IllegalArgumentException(
@@ -37,6 +49,9 @@ object ValidityChecks {
         }
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun expectNullOrNonNegativeDuration(fieldPath: String, value: Duration?) {
         if (value != null && value.isNegative) {
             throw IllegalArgumentException(
@@ -45,6 +60,9 @@ object ValidityChecks {
         }
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun expectNonEmptyDocument(fieldPath: String, value: Document) {
         if (value.isEmpty()) {
             throw IllegalArgumentException(
@@ -53,6 +71,9 @@ object ValidityChecks {
         }
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun expectAtLeastOneItem(fieldPath: String, value: List<*>) {
         if (value.isEmpty()) {
             throw IllegalArgumentException(
