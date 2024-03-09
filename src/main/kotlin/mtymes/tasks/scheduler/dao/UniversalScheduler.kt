@@ -1337,69 +1337,18 @@ class UniversalScheduler(
         additionalTaskData: Document? = null,
         additionalExecutionData: Document? = null
     ): ExecutionSummary {
-        expectAtLeastOneItem("fromTaskStatuses", fromTaskStatuses)
-        expectAtLeastOneItem("fromExecutionStatuses", fromExecutionStatuses)
-
-        val query = doc(
-            STATUS to if (fromTaskStatuses.size == 1) {
-                fromTaskStatuses[0]
-            } else {
-                doc("\$in" to fromTaskStatuses)
-            },
-            LAST_EXECUTION + "." + EXECUTION_ID to executionId,
-            LAST_EXECUTION + "." + STATUS to if (fromExecutionStatuses.size == 1) {
-                fromExecutionStatuses[0]
-            } else {
-                doc("\$in" to fromExecutionStatuses)
-            }
-        )
-        val update = doc(
-            "\$set" to docBuilder()
-                .putAll(
-                    when (toTaskStatus) {
-                        is ToSingleTaskStatus ->
-                            STATUS to toTaskStatus.status
-
-                        is ToAvailabilityBasedTaskStatus ->
-                            STATUS to doc(
-                                "\$cond" to listOf(
-                                    doc("\$gt" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 0)),
-                                    toTaskStatus.statusIfAttemptsAvailable,
-                                    toTaskStatus.statusIfNOAttemptsAvailable
-                                )
-                            )
-                    },
-                    STATUS_UPDATED_AT to now,
-                    LAST_EXECUTION + "." + STATUS to toExecutionStatus,
-                    LAST_EXECUTION + "." + STATUS_UPDATED_AT to now,
-                    LAST_EXECUTION + "." + UPDATED_AT to now,
-                    UPDATED_AT to now
-                )
-                .putAllIf(additionalExecutionData.isDefined()) {
-                    additionalExecutionData!!.mapKeys {
-                        LAST_EXECUTION + "." + DATA + "." + it.key
-                    }
-                }
-                .putAllIf(customExecutionUpdates.areDefined()) {
-                    customExecutionUpdates!!.mapKeys {
-                        LAST_EXECUTION + "." + it.key
-                    }
-                }
-                .putAllIf(additionalTaskData.isDefined()) {
-                    additionalTaskData!!.mapKeys { entry ->
-                        DATA + "." + entry.key
-                    }
-                }
-                .putAllIf(customTaskUpdates.isDefined()) {
-                    customTaskUpdates!!
-                }
-                .build()
-        )
-        val modifiedTask = coll.findOneAndUpdate(
-            query,
-            listOf(update),
-            FindOneAndUpdateOptions()
-                .returnDocument(ReturnDocument.AFTER)
+        val modifiedTask = tryToUpdateLastExecution(
+            coll,
+            executionId,
+            fromTaskStatuses,
+            fromExecutionStatuses,
+            toTaskStatus,
+            toExecutionStatus,
+            now,
+            customTaskUpdates,
+            customExecutionUpdates,
+            additionalTaskData,
+            additionalExecutionData
         )
 
         if (modifiedTask != null) {
@@ -1508,5 +1457,88 @@ class UniversalScheduler(
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
+    }
+
+    @Throws(
+        IllegalArgumentException::class,
+    )
+    private fun tryToUpdateLastExecution(
+        coll: MongoCollection<Document>,
+        executionId: ExecutionId,
+        fromTaskStatuses: List<TaskStatus>,
+        fromExecutionStatuses: List<ExecutionStatus>,
+        toTaskStatus: ToTaskStatus,
+        toExecutionStatus: ExecutionStatus,
+        now: ZonedDateTime,
+        customTaskUpdates: Document? = null,
+        customExecutionUpdates: Document? = null,
+        additionalTaskData: Document? = null,
+        additionalExecutionData: Document? = null
+    ): Document? {
+        expectAtLeastOneItem("fromTaskStatuses", fromTaskStatuses)
+        expectAtLeastOneItem("fromExecutionStatuses", fromExecutionStatuses)
+
+        val query = doc(
+            STATUS to if (fromTaskStatuses.size == 1) {
+                fromTaskStatuses[0]
+            } else {
+                doc("\$in" to fromTaskStatuses)
+            },
+            LAST_EXECUTION + "." + EXECUTION_ID to executionId,
+            LAST_EXECUTION + "." + STATUS to if (fromExecutionStatuses.size == 1) {
+                fromExecutionStatuses[0]
+            } else {
+                doc("\$in" to fromExecutionStatuses)
+            }
+        )
+        val update = doc(
+            "\$set" to docBuilder()
+                .putAll(
+                    when (toTaskStatus) {
+                        is ToSingleTaskStatus ->
+                            STATUS to toTaskStatus.status
+
+                        is ToAvailabilityBasedTaskStatus ->
+                            STATUS to doc(
+                                "\$cond" to listOf(
+                                    doc("\$gt" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 0)),
+                                    toTaskStatus.statusIfAttemptsAvailable,
+                                    toTaskStatus.statusIfNOAttemptsAvailable
+                                )
+                            )
+                    },
+                    STATUS_UPDATED_AT to now,
+                    LAST_EXECUTION + "." + STATUS to toExecutionStatus,
+                    LAST_EXECUTION + "." + STATUS_UPDATED_AT to now,
+                    LAST_EXECUTION + "." + UPDATED_AT to now,
+                    UPDATED_AT to now
+                )
+                .putAllIf(additionalExecutionData.isDefined()) {
+                    additionalExecutionData!!.mapKeys {
+                        LAST_EXECUTION + "." + DATA + "." + it.key
+                    }
+                }
+                .putAllIf(customExecutionUpdates.areDefined()) {
+                    customExecutionUpdates!!.mapKeys {
+                        LAST_EXECUTION + "." + it.key
+                    }
+                }
+                .putAllIf(additionalTaskData.isDefined()) {
+                    additionalTaskData!!.mapKeys { entry ->
+                        DATA + "." + entry.key
+                    }
+                }
+                .putAllIf(customTaskUpdates.isDefined()) {
+                    customTaskUpdates!!
+                }
+                .build()
+        )
+        val modifiedTask = coll.findOneAndUpdate(
+            query,
+            listOf(update),
+            FindOneAndUpdateOptions()
+                .returnDocument(ReturnDocument.AFTER)
+        )
+        return modifiedTask
     }
 }
