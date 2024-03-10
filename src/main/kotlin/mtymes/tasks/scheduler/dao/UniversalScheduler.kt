@@ -60,6 +60,7 @@ class UniversalScheduler(
         const val EXECUTIONS_COUNT = "executionsCount"
 
         const val IS_PICKABLE = "isPickable"
+
         // todo: mtymes - remove when execution started and move onto the execution as WAS_EXECUTABLE_AS_OF
         const val CAN_BE_EXECUTED_AS_OF = "canBeExecutedAsOf"
 
@@ -247,6 +248,7 @@ class UniversalScheduler(
                 )
                 return execution
             }
+
             OnlySuspended -> {
                 val execution = resumeSuspendedExecution(
                     coll = coll,
@@ -259,6 +261,7 @@ class UniversalScheduler(
                 )
                 return execution
             }
+
             SuspendedAndAvailable -> {
                 val now = clock.now()
 
@@ -1198,35 +1201,14 @@ class UniversalScheduler(
         customTaskUpdates: Document? = null,
         additionalTaskData: Document?
     ): Task {
-        expectAtLeastOneItem("fromTaskStatuses", fromTaskStatuses)
-
-        val modifiedTask = coll.findOneAndUpdate(
-            doc(
-                TASK_ID to taskId,
-                STATUS to if (fromTaskStatuses.size == 1)
-                    fromTaskStatuses[0]
-                else
-                    doc("\$in" to fromTaskStatuses)
-            ),
-            doc(
-                "\$set" to docBuilder()
-                    .putAll(
-                        STATUS to toTaskStatus,
-                        STATUS_UPDATED_AT to now,
-                        UPDATED_AT to now
-                    )
-                    .putAllIf(additionalTaskData.isDefined()) {
-                        additionalTaskData!!.mapKeys { entry ->
-                            DATA + "." + entry.key
-                        }
-                    }
-                    .putAllIf(customTaskUpdates.isDefined()) {
-                        customTaskUpdates!!
-                    }
-                    .build()
-            ),
-            FindOneAndUpdateOptions()
-                .returnDocument(ReturnDocument.AFTER)
+        val modifiedTask = tryToUpdateTask(
+            coll,
+            taskId,
+            fromTaskStatuses,
+            toTaskStatus,
+            now,
+            customTaskUpdates,
+            additionalTaskData
         )
 
         if (modifiedTask != null) {
@@ -1457,6 +1439,51 @@ class UniversalScheduler(
             additionalTaskData = additionalTaskData,
             additionalExecutionData = additionalExecutionData
         )
+    }
+
+    @Throws(
+        IllegalArgumentException::class,
+    )
+    private fun tryToUpdateTask(
+        coll: MongoCollection<Document>,
+        taskId: TaskId,
+        fromTaskStatuses: List<TaskStatus>,
+        toTaskStatus: TaskStatus,
+        now: ZonedDateTime,
+        customTaskUpdates: Document? = null,
+        additionalTaskData: Document? = null
+    ): Document? {
+        expectAtLeastOneItem("fromTaskStatuses", fromTaskStatuses)
+
+        val modifiedTask = coll.findOneAndUpdate(
+            doc(
+                TASK_ID to taskId,
+                STATUS to if (fromTaskStatuses.size == 1)
+                    fromTaskStatuses[0]
+                else
+                    doc("\$in" to fromTaskStatuses)
+            ),
+            doc(
+                "\$set" to docBuilder()
+                    .putAll(
+                        STATUS to toTaskStatus,
+                        STATUS_UPDATED_AT to now,
+                        UPDATED_AT to now
+                    )
+                    .putAllIf(additionalTaskData.isDefined()) {
+                        additionalTaskData!!.mapKeys { entry ->
+                            DATA + "." + entry.key
+                        }
+                    }
+                    .putAllIf(customTaskUpdates.isDefined()) {
+                        customTaskUpdates!!
+                    }
+                    .build()
+            ),
+            FindOneAndUpdateOptions()
+                .returnDocument(ReturnDocument.AFTER)
+        )
+        return modifiedTask
     }
 
     @Throws(
