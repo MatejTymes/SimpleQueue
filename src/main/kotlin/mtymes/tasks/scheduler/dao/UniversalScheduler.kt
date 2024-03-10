@@ -1455,31 +1455,33 @@ class UniversalScheduler(
     ): Document? {
         expectAtLeastOneItem("fromTaskStatuses", fromTaskStatuses)
 
+        val query = doc(
+            TASK_ID to taskId,
+            STATUS to if (fromTaskStatuses.size == 1)
+                fromTaskStatuses[0]
+            else
+                doc("\$in" to fromTaskStatuses)
+        )
+        val update = doc(
+            "\$set" to docBuilder()
+                .putAll(
+                    STATUS to toTaskStatus,
+                    STATUS_UPDATED_AT to now,
+                    UPDATED_AT to now
+                )
+                .putAllIf(additionalTaskData.isDefined()) {
+                    additionalTaskData!!.mapKeys { entry ->
+                        DATA + "." + entry.key
+                    }
+                }
+                .putAllIf(customTaskUpdates.isDefined()) {
+                    customTaskUpdates!!
+                }
+                .build()
+        )
         val modifiedTask = coll.findOneAndUpdate(
-            doc(
-                TASK_ID to taskId,
-                STATUS to if (fromTaskStatuses.size == 1)
-                    fromTaskStatuses[0]
-                else
-                    doc("\$in" to fromTaskStatuses)
-            ),
-            doc(
-                "\$set" to docBuilder()
-                    .putAll(
-                        STATUS to toTaskStatus,
-                        STATUS_UPDATED_AT to now,
-                        UPDATED_AT to now
-                    )
-                    .putAllIf(additionalTaskData.isDefined()) {
-                        additionalTaskData!!.mapKeys { entry ->
-                            DATA + "." + entry.key
-                        }
-                    }
-                    .putAllIf(customTaskUpdates.isDefined()) {
-                        customTaskUpdates!!
-                    }
-                    .build()
-            ),
+            query,
+            update,
             FindOneAndUpdateOptions()
                 .returnDocument(ReturnDocument.AFTER)
         )
