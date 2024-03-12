@@ -463,7 +463,7 @@ class UniversalScheduler(
 
     @Throws(
         IllegalArgumentException::class,
-        ExecutionNotFoundException::class,
+        TaskNotFoundException::class,
         TaskStatusAlreadyAppliedException::class,
         UnexpectedStatusException::class,
         UnknownFailureReasonException::class
@@ -563,7 +563,7 @@ class UniversalScheduler(
 
     @Throws(
         IllegalArgumentException::class,
-        ExecutionNotFoundException::class,
+        TaskNotFoundException::class,
         TaskStatusAlreadyAppliedException::class,
         UnexpectedStatusException::class,
         UnknownFailureReasonException::class
@@ -621,7 +621,7 @@ class UniversalScheduler(
 
     @Throws(
         IllegalArgumentException::class,
-        ExecutionNotFoundException::class,
+        TaskNotFoundException::class,
         TaskStatusAlreadyAppliedException::class,
         UnexpectedStatusException::class,
         UnknownFailureReasonException::class
@@ -1187,7 +1187,7 @@ class UniversalScheduler(
 
     @Throws(
         IllegalArgumentException::class,
-        ExecutionNotFoundException::class,
+        TaskNotFoundException::class,
         TaskStatusAlreadyAppliedException::class,
         UnexpectedStatusException::class,
         UnknownFailureReasonException::class
@@ -1219,7 +1219,7 @@ class UniversalScheduler(
             )
 
             if (task == null) {
-                throw ExecutionNotFoundException(
+                throw TaskNotFoundException(
                     "Task '${taskId}' NOT FOUND"
                 )
             }

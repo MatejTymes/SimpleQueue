@@ -281,7 +281,7 @@ class GenericScheduler(
 
     @Throws(
         IllegalArgumentException::class,
-        ExecutionNotFoundException::class,
+        TaskNotFoundException::class,
         TaskStatusAlreadyAppliedException::class,
         UnexpectedStatusException::class,
         UnknownFailureReasonException::class
@@ -301,7 +301,7 @@ class GenericScheduler(
 
     @Throws(
         IllegalArgumentException::class,
-        ExecutionNotFoundException::class,
+        TaskNotFoundException::class,
         TaskStatusAlreadyAppliedException::class,
         UnexpectedStatusException::class,
         UnknownFailureReasonException::class
@@ -394,7 +394,7 @@ class GenericScheduler(
 
     @Throws(
         IllegalArgumentException::class,
-        ExecutionNotFoundException::class,
+        TaskNotFoundException::class,
         TaskStatusAlreadyAppliedException::class,
         UnexpectedStatusException::class,
         UnknownFailureReasonException::class
@@ -414,7 +414,7 @@ class GenericScheduler(
 
     @Throws(
         IllegalArgumentException::class,
-        ExecutionNotFoundException::class,
+        TaskNotFoundException::class,
         TaskStatusAlreadyAppliedException::class,
         UnexpectedStatusException::class,
         UnknownFailureReasonException::class
@@ -423,8 +423,7 @@ class GenericScheduler(
         taskId: TaskId,
         additionalTaskData: Document? = null
     ): Task {
-        return scheduler.markTaskAsPaused(
-            coll = collection,
+        return markTaskAsPaused(
             taskId = taskId,
             options = defaults.markTaskAsPausedOptions ?: MarkTaskAsPausedOptions.DEFAULT,
             additionalTaskData = additionalTaskData
@@ -454,8 +453,7 @@ class GenericScheduler(
         customConstraints: Document,
         additionalTaskData: Document? = null
     ): Long {
-        return scheduler.markTasksAsPaused(
-            coll = collection,
+        return markTasksAsPaused(
             options = defaults.markTasksAsPausedOptions ?: MarkTasksAsPausedOptions.DEFAULT,
             customConstraints = customConstraints,
             additionalTaskData = additionalTaskData
@@ -464,7 +462,7 @@ class GenericScheduler(
 
     @Throws(
         IllegalArgumentException::class,
-        ExecutionNotFoundException::class,
+        TaskNotFoundException::class,
         TaskStatusAlreadyAppliedException::class,
         UnexpectedStatusException::class,
         UnknownFailureReasonException::class
@@ -484,7 +482,7 @@ class GenericScheduler(
 
     @Throws(
         IllegalArgumentException::class,
-        ExecutionNotFoundException::class,
+        TaskNotFoundException::class,
         TaskStatusAlreadyAppliedException::class,
         UnexpectedStatusException::class,
         UnknownFailureReasonException::class
@@ -679,6 +677,9 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun updateTaskData(
         taskId: TaskId,
         options: UpdateTaskDataOptions,
@@ -694,6 +695,9 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun updateTaskData(
         taskId: TaskId,
         customConstraints: Document? = null,
@@ -707,6 +711,9 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun updateExecutionData(
         executionId: ExecutionId,
         options: UpdateExecutionDataOptions,
@@ -724,6 +731,9 @@ class GenericScheduler(
         )
     }
 
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun updateExecutionData(
         executionId: ExecutionId,
         customConstraints: Document? = null,
