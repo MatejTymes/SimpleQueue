@@ -15,7 +15,7 @@ interface MongoWriter<T> {
 
 object BaseMongoWriters {
 
-    fun defaultMongoWriter(): MongoWriter<Any>? {
+    fun defaultMongoWriter(): MongoWriter<Any> {
         return PassTroughWriter
     }
 
@@ -23,7 +23,7 @@ object BaseMongoWriters {
         return mapOf(
             Document::class.java to PassTroughWriter,
             Map::class.java to MapWriter,
-            Collection::class.java to CollectionWriter,
+            Iterable::class.java to IterableWriter,
             Enum::class.java to EnumWriter,
             Optional::class.java to OptionalWriter,
             UUID::class.java to UUIDWriter,
@@ -42,9 +42,11 @@ object BaseMongoWriters {
             java.lang.Character::class.java to PassTroughWriter,
             java.util.Date::class.java to PassTroughWriter,
 
-            // not actually needed to be defined (as the default Collection is already handled by CollectionWriter, but decreases the class hierarchy traversing time
-            List::class.java to CollectionWriter,
-            Set::class.java to CollectionWriter,
+            // not actually needed to be defined (as the default Iterable is already handled by IterableWriter, but decreases the class hierarchy traversing time
+            List::class.java to IterableWriter,
+            Set::class.java to IterableWriter,
+            Queue::class.java to IterableWriter,
+            Collection::class.java to IterableWriter,
         )
     }
 }
@@ -148,9 +150,9 @@ object MapWriter : MongoWriter<Map<*, *>> {
 }
 
 
-object CollectionWriter : MongoWriter<Collection<*>> {
+object IterableWriter : MongoWriter<Iterable<*>> {
 
-    override fun writeValue(value: Collection<*>?, valueInserter: ValueInserter, writerRegistry: MongoWriterRegistry) {
+    override fun writeValue(value: Iterable<*>?, valueInserter: ValueInserter, writerRegistry: MongoWriterRegistry) {
         if (value == null) {
             valueInserter.insertValue(null)
         } else {
