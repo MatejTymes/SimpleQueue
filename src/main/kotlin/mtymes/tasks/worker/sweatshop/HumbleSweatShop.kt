@@ -227,6 +227,7 @@ class HumbleSweatShop : SweatShop {
         synchronized(workers) {
             if (workers.isNotEmpty()) {
                 val workerIds = workers.keys.toList()
+                // todo: send stop command to workers in parallel and only then wait for them to finish
                 for (workerId in workerIds) {
                     if (waitTillDone) {
                         runAndIgnoreExceptions {
