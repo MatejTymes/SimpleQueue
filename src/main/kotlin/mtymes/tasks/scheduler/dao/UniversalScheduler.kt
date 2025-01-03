@@ -3,7 +3,9 @@ package mtymes.tasks.scheduler.dao
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.FindOneAndUpdateOptions
 import com.mongodb.client.model.ReturnDocument
+import mtymes.tasks.common.check.ValidityChecks.expectAtLeastOne
 import mtymes.tasks.common.check.ValidityChecks.expectAtLeastOneItem
+import mtymes.tasks.common.check.ValidityChecks.expectGreaterThanNumber
 import mtymes.tasks.common.check.ValidityChecks.expectNonEmptyDocument
 import mtymes.tasks.common.domain.WorkerId
 import mtymes.tasks.common.exception.ExceptionUtil.runAndIgnoreExceptions
@@ -648,6 +650,91 @@ class UniversalScheduler(
             },
             additionalTaskData = additionalTaskData
         )
+    }
+
+    @Throws(
+        IllegalArgumentException::class,
+        TaskNotFoundException::class
+    )
+    fun addMoreAttempts(
+        coll: MongoCollection<Document>,
+        taskId: TaskId,
+        additionalAttemptsCount: Int,
+        options: AddMoreAttemptsOptions,
+        additionalTaskData: Document? = null
+    ): Task {
+        expectAtLeastOne("additionalAttemptsCount", additionalAttemptsCount)
+
+        val now = clock.now()
+
+        val isRetryingFailureCond = doc("\$and" to listOf(
+            doc("\$eq" to listOf("\$" + STATUS, TaskStatus.failed)),
+            doc("\$eq" to listOf("\$" + LAST_EXECUTION + "." + WAS_RETRYABLE_FAIL, true)),
+            doc("\$eq" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, 0)),
+            doc("\$eq" to listOf("\$" + IS_PICKABLE, false))
+        ))
+        val update = doc(
+            "\$set" to docBuilder()
+                .putAllIf(additionalTaskData.isDefined()) {
+                    additionalTaskData!!.mapKeys { entry ->
+                        DATA + "." + entry.key
+                    }
+                }
+                .put(IS_PICKABLE to doc(
+                    "\$cond" to listOf(
+                        isRetryingFailureCond,
+                        true,
+                        "\$" + IS_PICKABLE
+                    )
+                ))
+                .put(STATUS_UPDATED_AT to doc(
+                    "\$cond" to listOf(
+                        isRetryingFailureCond,
+                        now,
+                        "\$" + STATUS_UPDATED_AT
+                    )
+                ))
+                .put(STATUS to doc(
+                    "\$cond" to listOf(
+                        isRetryingFailureCond,
+                        TaskStatus.available,
+                        "\$" + STATUS
+                    )
+                ))
+                .put(EXECUTION_ATTEMPTS_LEFT to doc("\$sum" to listOf("\$" + EXECUTION_ATTEMPTS_LEFT, additionalAttemptsCount)))
+                .putIf(options.retryDelayIfInFailedState != null) {
+                    CAN_BE_EXECUTED_AS_OF to doc(
+                        "\$cond" to listOf(
+                            isRetryingFailureCond,
+                            now.plus(options.retryDelayIfInFailedState),
+                            "\$" + CAN_BE_EXECUTED_AS_OF // todo: mtymes - what if CAN_BE_EXECUTED_AS_OF does not exist
+                        )
+                    )
+                }
+                .putIf(options.newTTL != null) {
+                    DELETABLE_AFTER to now.plus(options.newTTL!!)
+                }
+                .put(UPDATED_AT to now)
+                .build()
+        )
+
+
+        val modifiedTask = coll.findOneAndUpdate(
+            doc(TASK_ID to taskId),
+            listOf(
+                update
+            ),
+            FindOneAndUpdateOptions()
+                .returnDocument(ReturnDocument.AFTER)
+        )
+
+        if (modifiedTask != null) {
+            return modifiedTask.toTask()
+        } else {
+            throw TaskNotFoundException(
+                "Task '${taskId}' NOT FOUND"
+            )
+        }
     }
 
     @Throws(

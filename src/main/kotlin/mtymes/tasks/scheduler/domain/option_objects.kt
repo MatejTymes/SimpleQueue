@@ -152,6 +152,20 @@ data class MarkTaskAsUnPausedOptions(
     }
 }
 
+data class AddMoreAttemptsOptions(
+    val retryDelayIfInFailedState: Duration? = null,
+    val newTTL: Duration? = null
+) {
+    init {
+        expectNullOrPositiveDuration("retryDelayIfInFailedState", retryDelayIfInFailedState)
+        expectNullOrPositiveDuration("newTTL", newTTL)
+    }
+
+    companion object {
+        val DEFAULT = AddMoreAttemptsOptions()
+    }
+}
+
 data class MarkTasksAsUnPausedOptions(
     val newTTL: Duration? = null
 ) {

@@ -10,9 +10,11 @@ import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.CAN_BE_EXECUTED_A
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTIONS_COUNT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.EXECUTION_ATTEMPTS_LEFT
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.FINISHED_AT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.IS_PICKABLE
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.LAST_EXECUTION
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.PREVIOUS_EXECUTIONS
 import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.STARTED_AT
+import mtymes.tasks.scheduler.dao.UniversalScheduler.Companion.WAS_RETRYABLE_FAIL
 import mtymes.tasks.scheduler.domain.*
 import mtymes.tasks.test.mongo.emptyLocalCollection
 import mtymes.tasks.test.task.TaskViewer.displayTinyTasksSummary
@@ -53,16 +55,34 @@ class FailureSupportingTaskDao(
 
     fun submitTask(
         request: String,
-        retainOnlyLastExecution: Boolean = false
+        retainOnlyLastExecution: Boolean = false,
+        maxAttemptsCount: Int? = null
     ): TaskId {
         val taskId = scheduler.submitTask(
             customData = doc("request" to request),
             options = scheduler.defaults.submitTaskOptions!!.copy(
-                retainOnlyLastExecution = retainOnlyLastExecution
+                retainOnlyLastExecution = retainOnlyLastExecution,
+                maxAttemptsCount = maxAttemptsCount ?: scheduler.defaults.submitTaskOptions!!.maxAttemptsCount
             )
         )
         printTimedString("submitted Task '${request}'")
         return taskId
+    }
+
+    fun addAnAttempt(
+        taskId: TaskId
+    ): Task {
+        try {
+            val task = scheduler.addMoreAttempts(
+                taskId = taskId,
+                additionalAttemptsCount = 1
+            )
+            printTimedString("added additional attempt to Task '${taskId}'")
+            return task
+        } catch (e: Exception) {
+            printTimedString("failed to add additional attempt to Task '${taskId}'")
+            throw e
+        }
     }
 
     fun findTask(
@@ -297,6 +317,86 @@ object FailThenSucceed {
             coll, setOf(
                 EXECUTION_ATTEMPTS_LEFT,
                 EXECUTIONS_COUNT
+            )
+        )
+
+
+        dao.pickNextTaskExecution(workerId)
+    }
+}
+
+
+object FailAddAttemptsAndThenSucceed {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val workerId = WorkerId("UnluckyInternDoingManualWork")
+        val coll = emptyLocalCollection("sample03tasks")
+        val dao = FailureSupportingTaskDao(coll)
+
+        var taskId = dao.submitTask(
+            request = "A",
+            retainOnlyLastExecution = false,
+            maxAttemptsCount = 1
+        )
+
+        val executionId1 = dao.pickNextTaskExecution(workerId)!!.executionId
+        dao.markAsFailed(executionId1, IllegalStateException("It should have worked"))
+
+
+        displayTinyTasksSummary(
+            coll, setOf(
+                EXECUTION_ATTEMPTS_LEFT,
+                EXECUTIONS_COUNT,
+                LAST_EXECUTION + "." + WAS_RETRYABLE_FAIL,
+                IS_PICKABLE,
+                "_tempIsRetryingFailure"
+            )
+        )
+
+
+        dao.pickNextTaskExecution(workerId)
+
+
+        dao.addAnAttempt(taskId)
+
+
+        displayTinyTasksSummary(
+            coll, setOf(
+                EXECUTION_ATTEMPTS_LEFT,
+                EXECUTIONS_COUNT,
+                LAST_EXECUTION + "." + WAS_RETRYABLE_FAIL,
+                IS_PICKABLE,
+                "_tempIsRetryingFailure"
+            )
+        )
+
+
+        val executionId2 = dao.pickNextTaskExecution(workerId)!!.executionId
+        dao.markAsSucceeded(executionId2, "So glad it's over. I'm not doing this again")
+
+
+        displayTinyTasksSummary(
+            coll, setOf(
+                EXECUTION_ATTEMPTS_LEFT,
+                EXECUTIONS_COUNT,
+                LAST_EXECUTION + "." + WAS_RETRYABLE_FAIL,
+                IS_PICKABLE,
+                "_tempIsRetryingFailure"
+            )
+        )
+
+
+        dao.addAnAttempt(taskId)
+
+
+        displayTinyTasksSummary(
+            coll, setOf(
+                EXECUTION_ATTEMPTS_LEFT,
+                EXECUTIONS_COUNT,
+                LAST_EXECUTION + "." + WAS_RETRYABLE_FAIL,
+                IS_PICKABLE,
+                "_tempIsRetryingFailure"
             )
         )
 

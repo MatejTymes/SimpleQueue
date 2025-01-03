@@ -8,6 +8,17 @@ object ValidityChecks {
     @Throws(
         IllegalArgumentException::class
     )
+    fun expectGreaterThanNumber(fieldPath: String, value: Int, greaterThan: Int) {
+        if (value <= greaterThan) {
+            throw IllegalArgumentException(
+                "'${fieldPath}' MUST BE GREATER THAN ${greaterThan} but was ${value} instead"
+            )
+        }
+    }
+
+    @Throws(
+        IllegalArgumentException::class
+    )
     fun expectAtLeastOne(fieldPath: String, value: Int) {
         if (value < 1) {
             throw IllegalArgumentException(

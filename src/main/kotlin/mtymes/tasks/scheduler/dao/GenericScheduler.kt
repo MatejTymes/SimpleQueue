@@ -33,6 +33,8 @@ data class SchedulerDefaults(
 
     val markTaskAsUnPausedOptions: MarkTaskAsUnPausedOptions? = null,
 
+    val addMoreAttemptsOptions: AddMoreAttemptsOptions? = null,
+
     val markTasksAsUnPausedOptions: MarkTasksAsUnPausedOptions? = null,
 
     val markAsSuspendedOptions: MarkAsSuspendedOptions? = null,
@@ -495,6 +497,38 @@ class GenericScheduler(
             taskId = taskId,
             options = defaults.markTaskAsUnPausedOptions ?: MarkTaskAsUnPausedOptions.DEFAULT,
             additionalTaskData = additionalTaskData
+        )
+    }
+
+    @Throws(
+        IllegalArgumentException::class,
+        TaskNotFoundException::class
+    )
+    fun addMoreAttempts(
+        taskId: TaskId,
+        options: AddMoreAttemptsOptions,
+        additionalAttemptsCount: Int,
+    ): Task {
+        return scheduler.addMoreAttempts(
+            coll = collection,
+            taskId = taskId,
+            options = options,
+            additionalAttemptsCount = additionalAttemptsCount
+        )
+    }
+
+    @Throws(
+        IllegalArgumentException::class,
+        TaskNotFoundException::class
+    )
+    fun addMoreAttempts(
+        taskId: TaskId,
+        additionalAttemptsCount: Int,
+    ): Task {
+        return addMoreAttempts(
+            taskId = taskId,
+            options = defaults.addMoreAttemptsOptions ?: AddMoreAttemptsOptions.DEFAULT,
+            additionalAttemptsCount = additionalAttemptsCount
         )
     }
 

@@ -97,7 +97,10 @@ object MultipleWorkersRegistered {
                 println("- ${summary}")
             }
 
-            Thread.sleep(4_000)
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = true
+            )
         }
     }
 }
@@ -126,7 +129,10 @@ object OneWorkerRegisteredMultipleTimes {
                 println("- ${summary}")
             }
 
-            Thread.sleep(3_000)
+            sweatShop.close(
+                shutDownMode = OnceNoMoreWork,
+                waitTillDone = true
+            )
         }
     }
 }
